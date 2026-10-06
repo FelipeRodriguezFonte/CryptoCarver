@@ -25,3 +25,11 @@ Los dos fallos iniciales de los tests criptográficos nuevos eran un supuesto in
 Composición detached reutiliza el helper normal en Compact y JSON. Los tests criptográficos pasan: vectores RFC 7797 §4.1/§4.2, Mac independiente del JDK, cabeceras preservadas y firmadas, contenido cambiado rechazado, JWKS/kid, General con dos algoritmos y política compartida de reservadas/jwk pública. El test UI funcional completo pasa hasta fijar su digest inicial: `325d384b8f4f546853aabf90b2fa0307f054ec61c3f87752db2edff1ae31693a`. Transcripción de avisos b64=false EN/ES, perfiles y privacidad del editor, sin datos aleatorios ni mensajes de proveedor. Los digests existentes JWT, PKIX y OKP permanecen intactos.
 
 Las claves de aviso y error detached se añaden al final de los tres bundles con paridad. No se editan tests existentes.
+
+Puerta 1: `mvn -o -q test -Plow-cpu`: {'reports': 445, 'tests': 2911, 'failures': 0, 'errors': 0, 'skipped': 1}.
+
+Puerta 2: `mvn -o -q test -Plow-cpu -DrunUiTests=true`: {'reports': 125, 'tests': 541, 'failures': 0, 'errors': 0, 'skipped': 0}.
+
+Puerta 3: `mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false test`: {'reports': 125, 'tests': 541, 'failures': 0, 'errors': 0, 'skipped': 0}.
+
+Las tres puertas pasan limpiamente; digests nuevos y existentes verificados. Presupuestos finales: 0 estilos FXML y 325 emojis. API pública JOSEController sin cambios (1063 → 1055 líneas).
