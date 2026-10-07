@@ -67,7 +67,8 @@ public final class UiStateSnapshot {
     private static final Map<String, String> LEGACY_FIELD_ALIASES = Map.of(
             "keyLabStatusFilter", "keyLabStatusFilterCombo",
             "jwtAlgoCombo2", "jwtAlgo2Combo",
-            "xmlSignTsaUrlCombo", "xmlSignTsaUrlText"
+            "xmlSignTsaUrlCombo", "xmlSignTsaUrlText",
+            "jwksArea", "jwksSecretArea"
     );
 
     private UiStateSnapshot() {
@@ -119,17 +120,20 @@ public final class UiStateSnapshot {
     static List<Node> restoreHistoryRecipe(Object rootController, Map<String, Object> state) {
         clearHistorySensitiveControls(rootController);
         if (state == null || state.isEmpty()) return List.of();
+        Map<String, Object> canonicalState = withRestorationAliases(state);
         Map<String, Object> safe = new LinkedHashMap<>();
         List<Node> redacted = new ArrayList<>();
         boolean restoreSensitive = AppSettings.isFullLab();
         visitControllers(rootController, (owner, field, value) -> {
-            Object stored = state.get(key(owner, field));
+            String qualifiedKey = key(owner, field);
+            Object stored = canonicalState.containsKey(qualifiedKey)
+                    ? canonicalState.get(qualifiedKey) : canonicalState.get(field.getName());
             if (value instanceof Node node && ("[REDACTED_SECRET]".equals(stored)
                     || (!restoreSensitive && holdsSecretValue(key(owner, field), stored)))) {
                 redacted.add(node);
             }
         });
-        state.forEach((key, value) -> {
+        canonicalState.forEach((key, value) -> {
             String field = key == null ? "" : key.substring(key.lastIndexOf('.') + 1);
             if ("[REDACTED_SECRET]".equals(value)) return;
             if (!isResultField(field) && (!isHistorySensitiveField(field) || restoreSensitive)) {
@@ -360,19 +364,13 @@ public final class UiStateSnapshot {
         List<Node> redactedNodes = new ArrayList<>();
         if (rootController == null || state == null || state.isEmpty()) return redactedNodes;
 
+        Map<String, Object> canonicalState = withRestorationAliases(state);
         List<RestorationTask> tasks = new ArrayList<>();
         visitControllers(rootController, (owner, field, value) -> {
             String qualifiedKey = key(owner, field);
-            Object saved = state.containsKey(qualifiedKey) ? state.get(qualifiedKey) : state.get(field.getName());
-            String oldName = LEGACY_FIELD_ALIASES.entrySet().stream()
-                    .filter(entry -> entry.getValue().equals(field.getName()))
-                    .map(Map.Entry::getKey).findFirst().orElse(null);
-            String oldKey = oldName == null ? null : qualifiedKey.replace("." + field.getName(), "." + oldName);
-            boolean hasAlias = oldKey != null && (state.containsKey(oldKey) || state.containsKey(oldName));
-            if (saved == null && hasAlias) {
-                saved = state.containsKey(oldKey) ? state.get(oldKey) : state.get(oldName);
-            }
-            if (saved != null || state.containsKey(qualifiedKey) || state.containsKey(field.getName()) || hasAlias) {
+            boolean hasQualified = canonicalState.containsKey(qualifiedKey);
+            if (hasQualified || canonicalState.containsKey(field.getName())) {
+                Object saved = hasQualified ? canonicalState.get(qualifiedKey) : canonicalState.get(field.getName());
                 tasks.add(new RestorationTask(owner, field, value, saved));
             }
         });
@@ -401,6 +399,25 @@ public final class UiStateSnapshot {
             }
         }
         return redactedNodes;
+    }
+
+    /** Read aliases only; canonical keys (including null) always take precedence. */
+    private static Map<String, Object> withRestorationAliases(Map<String, Object> state) {
+        Map<String, Object> canonical = new LinkedHashMap<>(state);
+        state.forEach((savedKey, savedValue) -> {
+            if (savedKey == null) return;
+            int fieldStart = savedKey.lastIndexOf('.') + 1;
+            String currentName = LEGACY_FIELD_ALIASES.get(savedKey.substring(fieldStart));
+            if (currentName == null) return;
+            canonical.remove(savedKey);
+            String currentKey = savedKey.substring(0, fieldStart) + currentName;
+            // A bare current key also wins over a qualified legacy key. Conversely,
+            // restore already gives qualified current keys precedence over bare aliases.
+            if (!state.containsKey(currentKey) && !state.containsKey(currentName)) {
+                canonical.put(currentKey, savedValue);
+            }
+        });
+        return canonical;
     }
 
     private static class RestorationTask {

@@ -67,4 +67,35 @@ class JoseHistoryAliasUITest {
             } catch (Exception error) { throw new RuntimeException(error); }
         });
     }
+    @Test void aliasesAreReadOnlyAndCurrentKeysWinEvenWhenEmptyOrNull() throws Exception {
+        UiTestLifecycleExtension.onFx(() -> {
+            try (var fixture = new JoseCharacterizationSupport()) {
+                for (String oldKey : List.of("jwksArea", "JOSEController.jwksArea")) {
+                    Map<String, Object> legacy = Map.of(oldKey, PRIVATE_JWKS);
+                    UiStateSnapshot.restoreHistoryRecipe(fixture.controller, legacy);
+                    assertEquals(PRIVATE_JWKS, fixture.area("jwksSecretArea").getText());
+                    assertEquals(Map.of(oldKey, PRIVATE_JWKS), legacy, "restore must not rewrite the stored recipe");
+                    for (UiStateSnapshot.CaptureMode mode : UiStateSnapshot.CaptureMode.values()) {
+                        var captured = UiStateSnapshot.capture(fixture.controller, mode);
+                        assertFalse(captured.containsKey("JOSEController.jwksArea"));
+                        if (mode != UiStateSnapshot.CaptureMode.NON_TEXT) {
+                            assertEquals(PRIVATE_JWKS, captured.get("JOSEController.jwksSecretArea"));
+                        }
+                    }
+                    for (String currentKey : List.of("jwksSecretArea", "JOSEController.jwksSecretArea")) {
+                        for (String currentValue : java.util.Arrays.asList("{\"keys\":[]}", "", null)) {
+                            var both = new java.util.LinkedHashMap<String, Object>();
+                            both.put(oldKey, PRIVATE_JWKS); both.put(currentKey, currentValue);
+                            UiStateSnapshot.restoreHistoryRecipe(fixture.controller, both);
+                            assertEquals(currentValue == null ? "" : currentValue, fixture.area("jwksSecretArea").getText());
+                        }
+                    }
+                }
+                // The same read aliases also support full saved-session restoration.
+                UiStateSnapshot.restore(fixture.controller, Map.of("JOSEController.jwksArea", PRIVATE_JWKS));
+                assertEquals(PRIVATE_JWKS, fixture.area("jwksSecretArea").getText());
+            } catch (Exception error) { throw new RuntimeException(error); }
+        });
+    }
+
 }
