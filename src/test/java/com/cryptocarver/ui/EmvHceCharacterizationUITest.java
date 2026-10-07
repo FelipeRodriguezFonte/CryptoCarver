@@ -92,7 +92,7 @@ class EmvHceCharacterizationUITest extends EmvExtractionCharacterizationSupport 
             }
             assertTrue(violations.isEmpty(),String.join("\n",violations));
         });
-        pinTranscript("emv-hce-75","",lines);
+        pinTranscript("emv-hce-75","e6708244e8cd007ed2712fc608d1032f752894f01998b444c12ae44865c807ea",lines);
     }
     private OperationResult published() throws Exception {
         return (OperationResult)get(shell,"lastPublishedResultSnapshot");
