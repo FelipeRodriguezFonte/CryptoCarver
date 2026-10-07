@@ -1,8 +1,10 @@
-# Encargo 76 — registro de las dos paradas
+# Encargo 76 — entrega final y registro de las dos paradas
 
-Estado actual: segunda continuación en marcha; el bloqueo de Outcome.inspectorOutput
-se resuelve mediante comprobación de la superficie real, sin cambiar producción.
-Las dos paradas siguientes se conservan como registro histórico.
+Estado final: fases 0, 1 y 2 aprobadas por sus nueve puertas, todas limpias, sin excepción GC.
+Informes extraídos y analyze dividido en etapas sin cambiar su orden ni resultados.
+La corrección autorizada protege las vistas previas en archivos; FULL_LAB conserva la salida.
+El inspector real muestra recuentos y detalles sin secretos. Los bytes de Outcome no son
+una superficie visible. Las dos paradas siguientes se conservan como registro histórico.
 
 ## Parada original (registro hasta 8b2588f)
 
@@ -203,9 +205,9 @@ Cada ejecución borra target/surefire-reports antes de Maven; los recuentos proc
 | 1 | G1 | 454 | 2929 | 0 | 0 | 1 | 0 — limpia |
 | 1 | G2 | 132 | 552 | 0 | 0 | 0 | 0 — limpia |
 | 1 | G3 | 132 | 552 | 0 | 0 | 0 | 0 — limpia |
-| 2 | G1 | — | — | — | — | — | Pendiente |
-| 2 | G2 | — | — | — | — | — | Pendiente |
-| 2 | G3 | — | — | — | — | — | Pendiente |
+| 2 | G1 | 454 | 2929 | 0 | 0 | 1 | 0 — limpia |
+| 2 | G2 | 132 | 552 | 0 | 0 | 0 | 0 — limpia |
+| 2 | G3 | 132 | 552 | 0 | 0 | 0 | 0 — limpia |
 
 G1: `mvn -o -q test -Plow-cpu`.
 G2: `mvn -o -q test -Plow-cpu -DrunUiTests=true`.
@@ -254,3 +256,86 @@ Puertas de fase 1 aprobadas sin excepción GC:
 G1 454 informes / 2929 pruebas / 0 fallos / 0 errores / 1 omitida / exit 0;
 G2 y G3, cada una, 132 informes / 552 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0.
 Se borraron los informes antes de cada puerta. No se retira la extracción porque las tres pasan.
+
+
+## Fase 2 — etapas de analyze
+
+Base: c6ea897. analyze conserva normalización, creación del directorio, lectura/vacío,
+muestreo y preparación de combinaciones; llama a testInputEncodings, escribe CSV y
+resuelve la salida. Sus etapas privadas son testInputEncodings, testFullContent,
+testIndependentBlocks, testStructuredBlocks, testGuessedBlocks, writeNoCandidateOutcome
+y writeCandidateOutcome. AnalysisProgress contiene únicamente los contadores y listas
+ordenadas de una ejecución. El orden sigue siendo codificación → contenido completo →
+estructurados → tamaños heurísticos; CSV → ranking/confianza → TXT → HTML → Outcome.
+Se mantienen los límites de try/catch y la secuencia de cada intento.
+
+Antes y después del troceado: 5 informes / 19 pruebas / 0 fallos / 0 errores / 0 omitidas /
+exit 0. No se modifica ningún test ni digest en fase 2. Contratos de claves aislados:
+2 informes / 4 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0. Todos los literales
+se conservan y los helpers desde las constantes del analizador permanecen byte a byte
+iguales a la base de fase 2. Ninguna clave cambia de propietario.
+
+No se extrae una clase de evidencia: computePaddingEvidence depende del descifrado con
+IV/CipherInputs y de helpers del analizador; un traslado conjunto con evaluatePlaintextQuality
+exigiría un contrato adicional de callback o mover también esa responsabilidad. Se conservan
+ambos métodos intactos, según la decisión previa del mapa, sin introducir ese cambio adicional.
+
+Líneas finales de producción: EncryptedFileAnalyzer.java 1437, escritor 257; analyze 37.
+Higiene tras el troceado: inline=0, emoji=325. No se toca crypto/, pom.xml,
+ModernMainController, UiStateSnapshot, StatusReporter ni OperationResult.
+
+
+Puertas de fase 2 aprobadas sin excepción GC:
+G1 454 informes / 2929 pruebas / 0 fallos / 0 errores / 1 omitida / exit 0;
+G2 y G3, cada una, 132 informes / 552 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0.
+Se borraron los informes antes de cada puerta. Todas pasan: se conserva el troceado.
+
+
+## Líneas de la entrega completa
+
+| Elemento | Base 257dd2b | Tras fase 0 | Tras fase 1 | Final fase 2 |
+| --- | ---: | ---: | ---: | ---: |
+| EncryptedFileAnalyzer.java | 1633 | 1639 | 1396 | 1437 |
+| analyze | 311 | 311 | 311 | 37 |
+| EncryptedFileAnalysisReportWriter.java | — | — | 257 | 257 |
+| Total de ambas clases | 1633 | 1639 | 1653 | 1694 |
+
+El aumento total corresponde a límites de métodos, estado local, clase escritora y la
+opción de privacidad; las responsabilidades quedan separadas. No se cambian los bucles,
+criterios de ranking, resultados ni evidencia durante las extracciones.
+
+## Tests existentes, hallazgos e higiene finales
+
+Tests existentes modificados: ninguno. Claves reasignadas: ninguna; los métodos movidos
+no usan claves de bundles. Los dos contratos de presencia por propietario pasan aislados.
+Los tres tests nuevos pertenecen a este encargo: reproducción de privacidad y digests,
+inspector del shell real, y caracterización de muestreo/sin candidatos. Se conservan
+AppSettings y las superficies persistentes, con restauración y borrado de temporales
+según se detalla en sus fixtures y mapas.
+
+El primer defecto (previews en archivos) queda corregido por autorización expresa.
+La segunda parada fue una aserción en la capa equivocada, retirada y reemplazada por
+controles reales; no se cambió producción por ella. No se descubrieron nuevos defectos
+al fijar las caracterizaciones ni durante las puertas. La extracción opcional de evidencia
+no se realiza por el acoplamiento descrito en el mapa; ambos métodos mantienen su lógica.
+
+Higiene final ejecutada con el bloque exacto del job quality-gates: FXML inline = 0;
+emojis = 325 de 325. Sin imágenes, .local.md, DMG ni ejecutables añadidos al repositorio.
+Todos los Maven fueron secuenciales en CryptoCarver-efa-1. Runtime efectivo comprobado:
+Java 25 en macOS ARM64; no se afirma ejecución Linux/Java 17.
+
+## Lista completa de commits del encargo
+
+- `8b2588f test: reproduce encrypted file report privacy defect before refactor 76`
+- `d7d2529 test: extend encrypted file privacy reproduction to CSV preview`
+- `ab8a9fc fix: require caller authorization for encrypted file report previews`
+- `44364ba test: document encrypted file inspector privacy blocker`
+- `1df985e test: verify encrypted file privacy in real shell inspector`
+- `18763a7 docs: explain encrypted file inspector privacy assertion correction`
+- `9e3ad06 test: record clean phase zero gates for encrypted file analysis`
+- `c6ea897 refactor: extract encrypted file analysis report writer`
+- `HEAD de la entrega — refactor: split encrypted file analysis into ordered stages`
+
+El último commit contiene esta sección y la fase 2. Su hash se obtiene con
+`git log -1 --format='%h %s'`; se entrega también en la respuesta del chat.
+La rama de entrega es codex/encrypted-file-analyzer-1, en el worktree solicitado.

@@ -91,12 +91,30 @@ final class EncryptedFileAnalyzer {
         List<String> algorithms = getAlgorithmCandidatesByKeyLength(key.length);
         List<CipherCombination> combinations = buildCipherCombinations(algorithms);
 
-        int attempts = 0;
-        int successes = 0;
-        int attemptIndex = 0;
-        List<AnalysisCandidate> candidates = new ArrayList<>();
-        List<AnalysisAttempt> attemptLog = new ArrayList<>();
+        AnalysisProgress progress = new AnalysisProgress();
+        testInputEncodings(analysisBytes, key, effectiveOptions, encodingsToTest, combinations, progress);
 
+        Path attemptsLogPath = analysisDirectory.resolve("attempts.csv");
+        writeAttemptLog(attemptsLogPath, progress.attemptLog);
+        if (progress.candidates.isEmpty()) {
+            return writeNoCandidateOutcome(inputFile, analysisDirectory, fileBytes, analysisBytes,
+                    sampled, attemptsLogPath, progress);
+        }
+        return writeCandidateOutcome(inputFile, analysisDirectory, fileBytes, analysisBytes,
+                sampled, attemptsLogPath, effectiveOptions, progress);
+    }
+
+    /** Counters and ordered results shared by the sequential analysis stages. */
+    private static final class AnalysisProgress {
+        private int attempts = 0;
+        private int successes = 0;
+        private int attemptIndex = 0;
+        private final List<AnalysisCandidate> candidates = new ArrayList<>();
+        private final List<AnalysisAttempt> attemptLog = new ArrayList<>();
+    }
+
+    private void testInputEncodings(byte[] analysisBytes, byte[] key, FileAnalysisOptions effectiveOptions,
+            List<FileDataEncoding> encodingsToTest, List<CipherCombination> combinations, AnalysisProgress progress) {
         for (FileDataEncoding inputEncoding : encodingsToTest) {
             byte[] decodedCiphertext;
             try {
@@ -110,226 +128,249 @@ final class EncryptedFileAnalyzer {
             }
 
             if (effectiveOptions.isTestFullContent()) {
-                for (CipherCombination combo : combinations) {
-                    attemptIndex++;
-                    attempts++;
-                    try {
-                        byte[] plaintext = decryptSymmetricBytes(
-                                decodedCiphertext,
-                                key,
-                                combo.algorithm,
-                                combo.mode,
-                                combo.padding);
-                        PaddingEvidence paddingEvidence = computePaddingEvidence(
-                                combo,
-                                "FULL_CONTENT",
-                                0,
-                                decodedCiphertext,
-                                key);
-                        AnalysisCandidate candidate = buildAnalysisCandidate(
-                                combo.algorithm,
-                                combo.mode,
-                                combo.padding,
-                                "FULL_CONTENT",
-                                0,
-                                inputEncoding,
-                                plaintext,
-                                paddingEvidence);
-                        candidates.add(candidate);
-                        attemptLog.add(new AnalysisAttempt(
-                                attemptIndex,
-                                combo.algorithm,
-                                combo.mode,
-                                combo.padding,
-                                "FULL_CONTENT",
-                                0,
-                                inputEncoding,
-                                true,
-                                candidate.score,
-                                candidate.inferredPlainEncoding,
-                                candidate.preview,
-                                ""));
-                        successes++;
-                    } catch (Exception error) {
-                        attemptLog.add(new AnalysisAttempt(
-                                attemptIndex,
-                                combo.algorithm,
-                                combo.mode,
-                                combo.padding,
-                                "FULL_CONTENT",
-                                0,
-                                inputEncoding,
-                                false,
-                                0,
-                                "",
-                                "",
-                                safeErrorMessage(error)));
-                    }
-                }
+                testFullContent(decodedCiphertext, key, inputEncoding, combinations, progress);
             }
 
             if (effectiveOptions.isTestIndependentBlocks()) {
-                int structuredBlockSize = extractStructuredBlockSize(decodedCiphertext);
-                // 1) Structured independent-block format (native CryptoCarver expert mode).
-                for (CipherCombination combo : combinations) {
-                    attemptIndex++;
-                    attempts++;
-                    try {
-                        byte[] plaintext = decryptIndependentBlocks(
-                                decodedCiphertext,
-                                key,
-                                combo.algorithm,
-                                combo.mode,
-                                combo.padding);
-                        PaddingEvidence paddingEvidence = computePaddingEvidence(
-                                combo,
-                                "INDEPENDENT_BLOCKS_STRUCTURED",
-                                structuredBlockSize,
-                                decodedCiphertext,
-                                key);
-                        AnalysisCandidate candidate = buildAnalysisCandidate(
-                                combo.algorithm,
-                                combo.mode,
-                                combo.padding,
-                                "INDEPENDENT_BLOCKS_STRUCTURED",
-                                structuredBlockSize,
-                                inputEncoding,
-                                plaintext,
-                                paddingEvidence);
-                        candidates.add(candidate);
-                        attemptLog.add(new AnalysisAttempt(
-                                attemptIndex,
-                                combo.algorithm,
-                                combo.mode,
-                                combo.padding,
-                                "INDEPENDENT_BLOCKS_STRUCTURED",
-                                structuredBlockSize,
-                                inputEncoding,
-                                true,
-                                candidate.score,
-                                candidate.inferredPlainEncoding,
-                                candidate.preview,
-                                ""));
-                        successes++;
-                    } catch (Exception error) {
-                        attemptLog.add(new AnalysisAttempt(
-                                attemptIndex,
-                                combo.algorithm,
-                                combo.mode,
-                                combo.padding,
-                                "INDEPENDENT_BLOCKS_STRUCTURED",
-                                structuredBlockSize,
-                                inputEncoding,
-                                false,
-                                0,
-                                "",
-                                "",
-                                safeErrorMessage(error)));
-                    }
-                }
+                testIndependentBlocks(decodedCiphertext, key, inputEncoding, effectiveOptions, combinations, progress);
+            }
 
-                // 2) Heuristic independent-block mode on raw chunks with user-provided sizes.
-                for (int blockSize : effectiveOptions.getCandidateBlockSizes()) {
-                    for (CipherCombination combo : combinations) {
-                        attemptIndex++;
-                        attempts++;
-                        try {
-                            byte[] plaintext = decryptIndependentBlocksRawGuess(
-                                    decodedCiphertext,
-                                    key,
-                                    combo.algorithm,
-                                    combo.mode,
-                                    combo.padding,
-                                    blockSize);
-                            PaddingEvidence paddingEvidence = computePaddingEvidence(
-                                    combo,
-                                    "INDEPENDENT_BLOCKS_GUESS",
-                                    blockSize,
-                                    decodedCiphertext,
-                                    key);
-                            AnalysisCandidate candidate = buildAnalysisCandidate(
-                                    combo.algorithm,
-                                    combo.mode,
-                                    combo.padding,
-                                    "INDEPENDENT_BLOCKS_GUESS",
-                                    blockSize,
-                                    inputEncoding,
-                                    plaintext,
-                                    paddingEvidence);
-                            candidates.add(candidate);
-                            attemptLog.add(new AnalysisAttempt(
-                                    attemptIndex,
-                                    combo.algorithm,
-                                    combo.mode,
-                                    combo.padding,
-                                    "INDEPENDENT_BLOCKS_GUESS",
-                                    blockSize,
-                                    inputEncoding,
-                                    true,
-                                    candidate.score,
-                                    candidate.inferredPlainEncoding,
-                                    candidate.preview,
-                                    ""));
-                            successes++;
-                        } catch (Exception error) {
-                            attemptLog.add(new AnalysisAttempt(
-                                    attemptIndex,
-                                    combo.algorithm,
-                                    combo.mode,
-                                    combo.padding,
-                                    "INDEPENDENT_BLOCKS_GUESS",
-                                    blockSize,
-                                    inputEncoding,
-                                    false,
-                                    0,
-                                    "",
-                                    "",
-                                    safeErrorMessage(error)));
-                        }
-                    }
+        }
+    }
+
+    private void testFullContent(byte[] decodedCiphertext, byte[] key, FileDataEncoding inputEncoding,
+            List<CipherCombination> combinations, AnalysisProgress progress) {
+        for (CipherCombination combo : combinations) {
+            progress.attemptIndex++;
+            progress.attempts++;
+            try {
+                byte[] plaintext = decryptSymmetricBytes(
+                        decodedCiphertext,
+                        key,
+                        combo.algorithm,
+                        combo.mode,
+                        combo.padding);
+                PaddingEvidence paddingEvidence = computePaddingEvidence(
+                        combo,
+                        "FULL_CONTENT",
+                        0,
+                        decodedCiphertext,
+                        key);
+                AnalysisCandidate candidate = buildAnalysisCandidate(
+                        combo.algorithm,
+                        combo.mode,
+                        combo.padding,
+                        "FULL_CONTENT",
+                        0,
+                        inputEncoding,
+                        plaintext,
+                        paddingEvidence);
+                progress.candidates.add(candidate);
+                progress.attemptLog.add(new AnalysisAttempt(
+                        progress.attemptIndex,
+                        combo.algorithm,
+                        combo.mode,
+                        combo.padding,
+                        "FULL_CONTENT",
+                        0,
+                        inputEncoding,
+                        true,
+                        candidate.score,
+                        candidate.inferredPlainEncoding,
+                        candidate.preview,
+                        ""));
+                progress.successes++;
+            } catch (Exception error) {
+                progress.attemptLog.add(new AnalysisAttempt(
+                        progress.attemptIndex,
+                        combo.algorithm,
+                        combo.mode,
+                        combo.padding,
+                        "FULL_CONTENT",
+                        0,
+                        inputEncoding,
+                        false,
+                        0,
+                        "",
+                        "",
+                        safeErrorMessage(error)));
+            }
+        }
+    }
+
+    private void testIndependentBlocks(byte[] decodedCiphertext, byte[] key, FileDataEncoding inputEncoding,
+            FileAnalysisOptions effectiveOptions, List<CipherCombination> combinations, AnalysisProgress progress) {
+        int structuredBlockSize = extractStructuredBlockSize(decodedCiphertext);
+        // 1) Structured independent-block format (native CryptoCarver expert mode).
+        testStructuredBlocks(decodedCiphertext, key, inputEncoding, structuredBlockSize, combinations, progress);
+
+        // 2) Heuristic independent-block mode on raw chunks with user-provided sizes.
+        testGuessedBlocks(decodedCiphertext, key, inputEncoding, effectiveOptions, combinations, progress);
+    }
+
+    private void testStructuredBlocks(byte[] decodedCiphertext, byte[] key, FileDataEncoding inputEncoding,
+            int structuredBlockSize, List<CipherCombination> combinations, AnalysisProgress progress) {
+        for (CipherCombination combo : combinations) {
+            progress.attemptIndex++;
+            progress.attempts++;
+            try {
+                byte[] plaintext = decryptIndependentBlocks(
+                        decodedCiphertext,
+                        key,
+                        combo.algorithm,
+                        combo.mode,
+                        combo.padding);
+                PaddingEvidence paddingEvidence = computePaddingEvidence(
+                        combo,
+                        "INDEPENDENT_BLOCKS_STRUCTURED",
+                        structuredBlockSize,
+                        decodedCiphertext,
+                        key);
+                AnalysisCandidate candidate = buildAnalysisCandidate(
+                        combo.algorithm,
+                        combo.mode,
+                        combo.padding,
+                        "INDEPENDENT_BLOCKS_STRUCTURED",
+                        structuredBlockSize,
+                        inputEncoding,
+                        plaintext,
+                        paddingEvidence);
+                progress.candidates.add(candidate);
+                progress.attemptLog.add(new AnalysisAttempt(
+                        progress.attemptIndex,
+                        combo.algorithm,
+                        combo.mode,
+                        combo.padding,
+                        "INDEPENDENT_BLOCKS_STRUCTURED",
+                        structuredBlockSize,
+                        inputEncoding,
+                        true,
+                        candidate.score,
+                        candidate.inferredPlainEncoding,
+                        candidate.preview,
+                        ""));
+                progress.successes++;
+            } catch (Exception error) {
+                progress.attemptLog.add(new AnalysisAttempt(
+                        progress.attemptIndex,
+                        combo.algorithm,
+                        combo.mode,
+                        combo.padding,
+                        "INDEPENDENT_BLOCKS_STRUCTURED",
+                        structuredBlockSize,
+                        inputEncoding,
+                        false,
+                        0,
+                        "",
+                        "",
+                        safeErrorMessage(error)));
+            }
+        }
+    }
+
+    private void testGuessedBlocks(byte[] decodedCiphertext, byte[] key, FileDataEncoding inputEncoding,
+            FileAnalysisOptions effectiveOptions, List<CipherCombination> combinations, AnalysisProgress progress) {
+        for (int blockSize : effectiveOptions.getCandidateBlockSizes()) {
+            for (CipherCombination combo : combinations) {
+                progress.attemptIndex++;
+                progress.attempts++;
+                try {
+                    byte[] plaintext = decryptIndependentBlocksRawGuess(
+                            decodedCiphertext,
+                            key,
+                            combo.algorithm,
+                            combo.mode,
+                            combo.padding,
+                            blockSize);
+                    PaddingEvidence paddingEvidence = computePaddingEvidence(
+                            combo,
+                            "INDEPENDENT_BLOCKS_GUESS",
+                            blockSize,
+                            decodedCiphertext,
+                            key);
+                    AnalysisCandidate candidate = buildAnalysisCandidate(
+                            combo.algorithm,
+                            combo.mode,
+                            combo.padding,
+                            "INDEPENDENT_BLOCKS_GUESS",
+                            blockSize,
+                            inputEncoding,
+                            plaintext,
+                            paddingEvidence);
+                    progress.candidates.add(candidate);
+                    progress.attemptLog.add(new AnalysisAttempt(
+                            progress.attemptIndex,
+                            combo.algorithm,
+                            combo.mode,
+                            combo.padding,
+                            "INDEPENDENT_BLOCKS_GUESS",
+                            blockSize,
+                            inputEncoding,
+                            true,
+                            candidate.score,
+                            candidate.inferredPlainEncoding,
+                            candidate.preview,
+                            ""));
+                    progress.successes++;
+                } catch (Exception error) {
+                    progress.attemptLog.add(new AnalysisAttempt(
+                            progress.attemptIndex,
+                            combo.algorithm,
+                            combo.mode,
+                            combo.padding,
+                            "INDEPENDENT_BLOCKS_GUESS",
+                            blockSize,
+                            inputEncoding,
+                            false,
+                            0,
+                            "",
+                            "",
+                            safeErrorMessage(error)));
                 }
             }
         }
+    }
 
-        Path attemptsLogPath = analysisDirectory.resolve("attempts.csv");
-        writeAttemptLog(attemptsLogPath, attemptLog);
-
-        if (candidates.isEmpty()) {
-            StringBuilder noResult = new StringBuilder();
-            noResult.append("=== ENCRYPTED FILE ANALYSIS REPORT ===\n\n");
-            noResult.append("No valid decryption candidates found.\n\n");
-            noResult.append("File: ").append(inputFile).append("\n");
-            noResult.append("File size: ").append(fileBytes.length).append(" bytes\n");
-            noResult.append("Tested sample: ").append(analysisBytes.length).append(" bytes");
-            if (sampled) {
-                noResult.append(" (sampled)");
-            }
-            noResult.append("\n");
-            noResult.append("Attempts: ").append(attempts).append("\n");
-            noResult.append("Successes: ").append(successes).append("\n\n");
-            noResult.append("Analysis Directory: ").append(analysisDirectory).append("\n");
-            noResult.append("Attempt Log: ").append(attemptsLogPath).append("\n\n");
-            noResult.append("Tips:\n");
-            noResult.append("- Verify key and IV/Nonce.\n");
-            noResult.append("- Provide GCM/Auth TAG if needed.\n");
-            noResult.append("- Try enabling more input encodings and chunk sizes.\n");
-            Files.writeString(analysisDirectory.resolve("report.txt"), noResult.toString(), StandardCharsets.UTF_8);
-            EncryptedFileAnalysisReportWriter.writeHtmlReport(
-                    analysisDirectory.resolve("report.html"),
-                    inputFile,
-                    fileBytes.length,
-                    analysisBytes.length,
-                    sampled,
-                    attempts,
-                    successes,
-                    List.of(),
-                    List.of(),
-                    attemptsLogPath);
-            return new Outcome(noResult.toString(), "Encrypted file analysis finished: no matches",
-                    analysisBytes, null, null, null, null);
+    private Outcome writeNoCandidateOutcome(Path inputFile, Path analysisDirectory, byte[] fileBytes,
+            byte[] analysisBytes, boolean sampled, Path attemptsLogPath, AnalysisProgress progress) throws Exception {
+        StringBuilder noResult = new StringBuilder();
+        noResult.append("=== ENCRYPTED FILE ANALYSIS REPORT ===\n\n");
+        noResult.append("No valid decryption candidates found.\n\n");
+        noResult.append("File: ").append(inputFile).append("\n");
+        noResult.append("File size: ").append(fileBytes.length).append(" bytes\n");
+        noResult.append("Tested sample: ").append(analysisBytes.length).append(" bytes");
+        if (sampled) {
+            noResult.append(" (sampled)");
         }
+        noResult.append("\n");
+        noResult.append("Attempts: ").append(progress.attempts).append("\n");
+        noResult.append("Successes: ").append(progress.successes).append("\n\n");
+        noResult.append("Analysis Directory: ").append(analysisDirectory).append("\n");
+        noResult.append("Attempt Log: ").append(attemptsLogPath).append("\n\n");
+        noResult.append("Tips:\n");
+        noResult.append("- Verify key and IV/Nonce.\n");
+        noResult.append("- Provide GCM/Auth TAG if needed.\n");
+        noResult.append("- Try enabling more input encodings and chunk sizes.\n");
+        Files.writeString(analysisDirectory.resolve("report.txt"), noResult.toString(), StandardCharsets.UTF_8);
+        EncryptedFileAnalysisReportWriter.writeHtmlReport(
+                analysisDirectory.resolve("report.html"),
+                inputFile,
+                fileBytes.length,
+                analysisBytes.length,
+                sampled,
+                progress.attempts,
+                progress.successes,
+                List.of(),
+                List.of(),
+                attemptsLogPath);
+        return new Outcome(noResult.toString(), "Encrypted file analysis finished: no matches",
+                analysisBytes, null, null, null, null);
+    }
 
-        List<AnalysisCandidate> topCandidates = selectTopCandidates(candidates, effectiveOptions.getMaxResults());
+    private Outcome writeCandidateOutcome(Path inputFile, Path analysisDirectory, byte[] fileBytes,
+            byte[] analysisBytes, boolean sampled, Path attemptsLogPath, FileAnalysisOptions effectiveOptions,
+            AnalysisProgress progress) throws Exception {
+        List<AnalysisCandidate> topCandidates = selectTopCandidates(progress.candidates, effectiveOptions.getMaxResults());
         assignConfidencePercentages(topCandidates);
         List<AnalysisCandidate> probableCandidates = selectProbableCandidates(topCandidates);
         AnalysisCandidate best = topCandidates.get(0);
@@ -339,8 +380,8 @@ final class EncryptedFileAnalyzer {
                 fileBytes.length,
                 analysisBytes.length,
                 sampled,
-                attempts,
-                successes,
+                progress.attempts,
+                progress.successes,
                 topCandidates,
                 probableCandidates,
                 analysisDirectory,
@@ -352,16 +393,16 @@ final class EncryptedFileAnalyzer {
                 fileBytes.length,
                 analysisBytes.length,
                 sampled,
-                attempts,
-                successes,
+                progress.attempts,
+                progress.successes,
                 topCandidates,
                 probableCandidates,
                 attemptsLogPath);
 
         Map<String, String> details = new HashMap<>();
         details.put("File", inputFile.toString());
-        details.put("Attempts", String.valueOf(attempts));
-        details.put("Successful Candidates", String.valueOf(successes));
+        details.put("Attempts", String.valueOf(progress.attempts));
+        details.put("Successful Candidates", String.valueOf(progress.successes));
         details.put("Best Algorithm", best.algorithm);
         details.put("Best Mode", best.mode);
         details.put("Best Padding", best.padding);
