@@ -3,7 +3,6 @@ package com.cryptocarver.ui;
 import com.cryptocarver.crypto.EmvTlv;
 
 import com.cryptocarver.crypto.EMVOperations;
-import com.cryptocarver.crypto.VisaHceOperations;
 import com.cryptocarver.crypto.MastercardDataStorage;
 import com.cryptocarver.crypto.MastercardIccDynamicNumber;
 import com.cryptocarver.model.OperationDetail;
@@ -160,6 +159,34 @@ public class EMVController {
                     () -> odaResultArea), () -> mainController);
         }
         return emvOdaCoordinator;
+    }
+
+    private EmvHceCoordinator emvHceCoordinator;
+    private EmvHceCoordinator emvHceCoordinator() {
+        if (emvHceCoordinator == null) {
+            emvHceCoordinator = new EmvHceCoordinator(new EmvHceCoordinator.View(
+                    () -> hceUdkField,
+                    () -> hceYearField,
+                    () -> hceHoursField,
+                    () -> hceCounterField,
+                    () -> hceMsdLukField,
+                    () -> hceQvsdcLukField,
+                    () -> hceMsdAtcField,
+                    () -> hceDeviceTypeField,
+                    () -> hceAmountField,
+                    () -> hceOtherAmountField,
+                    () -> hceCountryField,
+                    () -> hceTvrField,
+                    () -> hceCurrencyField,
+                    () -> hceDateField,
+                    () -> hceTypeField,
+                    () -> hceUnField,
+                    () -> hceAipField,
+                    () -> hceQvsdcAtcField,
+                    () -> hceCvrField,
+                    () -> hceResultArea), () -> mainController);
+        }
+        return emvHceCoordinator;
     }
 
     private StatusReporter mainController;
@@ -533,67 +560,13 @@ public class EMVController {
                 .details(details).status(t(statusKey)).build());
     }
 
-    public void handleHceLoadExample() {
-        hceUdkField.setText("94E3194C02105E3B153438D562D5A49D");
-        hceYearField.setText("26"); hceHoursField.setText("6431"); hceCounterField.setText("01");
-        hceMsdLukField.clear(); hceQvsdcLukField.clear();
-        hceMsdAtcField.setText("0001"); hceDeviceTypeField.setText("AAAA000000000001");
-        hceAmountField.setText("000000001000"); hceOtherAmountField.setText("000000000000");
-        hceCountryField.setText("0710"); hceTvrField.setText("0000000000");
-        hceCurrencyField.setText("0710"); hceDateField.setText("130205");
-        hceTypeField.setText("00"); hceUnField.setText("30901B6A");
-        hceAipField.setText("3C00"); hceQvsdcAtcField.setText("0055");
-        hceCvrField.setText("03A4A082");
-        emvShow(hceResultArea, t("module.emv.hce.exampleLoaded"));
-    }
+    public void handleHceLoadExample() { emvHceCoordinator().handleHceLoadExample(); }
 
-    public void handleHceLuk() {
-        try {
-            String udk = emvHex(hceUdkField, "module.emv.hce.udk", 16);
-            String year = smText(hceYearField), hours = smText(hceHoursField), counter = smText(hceCounterField);
-            if (!year.matches("\\d{1,2}")) throw new IllegalArgumentException(t("module.emv.hce.yearInvalid"));
-            if (!hours.matches("\\d{4}")) throw new IllegalArgumentException(t("module.emv.hce.hoursInvalid"));
-            if (!counter.matches("\\d{2}")) throw new IllegalArgumentException(t("module.emv.hce.counterInvalid"));
-            String luk = VisaHceOperations.limitedUseKey(udk, year, hours, counter);
-            hceMsdLukField.setText(luk); hceQvsdcLukField.setText(luk);
-            emvShow(hceResultArea, t("module.emv.hce.lukResult", luk));
-            emvPublish("module.emv.hce.lukAction", "module.emv.hce.status", luk, true,
-                    java.util.List.of(OperationDetail.secretDetail("UDK", udk), OperationDetail.secretDetail("LUK", luk)));
-        } catch (Exception e) { emvShow(hceResultArea, t("module.emv.hce.error", e.getMessage())); }
-    }
+    public void handleHceLuk() { emvHceCoordinator().handleHceLuk(); }
 
-    public void handleHceMsd() {
-        try {
-            String luk = emvHex(hceMsdLukField, "module.emv.hce.luk", 16);
-            String atc = emvHex(hceMsdAtcField, "module.emv.hce.atc", 2);
-            String device = emvHex(hceDeviceTypeField, "module.emv.hce.deviceType", 8);
-            String value = VisaHceOperations.msdVerificationValue(luk, atc, device);
-            emvShow(hceResultArea, t("module.emv.hce.msdResult", value));
-            emvPublish("module.emv.hce.msdAction", "module.emv.hce.status", value, false,
-                    java.util.List.of(OperationDetail.secretDetail("LUK", luk), OperationDetail.publicDetail("MSD", value)));
-        } catch (Exception e) { emvShow(hceResultArea, t("module.emv.hce.error", e.getMessage())); }
-    }
+    public void handleHceMsd() { emvHceCoordinator().handleHceMsd(); }
 
-    public void handleHceQvsdc() {
-        try {
-            String luk = emvHex(hceQvsdcLukField, "module.emv.hce.luk", 16);
-            String terminal = emvHex(hceAmountField, "module.emv.hce.amount", 6)
-                    + emvHex(hceOtherAmountField, "module.emv.hce.otherAmount", 6)
-                    + emvHex(hceCountryField, "module.emv.hce.country", 2)
-                    + emvHex(hceTvrField, "module.emv.hce.tvr", 5)
-                    + emvHex(hceCurrencyField, "module.emv.hce.currency", 2)
-                    + emvHex(hceDateField, "module.emv.hce.date", 3)
-                    + emvHex(hceTypeField, "module.emv.hce.type", 1)
-                    + emvHex(hceUnField, "module.emv.hce.un", 4);
-            String chip = emvHex(hceAipField, "module.emv.hce.aip", 2)
-                    + emvHex(hceQvsdcAtcField, "module.emv.hce.atc", 2)
-                    + emvHex(hceCvrField, "module.emv.hce.cvr", 4);
-            String value = VisaHceOperations.qvsdcCryptogram(luk, terminal, chip);
-            emvShow(hceResultArea, t("module.emv.hce.qvsdcResult", value));
-            emvPublish("module.emv.hce.qvsdcAction", "module.emv.hce.status", value, false,
-                    java.util.List.of(OperationDetail.secretDetail("LUK", luk), OperationDetail.publicDetail("qVSDC", value)));
-        } catch (Exception e) { emvShow(hceResultArea, t("module.emv.hce.error", e.getMessage())); }
-    }
+    public void handleHceQvsdc() { emvHceCoordinator().handleHceQvsdc(); }
 
     public void handleDsLoadExample() {
         dsIdField.setText("5168624300900697"); dsOperatorIdField.setText("8199829983998499");
