@@ -9,14 +9,10 @@ import com.cryptocarver.model.process.ProcessEngine;
 import com.cryptocarver.model.process.Representation;
 import com.cryptocarver.service.I18nService;
 import javafx.fxml.FXML;
-import javafx.geometry.Point2D;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.*;
 import javafx.scene.transform.Scale;
 import javafx.stage.FileChooser;
@@ -92,6 +88,7 @@ public class ProcessDesignerController {
     private boolean snapToGrid = true;
     private ProcessExecutionCoordinator processExecutionCoordinator;
     private ProcessPaletteCoordinator processPaletteCoordinator;
+    private ProcessCanvasEventsCoordinator processCanvasEventsCoordinator;
 
     // Secrets in-memory map: nodeId -> (paramKey -> char[])
     final Map<String, Map<String, char[]>> transientSecrets = new HashMap<>();
@@ -164,70 +161,22 @@ public class ProcessDesignerController {
         select(input);
     }
 
-    private void initCanvasEventHandlers() {
-        workflowCanvas.setOnScroll(e -> {
-            if (e.isControlDown() || e.isShortcutDown()) {
-                double delta = e.getDeltaY() > 0 ? 0.08 : -0.08;
-                setZoom(currentZoom + delta);
-                e.consume();
-            }
-        });
-
-        workflowCanvas.setOnMouseClicked(e -> {
-            if (e.getTarget() == workflowCanvas) {
-                selected = null;
-                selectedNodeIds.clear();
-                selectedConnection = null;
-                updateSelectionUi();
-                redraw();
-            }
-        });
-
-        workflowCanvas.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.DELETE || e.getCode() == KeyCode.BACK_SPACE) {
-                handleDeleteSelected();
-                e.consume();
-            } else if (e.isShortcutDown() && e.getCode() == KeyCode.Z) {
-                if (e.isShiftDown()) handleRedo();
-                else handleUndo();
-                e.consume();
-            } else if (e.isShortcutDown() && e.getCode() == KeyCode.Y) {
-                handleRedo();
-                e.consume();
-            } else if (e.isShortcutDown() && e.getCode() == KeyCode.D) {
-                handleDuplicateSelected();
-                e.consume();
-            } else if (e.getCode() == KeyCode.ESCAPE) {
-                selected = null;
-                selectedNodeIds.clear();
-                selectedConnection = null;
-                if (connectionCoordinator.interactiveCurve() != null) cancelConnectionDrag();
-                updateSelectionUi();
-                redraw();
-                e.consume();
-            } else if (e.getCode().isArrowKey()) {
-                double step = e.isShiftDown() ? 10.0 : 1.0;
-                if (selected != null) {
-                    if (e.getCode() == KeyCode.UP) selected.y -= step;
-                    else if (e.getCode() == KeyCode.DOWN) selected.y += step;
-                    else if (e.getCode() == KeyCode.LEFT) selected.x -= step;
-                    else if (e.getCode() == KeyCode.RIGHT) selected.x += step;
-                    updateCanvasGeometry();
-                    redraw();
-                    e.consume();
-                }
-            }
-        });
-
-        workflowCanvas.setOnMouseMoved(e -> {
-            if (connectionCoordinator.isDragging()) {
-                ProcessDefinition.Node sourceNode = connectionCoordinator.dragSourceNode();
-                Point2D local = workflowCanvas.sceneToLocal(e.getSceneX(), e.getSceneY());
-                updateInteractiveCurve(sourceNode.x + 150, sourceNode.y + 35, local.getX(), local.getY());
-            }
-        });
+    private ProcessCanvasEventsCoordinator processCanvasEventsCoordinator() {
+        if (processCanvasEventsCoordinator == null) processCanvasEventsCoordinator = new ProcessCanvasEventsCoordinator();
+        return processCanvasEventsCoordinator;
     }
 
+    private ProcessCanvasEventsCoordinator.View canvasEventsView() {
+        return new ProcessCanvasEventsCoordinator.View(() -> workflowCanvas, () -> currentZoom, this::setZoom,
+                this::handleDeleteSelected, this::handleUndo, this::handleRedo, this::handleDuplicateSelected,
+                () -> selected, () -> { selected = null; selectedNodeIds.clear(); selectedConnection = null; },
+                this::updateSelectionUi, this::redraw, this::updateCanvasGeometry,
+                connectionCoordinator::isDragging, connectionCoordinator::dragSourceNode,
+                () -> connectionCoordinator.interactiveCurve() != null,
+                this::cancelConnectionDrag, this::updateInteractiveCurve);
+    }
+
+    private void initCanvasEventHandlers() { processCanvasEventsCoordinator().initCanvasEventHandlers(canvasEventsView()); }
 
     // --- Searchable Palette ---
     private ProcessPaletteCoordinator processPaletteCoordinator() {
