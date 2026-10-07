@@ -217,3 +217,13 @@ Commits de la segunda continuación:
 - Commit que contiene esta sección (`docs: record accepted ODA and pre-extraction HCE privacy blocker`): informe de continuación y estado final.
 
 Se conserva toda la historia y ambos registros de parada. Rama limpia tras el commit de informe, sin push ni merge. El encargo queda detenido en la caracterización HCE por un fallo de privacidad fuera de la excepción autorizada.
+
+## Tercera continuación: corrección de privacidad autorizada
+
+El usuario autoriza exclusivamente añadir `luk` a HISTORY_SENSITIVE_TOKENS de UiStateSnapshot, sin ningún otro cambio en ese archivo. Se añade una sola entrada en la misma línea; el resto es idéntico al commit anterior. Esta corrección de privacidad se separa de la extracción HCE.
+
+### Paso 1: alcance y reproducción verde
+
+Inventario de los **1511 ids FXML distintos**, usando los mismos límites camel-case de nameWords, y revisión de declaraciones de controles Java: los únicos controles que incorporan el token nuevo son **hceMsdLukField y hceQvsdcLukField**, ambos TextField de EMVController. Antes no se clasificaban como sensibles; después sí. Ningún otro control cambia. hceUdkField ya era sensible y sigue igual. Inventario local: target/emv75-luk-classification-inventory.json.
+
+La reproducción EmvHceCharacterizationUITest pasa a verde **sin modificar sus aserciones ni su código**. Comando focalizado con UiStateSnapshotTest existente: `mvn -o -q test -Plow-cpu -DrunUiTests=true -Dtest=EmvHceCharacterizationUITest,UiStateSnapshotTest`; dos informes seleccionados / 11 pruebas / 0 fallos, errores u omitidas / exit 0. Los tests existentes se mantienen intactos en este paso; ninguno depende de LUK en claro. Log: target/emv75-luk-fix-focused.log.
