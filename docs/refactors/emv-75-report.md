@@ -1,4 +1,8 @@
-# Encargo 75: extracción EMV y parada en ODA
+# Encargo 75: EMV, paradas y continuaciones
+
+Estado actual tras la segunda continuación: **SM validada; ODA aceptada por excepción GC contrastada; HCE bloqueada antes de extraer por filtración de LUK en historial. Controlador: 810 líneas.** El detalle más reciente está en la última sección.
+
+## Registro inicial y primera parada
 
 **Secure Messaging queda extraído y validado. ODA se retiró al fallar G3 y su reejecución aislada. HCE no se inició.** Se aplicó la regla de detenerse ante una puerta no limpia, conservando la última extracción validada.
 
@@ -145,3 +149,71 @@ Commits de esta continuación:
 
 - `e9e3944`: recuperación de ODA solo en código.
 - Commit que contiene esta sección (`docs: withdraw recovered ODA after G1 GC failure and record continuation`): retirada del código recuperado, recuentos y actualización del informe. No reescribe ninguno de los commits anteriores.
+
+## Segunda continuación: excepción en las tres puertas y fallo previo de HCE
+
+El usuario amplía expresamente la excepción GC a **G1/G2/G3**, manteniendo las dos condiciones: los únicos fallos deben ser exactamente los tres tests de ExpandedViewerLifecycleUITest y la misma clase, aislada con las opciones correspondientes, debe reproducir los mismos fallos sobre el commit base de la fase. Cualquier fallo distinto continúa bloqueando el avance. No se modifica ni se excluye el test GC.
+
+### ODA recuperada y aceptada
+
+`626ee3b` recupera **solo código**, idéntico byte a byte a 06dd269 (EMVController y EmvOdaCoordinator), sin reescribir historia ni borrar documentación. Antes de las puertas pasan en invocación exclusiva los guards:
+
+```sh
+mvn -o -q test -Plow-cpu -Dtest=SpecializedFeedbackHeadlessTest,EmvOdaPaneTranslationTest
+```
+
+Las tres puertas ODA terminan con exit 1, pero sus únicos fallos son los tres métodos GC ya documentados, con `Closed UI fixture is still strongly reachable`. Se reejecuta la clase aislada con extracción y luego en base 45e5a1b, sin ODA, con las opciones exactas de cada puerta más `-Dtest=ExpandedViewerLifecycleUITest`. Coinciden métodos y diagnóstico; los identificadores de instancia de Stage no se usan como aserción. Los recuentos son:
+
+| Puerta ODA | Reintento con extracción (inf./pr./fallos/errores/omitidas/exit) | Base 45e5a1b, aislada (inf./pr./fallos/errores/omitidas/exit) |
+| --- | --- | --- |
+| G1 | 1 / 3 / 3 / 0 / 0 / 1 | 1 / 3 / 3 / 0 / 0 / 1 |
+| G2 | 1 / 3 / 3 / 0 / 0 / 1 | 1 / 3 / 3 / 0 / 0 / 1 |
+| G3 | 1 / 3 / 3 / 0 / 0 / 1 | 1 / 3 / 3 / 0 / 0 / 1 |
+
+Así se satisfacen las dos condiciones de la excepción en cada puerta. **Aceptación autorizada, no éxito limpio de Maven**. La base temporal se mide en el mismo worktree y se restauran inmediatamente los archivos de la extracción antes de la siguiente ejecución. No se compila main. Un solo Maven simultáneo. Los XML confirman Mac OS X / Homebrew Java 25; no se declara una ejecución CI Linux/Java 17. Las caracterizaciones fijadas de ODA y Secure Messaging pasan en las tres puertas, sin cambiar sus digests.
+
+`635a178` registra la aceptación y los nueve recuentos ODA (tres puertas y seis aisladas) en emv-6-gates.md. Logs/manifiesto: target/emv75-oda-cont2-*.log y target/emv75-oda-cont2-results.json. Informes borrados antes de todas las ejecuciones; cada fila cuenta solo XML frescos. Las puertas completas usan los comandos originales sin selección ni exclusión de tests.
+
+### Estado de las nueve puertas, tras esta continuación
+
+La fase 5 conserva sus resultados originales; la fase 6 usa las últimas ejecuciones aceptadas. Los resultados anteriores y las dos paradas se conservan arriba.
+
+| Fase | Puerta | Informes | Pruebas | Fallos | Errores | Omitidas | Exit | Aceptación |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 5 | G1 | 449 | 2917 | 0 | 0 | 1 | 0 | Limpia |
+| 5 | G2 | 129 | 547 | 0 | 0 | 0 | 0 | Limpia |
+| 5 | G3 | 129 | 547 | 0 | 0 | 0 | 0 | Limpia |
+| 6 | G1 | 450 | 2918 | 3 | 0 | 1 | 1 | Excepción GC contrastada |
+| 6 | G2 | 130 | 548 | 3 | 0 | 0 | 1 | Excepción GC contrastada |
+| 6 | G3 | 130 | 548 | 3 | 0 | 0 | 1 | Excepción GC contrastada |
+| 7 HCE | G1 | — | — | — | — | — | — | No ejecutada: caracterización roja |
+| 7 HCE | G2 | — | — | — | — | — | — | No ejecutada: caracterización roja |
+| 7 HCE | G3 | — | — | — | — | — | — | No ejecutada: caracterización roja |
+
+### HCE: mapa y reproducción de privacidad, extracción bloqueada
+
+`f15cd16` añade el mapa completo [emv-7-map.md](emv-7-map.md): cuatro handlers HCE previstos para EmvHceCoordinator, record View, Supplier<StatusReporter>, getter perezoso y delegados de una línea, campos FXML conservados, helpers compartidos que siguen en EMVController y propietario final de cada clave module.emv.*. backup/emv-2-wip sigue siendo referencia de lectura, sin merge ni cherry-pick. No se necesita reasignar tests de fuente.
+
+Sobre HCE **sin extraer**, el nuevo EmvHceCharacterizationUITest comprueba LUK, MSD, qVSDC, clasificación de salida/detalles, validación localizada EN/ES, y privacidad real del shell. Usa UDK inventada fija y el LUK derivado; restaura AppSettings, idioma, Shelf y test.mode, y limpia historial temporal y UI.
+
+Dos ejecuciones focalizadas dan cada una **1 informe / 1 prueba / 1 fallo / 0 errores / 0 omitidas / exit 1**. El fallo de privacidad está en historial bajo MASKED y REDACTED, tras LUK, MSD y qVSDC. El diagnóstico confirma tres entradas por perfil: `EMVController.hceUdkField` está redacted, pero `EMVController.hceMsdLukField` y `EMVController.hceQvsdcLukField` conservan en claro el mismo LUK de 32 caracteres. Resultados, Shelf, estado y visor expandido no muestran ese valor en estas comprobaciones.
+
+La lista de tokens sensibles de UiStateSnapshot reconoce udk y **no reconoce luk**. Es un defecto anterior a la extracción HCE, reproducido sobre el controlador original. Evidencia completa y salida: [emv-7-characterization-failures.md](emv-7-characterization-failures.md); los JSON de diagnóstico en target contienen solo datos inventados de la fixture aislada.
+
+`5c34231` conserva la reproducción roja y su evidencia. **No se fija SHA-256 de una caracterización fallida, no se relajan aserciones y no se comienza la extracción ni sus puertas.** El test HCE queda deliberadamente rojo y la caracterización incompleta; no se declara una rama con suite limpia. La corrección de esa clasificación requeriría modificar comportamiento de privacidad y UiStateSnapshot, expresamente fuera del alcance autorizado. No se tocó ese archivo ni se ocultó el LUK retirándolo de las aserciones. Este fallo es distinto de GC y no queda cubierto por la excepción.
+
+### Entrega actual y commits
+
+**EMVController: 988 → 810 líneas.** Secure Messaging y ODA permanecen extraídos. HCE sigue en el controlador original, con mapa y reproducción del bloqueo. No hay EmvHceCoordinator ni cambio de producción HCE que retirar. No se completaron los pasos c/d de esa fase.
+
+Ningún test existente modificado respecto a e002737; se añaden tres tests UI (SM/ODA fijados; HCE rojo) y un soporte. No se relajan umbrales ni aserciones. No se tocan crypto/, pom.xml, ModernMainController, UiStateSnapshot, StatusReporter ni OperationResult. Higiene del job quality-gates, ejecutada de nuevo con sus comandos exactos: **0 estilos en línea / 325 emojis de 325**, sin añadidos. git diff --check pasa. No se generaron imágenes, .local.md, DMG ni ejecutables.
+
+Commits de la segunda continuación:
+
+- `626ee3b`: recuperación ODA solo en código, idéntica a 06dd269.
+- `635a178`: puertas ODA aceptadas con recuentos de contraste.
+- `f15cd16`: mapa HCE y propiedad completa de claves.
+- `5c34231`: reproducción roja de la filtración LUK anterior a la extracción.
+- Commit que contiene esta sección (`docs: record accepted ODA and pre-extraction HCE privacy blocker`): informe de continuación y estado final.
+
+Se conserva toda la historia y ambos registros de parada. Rama limpia tras el commit de informe, sin push ni merge. El encargo queda detenido en la caracterización HCE por un fallo de privacidad fuera de la excepción autorizada.
