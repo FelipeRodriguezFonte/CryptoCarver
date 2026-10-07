@@ -302,4 +302,50 @@ class UiStateSnapshotTest {
         }
         org.junit.jupiter.api.Assertions.assertTrue(UiStateSnapshot.isHistorySensitiveField("certIssueCsrArea"));
     }
+
+    /** Separate fixture: adding fields to DummyController would alter existing capture contracts. */
+    public static class HceRecipeController {
+        @FXML public TextField hceMsdLukField = new TextField();
+        @FXML public TextField hceQvsdcLukField = new TextField();
+    }
+
+    @Test
+    void hceLukRecipesRespectVisibilityAndFullLabRestoration(
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path temporary) throws Exception {
+        var original = com.cryptocarver.model.AppSettings.getInstance();
+        var isolated = new com.cryptocarver.model.AppSettings(temporary.resolve("settings.json"));
+        var shelfBefore = java.util.List.copyOf(com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries());
+        com.cryptocarver.model.AppSettings.setInstanceForTesting(isolated);
+        try {
+            UiTestLifecycleExtension.onFx(() -> {
+                HceRecipeController controller = new HceRecipeController();
+                String invented = "00112233445566778899AABBCCDDEEFF";
+                assertTrue(UiStateSnapshot.isHistorySensitiveField("hceMsdLukField", controller.hceMsdLukField));
+                assertTrue(UiStateSnapshot.isHistorySensitiveField("hceQvsdcLukField", controller.hceQvsdcLukField));
+                for (var profile : com.cryptocarver.model.SecretVisibilityProfile.values()) {
+                    isolated.setSecretVisibilityProfile(profile);
+                    controller.hceMsdLukField.setText(invented);
+                    controller.hceQvsdcLukField.setText(invented);
+                    Map<String, Object> recipe = UiStateSnapshot.captureHistoryRecipe(controller);
+                    boolean full = profile == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB;
+                    String expected = full ? invented : "[REDACTED_SECRET]";
+                    assertEquals(expected, recipe.get("HceRecipeController.hceMsdLukField"));
+                    assertEquals(expected, recipe.get("HceRecipeController.hceQvsdcLukField"));
+                    controller.hceMsdLukField.setText("stale");
+                    controller.hceQvsdcLukField.setText("stale");
+                    var redacted = UiStateSnapshot.restoreHistoryRecipe(controller, recipe);
+                    assertEquals(full ? invented : "", controller.hceMsdLukField.getText());
+                    assertEquals(full ? invented : "", controller.hceQvsdcLukField.getText());
+                    if (full) assertTrue(redacted.isEmpty());
+                    else {
+                        assertTrue(redacted.contains(controller.hceMsdLukField));
+                        assertTrue(redacted.contains(controller.hceQvsdcLukField));
+                    }
+                }
+            });
+            assertEquals(shelfBefore, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries());
+        } finally {
+            com.cryptocarver.model.AppSettings.setInstanceForTesting(original);
+        }
+    }
 }
