@@ -3,7 +3,6 @@ package com.cryptocarver.ui;
 import com.cryptocarver.crypto.EmvTlv;
 
 import com.cryptocarver.crypto.EMVOperations;
-import com.cryptocarver.crypto.EmvOdaOperations;
 import com.cryptocarver.crypto.VisaHceOperations;
 import com.cryptocarver.crypto.MastercardDataStorage;
 import com.cryptocarver.crypto.MastercardIccDynamicNumber;
@@ -137,6 +136,30 @@ public class EMVController {
                     () -> smResultArea), () -> mainController);
         }
         return emvSecureMessagingCoordinator;
+    }
+
+    private EmvOdaCoordinator emvOdaCoordinator;
+    private EmvOdaCoordinator emvOdaCoordinator() {
+        if (emvOdaCoordinator == null) {
+            emvOdaCoordinator = new EmvOdaCoordinator(new EmvOdaCoordinator.View(
+                    () -> odaIccCertificateArea,
+                    () -> odaSsadArea,
+                    () -> odaStaticDataArea,
+                    () -> odaSdadArea,
+                    () -> odaTerminalDataField,
+                    () -> odaCidField,
+                    () -> odaTransactionDataArea,
+                    () -> odaCaModulusArea,
+                    () -> odaCaExponentField,
+                    () -> odaIssuerCertificateArea,
+                    () -> odaIssuerRemainderField,
+                    () -> odaIssuerExponentField,
+                    () -> odaIccRemainderField,
+                    () -> odaIccExponentField,
+                    () -> odaPanField,
+                    () -> odaResultArea), () -> mainController);
+        }
+        return emvOdaCoordinator;
     }
 
     private StatusReporter mainController;
@@ -467,15 +490,9 @@ public class EMVController {
     // ISSUER-SCRIPT SECURE MESSAGING (all cryptography in EmvSecureMessaging)
     // ============================================================================
 
-
-
     private static String smText(TextInputControl field) {
         return field == null || field.getText() == null ? "" : field.getText().replaceAll("\\s+", "").toUpperCase(java.util.Locale.ROOT);
     }
-
-
-
-
 
     /** Fills every field with the worked example the external tool ships for the selected scheme. */
     public void handleSmLoadExample() { emvSecureMessagingCoordinator().handleSmLoadExample(); }
@@ -766,180 +783,28 @@ public class EMVController {
     @FXML private TextArea odaTransactionDataArea;
     @FXML private TextArea odaResultArea;
 
-    /** The test card's Unpredictable Number, so DDA and CDA stay reproducible. */
-    private static final String TEST_UNPREDICTABLE_NUMBER = "01020304";
-    private static final String TEST_PAN = "4761739001010119";
+    @FXML
+    public void handleOdaRecoverKeys() { emvOdaCoordinator().handleOdaRecoverKeys(); }
 
     @FXML
-    public void handleOdaRecoverKeys() {
-        runOda(() -> {
-            StringBuilder report = new StringBuilder();
-            EmvOdaOperations.IssuerCertificate issuer = recoverIssuer();
-            report.append(EmvOdaOperations.describe(issuer));
-            if (!text(odaIccCertificateArea).isEmpty()) {
-                report.append('\n').append(EmvOdaOperations.describe(recoverIcc(issuer)));
-            }
-            return report.toString();
-        }, "EMV ODA Key Recovery");
-    }
+    public void handleOdaVerifySda() { emvOdaCoordinator().handleOdaVerifySda(); }
 
     @FXML
-    public void handleOdaVerifySda() {
-        runOda(() -> {
-            EmvOdaOperations.IssuerCertificate issuer = recoverIssuer();
-            if (!issuer.passed()) {
-                return EmvOdaOperations.describe(issuer)
-                        + "\nThe issuer key did not come back clean, so the SSAD below was not checked.\n";
-            }
-            return EmvOdaOperations.describe(EmvOdaOperations.verifyStaticApplicationData(
-                    text(odaSsadArea), issuer.issuerPublicKey(), text(odaStaticDataArea)));
-        }, "EMV SDA");
-    }
+    public void handleOdaVerifyDda() { emvOdaCoordinator().handleOdaVerifyDda(); }
 
     @FXML
-    public void handleOdaVerifyDda() {
-        runOda(() -> {
-            EmvOdaOperations.IccCertificate icc = recoverIcc(recoverIssuer());
-            if (!icc.passed()) {
-                return EmvOdaOperations.describe(icc)
-                        + "\nThe ICC key did not come back clean, so the dynamic signature was not checked.\n";
-            }
-            return EmvOdaOperations.describe(EmvOdaOperations.verifyDynamicApplicationData(
-                    text(odaSdadArea), icc.iccPublicKey(), text(odaTerminalDataField)));
-        }, "EMV DDA");
-    }
-
-    @FXML
-    public void handleOdaVerifyCda() {
-        runOda(() -> {
-            EmvOdaOperations.IccCertificate icc = recoverIcc(recoverIssuer());
-            if (!icc.passed()) {
-                return EmvOdaOperations.describe(icc)
-                        + "\nThe ICC key did not come back clean, so the combined signature was not checked.\n";
-            }
-            return EmvOdaOperations.describe(EmvOdaOperations.verifyCombinedApplicationData(
-                    text(odaSdadArea), icc.iccPublicKey(), text(odaTerminalDataField),
-                    text(odaCidField), text(odaTransactionDataArea)));
-        }, "EMV CDA");
-    }
+    public void handleOdaVerifyCda() { emvOdaCoordinator().handleOdaVerifyCda(); }
 
     /**
      * Personalises a throwaway card and fills every field with it, so the pane
      * is usable without a reader. The keys exist for the length of this click.
      */
     @FXML
-    public void handleOdaIssueTestCard() {
-        runOda(() -> {
-            java.security.KeyPair ca = odaKeyPair(1024);
-            java.security.KeyPair issuer = odaKeyPair(768);
-            java.security.KeyPair icc = odaKeyPair(512);
-
-            String staticData = "70115A0844AAAAAAAAAAAAAA5F3401009F0702FF00";
-            String expiry = java.time.YearMonth.now().plusYears(3).format(
-                    java.time.format.DateTimeFormatter.ofPattern("MMyy"));
-
-            EmvOdaOperations.IssuedCertificate issuerCertificate = EmvOdaOperations.signIssuerCertificate(
-                    EmvOdaOperations.RsaPrivateKey.of((java.security.interfaces.RSAPrivateKey) ca.getPrivate()),
-                    EmvOdaOperations.RsaPublicKey.of((java.security.interfaces.RSAPublicKey) issuer.getPublic()),
-                    TEST_PAN.substring(0, 8), expiry, "000001");
-            EmvOdaOperations.IssuedCertificate iccCertificate = EmvOdaOperations.signIccCertificate(
-                    EmvOdaOperations.RsaPrivateKey.of((java.security.interfaces.RSAPrivateKey) issuer.getPrivate()),
-                    EmvOdaOperations.RsaPublicKey.of((java.security.interfaces.RSAPublicKey) icc.getPublic()),
-                    TEST_PAN, expiry, "000002", staticData);
-
-            String ssad = EmvOdaOperations.signStaticApplicationData(
-                    EmvOdaOperations.RsaPrivateKey.of((java.security.interfaces.RSAPrivateKey) issuer.getPrivate()),
-                    "1234", staticData);
-
-            String transactionData = "000000010000000000000000097801020304";
-            String dynamicData = EmvOdaOperations.combinedDynamicData("1122334455667788", "80",
-                    "A1B2C3D4E5F60718", EmvOdaOperations.transactionDataHashCode(transactionData));
-            String sdad = EmvOdaOperations.signDynamicApplicationData(
-                    EmvOdaOperations.RsaPrivateKey.of((java.security.interfaces.RSAPrivateKey) icc.getPrivate()),
-                    dynamicData, TEST_UNPREDICTABLE_NUMBER);
-
-            set(odaCaModulusArea, EmvOdaOperations.RsaPublicKey.of(
-                    (java.security.interfaces.RSAPublicKey) ca.getPublic()).modulusHex());
-            set(odaCaExponentField, EmvOdaOperations.RsaPublicKey.of(
-                    (java.security.interfaces.RSAPublicKey) ca.getPublic()).exponentHex());
-            set(odaIssuerCertificateArea, issuerCertificate.certificate());
-            set(odaIssuerRemainderField, issuerCertificate.remainder());
-            set(odaIssuerExponentField, issuerCertificate.exponent());
-            set(odaIccCertificateArea, iccCertificate.certificate());
-            set(odaIccRemainderField, iccCertificate.remainder());
-            set(odaIccExponentField, iccCertificate.exponent());
-            set(odaStaticDataArea, staticData);
-            set(odaPanField, TEST_PAN);
-            set(odaSsadArea, ssad);
-            set(odaSdadArea, sdad);
-            set(odaTerminalDataField, TEST_UNPREDICTABLE_NUMBER);
-            set(odaCidField, "80");
-            set(odaTransactionDataArea, transactionData);
-
-            return t("module.emv.oda.testCardIssued");
-        }, "EMV ODA Test Card");
-    }
+    public void handleOdaIssueTestCard() { emvOdaCoordinator().handleOdaIssueTestCard(); }
 
     @FXML
-    public void handleOdaClear() {
-        for (TextInputControl field : new TextInputControl[] {
-                odaCaModulusArea, odaCaExponentField, odaIssuerCertificateArea, odaIssuerRemainderField,
-                odaIssuerExponentField, odaIccCertificateArea, odaIccRemainderField, odaIccExponentField,
-                odaStaticDataArea, odaPanField, odaSsadArea, odaSdadArea, odaTerminalDataField,
-                odaCidField, odaTransactionDataArea, odaResultArea}) {
-            if (field != null) field.clear();
-        }
-    }
-
-    private EmvOdaOperations.IssuerCertificate recoverIssuer() {
-        return EmvOdaOperations.recoverIssuerPublicKey(
-                text(odaIssuerCertificateArea), text(odaIssuerRemainderField), text(odaIssuerExponentField),
-                EmvOdaOperations.RsaPublicKey.of(text(odaCaModulusArea), text(odaCaExponentField)),
-                text(odaPanField));
-    }
-
-    private EmvOdaOperations.IccCertificate recoverIcc(EmvOdaOperations.IssuerCertificate issuer) {
-        if (issuer.issuerPublicKey() == null) {
-            throw new IllegalArgumentException(t("module.emv.oda.noIssuerKey"));
-        }
-        return EmvOdaOperations.recoverIccPublicKey(
-                text(odaIccCertificateArea), text(odaIccRemainderField), text(odaIccExponentField),
-                issuer.issuerPublicKey(), text(odaStaticDataArea), text(odaPanField));
-    }
+    public void handleOdaClear() { emvOdaCoordinator().handleOdaClear(); }
 
     /** EMV allows exponent 3 and 65537 only; a bench card uses 3, as most do. */
-    private static java.security.KeyPair odaKeyPair(int bits) throws Exception {
-        java.security.KeyPairGenerator generator = java.security.KeyPairGenerator.getInstance("RSA");
-        generator.initialize(new java.security.spec.RSAKeyGenParameterSpec(bits, java.math.BigInteger.valueOf(3)));
-        return generator.generateKeyPair();
-    }
 
-    private interface OdaStep {
-        String run() throws Exception;
-    }
-
-    private void runOda(OdaStep step, String operation) {
-        try {
-            String report = step.run();
-            if (odaResultArea != null) odaResultArea.setText(report);
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation(operation)
-                        .output(report.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                        .status(t("module.emv.oda.status"))
-                        .build());
-            }
-        } catch (Exception e) {
-            if (odaResultArea != null) {
-                odaResultArea.setText(t("module.emv.oda.error", String.valueOf(e.getMessage())));
-            }
-        }
-    }
-
-    private static String text(TextInputControl field) {
-        return field == null || field.getText() == null ? "" : field.getText().trim();
-    }
-
-    private static void set(TextInputControl field, String value) {
-        if (field != null) field.setText(value);
-    }
 }
