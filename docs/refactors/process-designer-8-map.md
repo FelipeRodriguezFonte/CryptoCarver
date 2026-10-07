@@ -16,3 +16,7 @@ Caracterización existente: ProcessDesignerPaletteUITest (texto, vacío, doble c
 Privacidad: ejecutar de nuevo la caracterización de ejecución y los tests inalterados de secretos/traza/telemetría mediante las tres puertas; comprobar superficies MASKED y REDACTED. Ninguna nueva operación de paleta consume secretos ni persiste resultados.
 
 Tras extracción: tres puertas Maven en serie, informes nuevos únicamente. No comenzar fase 9 si existe fallo distinto de la excepción expresamente autorizada para ExpandedViewerLifecycleUITest.
+
+## Cierre
+
+Controlador 1030 → 965 líneas. Tres puertas limpias: headless 446 informes / 2912 pruebas / 0 fallos / 0 errores / 1 omitida; UI opt-in 126 / 542 / 0 / 0 / 0; UI CI 126 / 542 / 0 / 0 / 0. Digest paleta `e5919c4b74289c4943dec6ca56218164ddff40ffee4baeac5c957bfdaf4a6a76` verificado en ambas puertas UI. Ejecución/privacidad conserva sus dos digests y las comprobaciones de las siete superficies sensibles en los tres perfiles. No hubo fallos preexistentes de visor expandido ni cambios de comportamiento.

@@ -1,7 +1,6 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.model.process.NodeCatalog;
-import com.cryptocarver.model.process.NodeDescriptor;
 import com.cryptocarver.model.process.NodeExecutionEvent;
 import com.cryptocarver.model.process.NodeParameter;
 import com.cryptocarver.model.process.ProcessDefinition;
@@ -10,7 +9,6 @@ import com.cryptocarver.model.process.ProcessEngine;
 import com.cryptocarver.model.process.Representation;
 import com.cryptocarver.service.I18nService;
 import javafx.fxml.FXML;
-import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
@@ -93,6 +91,7 @@ public class ProcessDesignerController {
     private final Scale canvasScale = new Scale(1.0, 1.0, 0, 0);
     private boolean snapToGrid = true;
     private ProcessExecutionCoordinator processExecutionCoordinator;
+    private ProcessPaletteCoordinator processPaletteCoordinator;
 
     // Secrets in-memory map: nodeId -> (paramKey -> char[])
     final Map<String, Map<String, char[]>> transientSecrets = new HashMap<>();
@@ -231,83 +230,19 @@ public class ProcessDesignerController {
 
 
     // --- Searchable Palette ---
-    private void buildPalette() {
-        filterPalette(paletteSearchField == null ? null : paletteSearchField.getText());
+    private ProcessPaletteCoordinator processPaletteCoordinator() {
+        if (processPaletteCoordinator == null) processPaletteCoordinator = new ProcessPaletteCoordinator();
+        return processPaletteCoordinator;
     }
 
-    private void filterPalette(String filter) {
-        if (paletteItemsContainer == null) return;
-        paletteItemsContainer.getChildren().clear();
-
-        String q = filter == null ? "" : filter.trim().toLowerCase(Locale.ROOT);
-
-        for (String category : NodeCatalog.categories()) {
-            List<NodeDescriptor> matching = NodeCatalog.descriptorsByCategory(category).stream()
-                    .filter(d -> matchesSearch(d, q))
-                    .toList();
-
-            if (matching.isEmpty()) continue;
-
-            String catKey = "module.process.category." + switch (category) {
-                case "Inputs" -> "inputs";
-                case "Conversions" -> "conversions";
-                case "Crypto" -> "crypto";
-                case "Generators" -> "generators";
-                case "Key Material" -> "keyMaterial";
-                case "WS-Security" -> "wsSecurity";
-                case "Outputs" -> "outputs";
-                default -> category.toLowerCase(Locale.ROOT);
-            };
-            Label catHeader = new Label(t(catKey).toUpperCase(Locale.ROOT));
-            catHeader.setStyle("-fx-font-size: 9px; -fx-font-weight: bold; -fx-text-fill: #8899aa; -fx-padding: 4 0 2 0;");
-            paletteItemsContainer.getChildren().add(catHeader);
-
-            for (NodeDescriptor d : matching) {
-                HBox item = new HBox(6);
-                item.setPadding(new Insets(4, 6, 4, 6));
-                item.setStyle("-fx-background-color: #242d38; -fx-background-radius: 4; -fx-cursor: hand;");
-
-                Label iconLabel = new Label(d.icon());
-                iconLabel.setStyle("-fx-font-size: 13px;");
-                // Bind the preferred-size sentinel so the legacy 18 px CSS minimum
-                // cannot override it after applyCss on platforms with wider glyphs.
-                iconLabel.minWidthProperty().bind(new javafx.beans.property.SimpleDoubleProperty(
-                        javafx.scene.layout.Region.USE_PREF_SIZE));
-
-                VBox textBox = new VBox(1);
-                Label titleLabel = new Label(t(d.labelKey()));
-                titleLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #ffffff; -fx-font-weight: bold;");
-                Label descLabel = new Label(t(d.descriptionKey()));
-                descLabel.setStyle("-fx-font-size: 9px; -fx-text-fill: #8899aa;");
-                descLabel.setWrapText(true);
-                textBox.getChildren().addAll(titleLabel, descLabel);
-
-                item.getChildren().addAll(iconLabel, textBox);
-
-                item.setOnMouseEntered(e -> item.setStyle("-fx-background-color: #334455; -fx-background-radius: 4; -fx-cursor: hand;"));
-                item.setOnMouseExited(e -> item.setStyle("-fx-background-color: #242d38; -fx-background-radius: 4; -fx-cursor: hand;"));
-
-                item.setOnMouseClicked(e -> {
-                    if (e.getClickCount() == 2) {
-                        double placeX = 60 + (nodes.size() % 5) * 40;
-                        double placeY = 80 + (nodes.size() % 6) * 35;
-                        ProcessDefinition.Node added = addNode(d.type(), t(d.labelKey()), placeX, placeY);
-                        select(added);
-                    }
-                });
-
-                paletteItemsContainer.getChildren().add(item);
-            }
-        }
+    private ProcessPaletteCoordinator.View paletteView() {
+        return new ProcessPaletteCoordinator.View(() -> paletteItemsContainer, this::t,
+                () -> nodes.size(), this::addNode, this::select);
     }
 
-    private boolean matchesSearch(NodeDescriptor d, String q) {
-        if (q.isEmpty()) return true;
-        return d.type().toLowerCase(Locale.ROOT).contains(q)
-                || d.category().toLowerCase(Locale.ROOT).contains(q)
-                || t(d.labelKey()).toLowerCase(Locale.ROOT).contains(q)
-                || t(d.descriptionKey()).toLowerCase(Locale.ROOT).contains(q);
-    }
+    private void buildPalette() { processPaletteCoordinator().buildPalette(paletteView(), paletteSearchField == null ? null : paletteSearchField.getText()); }
+
+    private void filterPalette(String filter) { processPaletteCoordinator().filterPalette(paletteView(), filter); }
 
     // --- Expandable Canvas Geometry ---
     public void updateCanvasGeometry() {
