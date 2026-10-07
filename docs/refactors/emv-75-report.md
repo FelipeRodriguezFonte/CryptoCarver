@@ -98,3 +98,50 @@ cd941cd docs: record clean secure messaging verification gates
 ```
 
 El commit que contiene este informe (`docs: withdraw ODA extraction after failed gate and report EMV outcome`) cierra el paso d de fase 6 con la retirada y la evidencia. Rama limpia al terminar; sin push ni merge. Encargo detenido conforme a la regla de puertas.
+
+## Continuación: recuperación y nueva parada en G1
+
+Se conserva íntegro el registro anterior. El usuario aporta el contraste del revisor: la clase aislada con opciones G3 falla 3/3 en 06dd269, 0214636 y e002737, y autoriza aceptar **G2 y G3** únicamente si los únicos fallos son los tests de GC y se reproducen igual en la clase aislada sobre la base de la fase. No autoriza aceptar fallos en G1. El dato del revisor se distingue aquí de las nuevas ejecuciones locales.
+
+### Recuperación
+
+Commit nuevo `e9e3944` (`refactor: recover ODA extraction under authorized GC exception`): recuperación **solo en código**, EMVController y EmvOdaCoordinator idénticos byte a byte a 06dd269. No se reescribió historia ni se revertió documentación. Los guards se ejecutaron esta vez en una invocación exclusiva, antes de la puerta, con exit 0:
+
+```sh
+mvn -o -q test -Plow-cpu -Dtest=SpecializedFeedbackHeadlessTest,EmvOdaPaneTranslationTest
+```
+
+### Puerta y contraste nuevos
+
+| Ejecución | Código | Informes | Pruebas | Fallos | Errores | Omitidas | Exit |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| G1 | `e9e3944` | 450 | 2918 | 3 | 0 | 1 | 1 |
+| G1-gc-extracted | `e9e3944` | 1 | 3 | 3 | 0 | 0 | 1 |
+| G1-gc-base | `45e5a1b` | 1 | 3 | 3 | 0 | 0 | 1 |
+| G2 ODA | — | — | — | — | — | — | No ejecutada |
+| G3 ODA | — | — | — | — | — | — | No ejecutada |
+
+G1 se ejecutó con el comando exacto `mvn -o -q test -Plow-cpu`. Los únicos fallos son los tres métodos GC de ExpandedViewerLifecycleUITest ya enumerados en la parada original. Todos presentan `Closed UI fixture is still strongly reachable`, con Stage alcanzable. La caracterización ODA y la de Secure Messaging pasan (1 prueba cada una, sin fallos/errores/omitidas) dentro de G1.
+
+Reejecución aislada **con opciones de G1**, primero con extracción e9e3944 y luego sobre la base original de fase ODA `45e5a1b`, sin la extracción:
+
+```sh
+mvn -o -q test -Plow-cpu -Dtest=ExpandedViewerLifecycleUITest
+```
+
+Ambas dan 1 informe / 3 pruebas / 3 fallos / 0 errores / 0 omitidas / exit 1, con los mismos métodos y diagnóstico. El contraste se hizo temporalmente sobre los dos archivos de producción dentro del mismo worktree; se restauraron inmediatamente los archivos de e9e3944 tras medir la base. La base 45e5a1b contiene la caracterización fijada antes de extraer; su controlador es idéntico al de 0214636. XML confirman Mac OS X / Homebrew Java 25. La nueva evidencia respalda que estos fallos de GC también se reproducen sin ODA con opciones G1; no se declara una nueva ejecución de main limpio.
+
+Antes de cada ejecución se borró target/surefire-reports; recuentos exclusivamente de XML nuevos. Logs: target/emv75-oda-cont-G1.log, target/emv75-oda-cont-G1-gc-extracted.log y target/emv75-oda-cont-G1-gc-base.log. Manifiesto con suites, comandos, runtime y fallos: target/emv75-oda-cont-results.json. Las puertas completas nunca seleccionan ni excluyen esa clase; el -Dtest se usó únicamente para el contraste/reintento aislado solicitado. No se modificó ExpandedViewerLifecycleUITest.
+
+### Aplicación de la regla y estado final
+
+La excepción autorizada se limita a G2/G3. Aunque el contraste reproduce 3/3 en la base, **no convierte G1 en una puerta aceptable**. Se detiene el encargo antes de G2, G3 y HCE, y se retira la extracción recuperada mediante revert --no-commit de e9e3944, en un commit nuevo de retirada y documentación. No hay mapa emv-7, caracterización ni coordinador HCE porque esa fase no se inició.
+
+El controlador vuelve byte a byte al de 0214636 / 0808b3c, 945 líneas frente a las 988 originales. EmvSecureMessagingCoordinator sigue extraído y validado por sus tres puertas anteriores; ODA/HCE permanecen en el controlador. Se conservan mapas, tests de caracterización y evidencia de ambos intentos ODA.
+
+Higiene final: 0 estilos en línea FXML / 325 emojis de 325; git diff --check pasa. Ningún test existente modificado, sin cambios en archivos prohibidos ni umbrales. Solo se compiló en CryptoCarver-emv-3, un Maven a la vez. Rama limpia después del commit de cierre, sin push ni merge.
+
+Commits de esta continuación:
+
+- `e9e3944`: recuperación de ODA solo en código.
+- Commit que contiene esta sección (`docs: withdraw recovered ODA after G1 GC failure and record continuation`): retirada del código recuperado, recuentos y actualización del informe. No reescribe ninguno de los commits anteriores.
