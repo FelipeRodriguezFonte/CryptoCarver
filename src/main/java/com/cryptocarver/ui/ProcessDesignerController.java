@@ -1,9 +1,5 @@
 package com.cryptocarver.ui;
 
-import com.cryptocarver.model.AppSettings;
-import com.cryptocarver.model.SecretVisibilityProfile;
-import com.cryptocarver.model.process.ExecutionContext;
-import com.cryptocarver.model.process.FileWritePolicy;
 import com.cryptocarver.model.process.NodeCatalog;
 import com.cryptocarver.model.process.NodeDescriptor;
 import com.cryptocarver.model.process.NodeExecutionEvent;
@@ -11,11 +7,8 @@ import com.cryptocarver.model.process.NodeParameter;
 import com.cryptocarver.model.process.ProcessDefinition;
 import com.cryptocarver.model.process.ProcessDefinitionCodec;
 import com.cryptocarver.model.process.ProcessEngine;
-import com.cryptocarver.model.process.ProcessValidator;
 import com.cryptocarver.model.process.Representation;
-import com.cryptocarver.model.process.handlers.SymmetricCipherSpec;
 import com.cryptocarver.service.I18nService;
-import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
@@ -99,8 +92,7 @@ public class ProcessDesignerController {
     private double currentZoom = 1.0;
     private final Scale canvasScale = new Scale(1.0, 1.0, 0, 0);
     private boolean snapToGrid = true;
-    private final ExpandedTextViewer expandedExecutionViewer = new ExpandedTextViewer();
-    private volatile boolean processCancellationRequested = false;
+    private ProcessExecutionCoordinator processExecutionCoordinator;
 
     // Secrets in-memory map: nodeId -> (paramKey -> char[])
     final Map<String, Map<String, char[]>> transientSecrets = new HashMap<>();
@@ -861,7 +853,7 @@ public class ProcessDesignerController {
             return;
         }
         javafx.stage.Window owner = workflowCanvas == null || workflowCanvas.getScene() == null ? null : workflowCanvas.getScene().getWindow();
-        expandedExecutionViewer.show(owner, "Expanded Result — Process Designer", trace);
+        processExecutionCoordinator().showExpandedResult(owner, trace);
     }
 
     public void selectNodeById(String nodeId) {
@@ -980,155 +972,25 @@ public class ProcessDesignerController {
     }
 
     // --- Dry Run & Execution ---
-    @FXML public void handleDryRunProcess() {
-        saveSelectedNodeSettings();
-        ProcessDefinition definition = toExecutableDefinition();
-        com.cryptocarver.model.process.DryRunSummary summary = ProcessValidator.dryRun(definition);
-        // Ephemeral definition discarded after dry-run
-        for (ProcessDefinition.Node n : definition.nodes) {
-            for (String sk : NodeCatalog.allSensitiveKeys()) {
-                n.configuration.remove(sk);
-            }
-        }
+    @FXML public void handleDryRunProcess() { processExecutionCoordinator().dryRun(executionView()); }
 
-        if (executionStatusTable != null) {
-            executionStatusTable.getItems().clear();
-            int idx = 1;
-            for (com.cryptocarver.model.process.StepValidationResult v : summary.stepValidations()) {
-                String label = nodeLabel(v.targetNodeId());
-                executionStatusTable.getItems().add(new ProcessExecutionRow(
-                        v.targetNodeId(), String.valueOf(idx++), label, "DRY-RUN", "-", "-", v.status().name(), "0 ms", v.message()
-                ));
-            }
-        }
+    @FXML public void handleCancelProcess() { processExecutionCoordinator().cancel(executionView()); }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("=== PROCESS DESIGNER DRY RUN ===\n");
-        sb.append("Total Steps: ").append(summary.totalSteps()).append('\n');
-        sb.append("Status Breakdown: Ready=").append(summary.readyCount())
-                .append(", Warning=").append(summary.warningCount())
-                .append(", Incomplete=").append(summary.incompleteCount())
-                .append(", Blocked=").append(summary.blockedCount()).append('\n');
-        if (summary.firstBlockedReason() != null) {
-            sb.append("First Blocked Reason: ").append(summary.firstBlockedReason()).append('\n');
-        }
-        sb.append("\nResolved Dependencies:\n");
-        for (String dep : summary.resolvedDependencies()) sb.append("  - ").append(dep).append('\n');
-        sb.append("\nExecution Order:\n");
-        for (String stepId : summary.executionOrder()) sb.append("  - ").append(nodeLabel(stepId)).append(" [").append(stepId).append("]\n");
-        sb.append("\n(Dry Run simulation finished: 0 cryptographic operations executed, 0 files written, 0 history entries created)");
+    @FXML public void handleRunProcess() { processExecutionCoordinator().run(executionView()); }
 
-        executionOutputArea.setText(sb.toString());
-        if (processStatusLabel != null) {
-            processStatusLabel.setText(t("module.process.drySummary", summary.readyCount(), summary.blockedCount()));
-        }
+    private ProcessExecutionCoordinator processExecutionCoordinator() {
+        if (processExecutionCoordinator == null) processExecutionCoordinator = new ProcessExecutionCoordinator();
+        return processExecutionCoordinator;
     }
 
-    @FXML public void handleCancelProcess() {
-        processCancellationRequested = true;
-        Platform.runLater(() -> {
-            if (processStatusLabel != null) processStatusLabel.setText(t("module.process.cancelling"));
-        });
-    }
-
-    @FXML public void handleRunProcess() {
-        saveSelectedNodeSettings();
-        ProcessDefinition definition = toExecutableDefinition();
-        executionOutputArea.clear();
-        if (executionStatusTable != null) executionStatusTable.getItems().clear();
-
-        for (ProcessDefinition.Node n : definition.nodes) {
-            if ("ENCRYPT".equals(n.type) || "DECRYPT".equals(n.type)) {
-                String alg = n.configuration.getOrDefault("algorithm", "AES/GCM/NoPadding");
-                SymmetricCipherSpec spec;
-                try {
-                    spec = SymmetricCipherSpec.fromAlgorithm(alg);
-                } catch (Exception e) {
-                    showPreflightFailure(t("module.process.feedback.nodeError", n.label, e.getMessage()));
-                    return;
-                }
-                boolean hasAadConn = definition.connections.stream().anyMatch(c -> c.to.equals(n.id) && "aad".equals(c.targetPort));
-                if (!spec.aead && hasAadConn) {
-                    showPreflightFailure(t("module.process.feedback.aad", n.label, alg));
-                    return;
-                }
-                boolean hasIvConn = definition.connections.stream().anyMatch(c -> c.to.equals(n.id) && "iv".equals(c.targetPort));
-                if (spec.ivLength == 0 && hasIvConn) {
-                    showPreflightFailure(t("module.process.feedback.iv", n.label, alg));
-                    return;
-                }
-            }
-        }
-        // Referenced for i18n feedback test contract: "module.process.feedback.ivLabel"
-
-        processCancellationRequested = false;
-        if (cancelProcessButton != null) cancelProcessButton.setDisable(false);
-        if (runProcessButton != null) runProcessButton.setDisable(true);
-        if (processProgressBar != null) processProgressBar.setProgress(0.0);
-        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.running"));
-
-        Queue<NodeExecutionEvent> events = new java.util.concurrent.ConcurrentLinkedQueue<>();
-        ExecutionContext context = new ExecutionContext(
-                FileWritePolicy.ALLOW_OVERWRITE,
-                event -> {
-                    events.add(event);
-                    if (onNodeExecutionEvent != null) onNodeExecutionEvent.accept(event);
-                    Platform.runLater(() -> {
-                        if (processProgressBar != null && definition.nodes.size() > 0) {
-                            processProgressBar.setProgress((double) event.step() / definition.nodes.size());
-                        }
-                        if (processStatusLabel != null) {
-                            processStatusLabel.setText(t("module.process.stepProgress", event.step(), definition.nodes.size(), event.nodeLabel()));
-                        }
-                    });
-                },
-                () -> processCancellationRequested
-        );
-
-        new Thread(() -> {
-            Map<String, com.cryptocarver.model.process.FlowValue> result = Map.of();
-            Exception failure = null;
-            try {
-                result = ProcessEngine.execute(definition, context);
-            } catch (Exception e) {
-                failure = e;
-            } finally {
-                final Map<String, com.cryptocarver.model.process.FlowValue> finalResult = result;
-                final Exception finalFailure = failure;
-                Platform.runLater(() -> {
-                    if (cancelProcessButton != null) cancelProcessButton.setDisable(true);
-                    if (runProcessButton != null) runProcessButton.setDisable(false);
-
-                    if (processCancellationRequested) {
-                        int completedSteps = finalResult.size();
-                        if (processProgressBar != null) {
-                            double prog = definition.nodes.size() > 0 ? (double) completedSteps / definition.nodes.size() : -1.0;
-                            if (prog >= 1.0) prog = 0.99;
-                            processProgressBar.setProgress(prog);
-                        }
-                        if (processStatusLabel != null) {
-                            processStatusLabel.setText(t("module.process.cancelled", completedSteps));
-                        }
-                        executionOutputArea.setText(t("module.process.cancelledOutput", completedSteps));
-                    } else if (finalFailure == null) {
-                        if (processProgressBar != null) processProgressBar.setProgress(1.0);
-                        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.completed"));
-                    } else {
-                        if (processProgressBar != null) processProgressBar.setProgress(0.0);
-                        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.failed", finalFailure.getMessage()));
-                    }
-
-                    renderExecutionResult(definition, finalResult, events, finalFailure);
-                    // Discard ephemeral secrets from the executed definition
-                    for (ProcessDefinition.Node n : definition.nodes) {
-                        for (String sk : NodeCatalog.allSensitiveKeys()) {
-                            n.configuration.remove(sk);
-                        }
-                    }
-                    if (onExecutionFinished != null) onExecutionFinished.run();
-                });
-            }
-        }).start();
+    private ProcessExecutionCoordinator.View executionView() {
+        return new ProcessExecutionCoordinator.View(this::saveSelectedNodeSettings, this::toExecutableDefinition,
+                () -> executionStatusTable, () -> stepCol, () -> stepNameCol, () -> operationCol,
+                () -> inputCol, () -> outputCol, () -> statusCol, () -> durationCol, () -> inspectCol,
+                () -> runProcessButton, () -> cancelProcessButton, () -> processProgressBar,
+                () -> processStatusLabel, () -> executionOutputArea, () -> selected, this::getInspectorControl,
+                this::nodeLabel, this::t, this::showPreflightFailure,
+                () -> onNodeExecutionEvent, () -> onExecutionFinished);
     }
 
     private void showPreflightFailure(String message) {
@@ -1147,182 +1009,10 @@ public class ProcessDesignerController {
 
     String renderExecutionResult(ProcessDefinition definition, Map<String, com.cryptocarver.model.process.FlowValue> result,
             java.util.Collection<NodeExecutionEvent> events, Exception failure) {
-        SecretVisibilityProfile profile = AppSettings.getInstance().getSecretVisibilityProfile();
-        if (profile == null) profile = SecretVisibilityProfile.FULL_LAB;
-
-        Map<String, NodeExecutionEvent> finalEvents = new LinkedHashMap<>();
-        for (NodeExecutionEvent event : events) {
-            if (event.state() != com.cryptocarver.model.process.NodeExecutionState.RUNNING) {
-                finalEvents.put(event.nodeId(), event);
-            }
-        }
-        if (executionStatusTable != null) {
-            executionStatusTable.getItems().clear();
-            if (finalEvents.isEmpty() && failure != null) {
-                executionStatusTable.getItems().add(new ProcessExecutionRow("validation", "-", "Validation",
-                        "PRE-FLIGHT", "-", "-", "ERROR", "0 ms"));
-            }
-            for (NodeExecutionEvent event : finalEvents.values()) {
-                Object val = result != null ? result.get(event.nodeId()) : null;
-                ProcessDefinition.Node node = definition.nodes.stream().filter(n -> n.id.equals(event.nodeId())).findFirst().orElse(null);
-                boolean isKeyGen = node != null && com.cryptocarver.model.process.SecretOutputPolicy.isSecretMaterialOutput(node.type);
-                if (isKeyGen) {
-                    if (profile == SecretVisibilityProfile.MASKED) {
-                        val = "***MASKED***";
-                    } else if (profile == SecretVisibilityProfile.REDACTED) {
-                        val = null;
-                    }
-                }
-                executionStatusTable.getItems().add(new ProcessExecutionRow(event.nodeId(), String.valueOf(event.step()),
-                        event.nodeLabel(), event.nodeType(), formatFlow(event.inputRepresentation(), event.inputSize()),
-                        formatFlow(event.outputRepresentation(), event.outputSize()), event.state().name(),
-                        event.duration().toMillis() + " ms", val));
-            }
-        }
-
-        StringBuilder trace = new StringBuilder(failure == null ? t("module.process.completed") + "\n"
-                : t("module.process.feedback.failed", failure.getMessage()) + "\n");
-        for (NodeExecutionEvent event : finalEvents.values()) {
-            trace.append('\n').append('[').append(event.step()).append("] ")
-                    .append(event.nodeLabel().replace("\n", " ")).append(" · ").append(event.nodeType())
-                    .append(" — ").append(event.state().name()).append(" (").append(event.duration().toMillis()).append(" ms)\n");
-            if (event.inputRepresentation() != null) trace.append("  input:  ").append(formatFlow(event.inputRepresentation(), event.inputSize())).append('\n');
-            if (event.outputRepresentation() != null) trace.append("  output: ").append(formatFlow(event.outputRepresentation(), event.outputSize())).append('\n');
-            ProcessDefinition.Node node = definition.nodes.stream().filter(n -> n.id.equals(event.nodeId())).findFirst().orElse(null);
-            boolean isKeyGen = node != null && com.cryptocarver.model.process.SecretOutputPolicy.isSecretMaterialOutput(node.type);
-            if (result.containsKey(event.nodeId())) {
-                com.cryptocarver.model.process.FlowValue value = result.get(event.nodeId());
-                if (isKeyGen) {
-                    if (profile == SecretVisibilityProfile.FULL_LAB) {
-                        trace.append("  value: ").append(value.render()).append('\n');
-                    } else if (profile == SecretVisibilityProfile.MASKED) {
-                        trace.append("  value: ***MASKED***\n");
-                    }
-                    // REDACTED: omit line completely
-                } else {
-                    trace.append("  value: ").append(value.render()).append('\n');
-                }
-            }
-            if (node != null && ("ENCRYPT".equals(node.type) || "DECRYPT".equals(node.type))) {
-                if (Boolean.parseBoolean(node.configuration.getOrDefault("ivFromFlow", "false"))) {
-                    appendFlowPortValue(trace, definition, result, node.id, "iv", "IV/nonce", profile);
-                } else if (node.configuration.get("nonce") != null) {
-                    if (profile == SecretVisibilityProfile.FULL_LAB) {
-                        trace.append("  IV/nonce (").append(node.configuration.getOrDefault("keyFormat", "HEX")).append("): ")
-                                .append(node.configuration.get("nonce")).append('\n');
-                    } else if (profile == SecretVisibilityProfile.MASKED) {
-                        trace.append("  IV/nonce (").append(node.configuration.getOrDefault("keyFormat", "HEX")).append("): ***MASKED***\n");
-                    }
-                    // REDACTED: omit line completely
-                }
-                if (Boolean.parseBoolean(node.configuration.getOrDefault("aadFromFlow", "false"))) {
-                    appendFlowPortValue(trace, definition, result, node.id, "aad", "AAD", profile);
-                }
-            }
-            if (node != null && ("ENCRYPT".equals(node.type) || "DECRYPT".equals(node.type) || "MAC".equals(node.type))
-                    && node.configuration.get("key") != null) {
-                if (profile == SecretVisibilityProfile.FULL_LAB) {
-                    trace.append("  key (").append(node.configuration.getOrDefault("keyFormat", "HEX")).append("): ")
-                            .append(node.configuration.get("key")).append('\n');
-                } else if (profile == SecretVisibilityProfile.MASKED) {
-                    trace.append("  key (").append(node.configuration.getOrDefault("keyFormat", "HEX")).append("): ***MASKED***\n");
-                }
-                // REDACTED: omit line completely
-            }
-            if (node != null && "KDF_PBKDF2".equals(node.type)) {
-                trace.append("  PBKDF2: ").append(node.configuration.getOrDefault("iterations", "210000"))
-                        .append(" iterations; salt (Base64): ").append(node.configuration.getOrDefault("salt", "")).append('\n');
-            }
-            if (isKeyGen && result.containsKey(node.id)) {
-                if (profile == SecretVisibilityProfile.FULL_LAB) {
-                    trace.append("  generated material (HEX): ").append(result.get(node.id).render()).append('\n');
-                } else if (profile == SecretVisibilityProfile.MASKED) {
-                    trace.append("  generated material (HEX): ***MASKED***\n");
-                }
-                // REDACTED: omit line completely
-            }
-        }
-        for (ProcessDefinition.Node node : definition.nodes) {
-            if ("CONSOLE_OUTPUT".equals(node.type) && result.containsKey(node.id)) {
-                com.cryptocarver.model.process.FlowValue value = result.get(node.id);
-                trace.append("\nConsole output · ").append(node.label.replace("\n", " ")).append('\n')
-                        .append("  ").append(formatFlow(value.representation(), value.bytes().length)).append('\n')
-                        .append("  value: ").append(value.render()).append('\n');
-            }
-        }
-        if (selected != null && "ENCRYPT".equals(selected.type)) {
-            Control c = getInspectorControl("nonce");
-            if (c instanceof TextInputControl tic) {
-                tic.setText(selected.configuration.getOrDefault("nonce", ""));
-            }
-        }
-        String traceText = trace.toString();
-        if (executionOutputArea != null) {
-            executionOutputArea.setText(traceText);
-        }
-        return traceText;
+        return processExecutionCoordinator().renderExecutionResult(executionView(), definition, result, events, failure);
     }
 
-    private static void appendFlowPortValue(StringBuilder trace, ProcessDefinition definition,
-            Map<String, com.cryptocarver.model.process.FlowValue> result, String destinationId,
-            String targetPort, String displayName, SecretVisibilityProfile profile) {
-        boolean isSecret = "iv".equals(targetPort) || "key".equals(targetPort);
-        if (isSecret && profile == SecretVisibilityProfile.REDACTED) {
-            return;
-        }
-        for (ProcessDefinition.Connection connection : definition.connections) {
-            if (destinationId.equals(connection.to) && targetPort.equals(connection.targetPort)) {
-                com.cryptocarver.model.process.FlowValue value = result.get(connection.from);
-                if (value != null) {
-                    String renderedVal = (isSecret && profile == SecretVisibilityProfile.MASKED) ? "***MASKED***" : value.render();
-                    trace.append("  ").append(displayName).append(" (flow from ")
-                            .append(connection.from).append(", ").append(value.representation()).append("): ")
-                            .append(renderedVal).append('\n');
-                    return;
-                }
-            }
-        }
-        trace.append("  ").append(displayName).append(": [provided by flow; value unavailable]\n");
-    }
-
-    private static String formatFlow(Representation representation, int size) {
-        if (representation == null) return "—";
-        return representation + " · " + size + (representation == Representation.BINARY ? " bytes" : " chars");
-    }
-
-    private void configureExecutionStatusTable() {
-        if (executionStatusTable == null) return;
-        stepCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getStep()));
-        stepNameCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getStepName()));
-        operationCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getOperation()));
-        inputCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getInput()));
-        outputCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getOutput()));
-        statusCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getStatus()));
-        durationCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getDuration()));
-
-        if (inspectCol != null) {
-            inspectCol.setCellFactory(col -> new TableCell<ProcessExecutionRow, Void>() {
-                private final Button btn = new Button(t("module.process.inspect"));
-                {
-                    btn.setStyle("-fx-font-size: 9px; -fx-padding: 1 4 1 4;");
-                    btn.setOnAction(evt -> {
-                        ProcessExecutionRow row = getTableRow() != null ? getTableRow().getItem() : null;
-                        if (row != null && row.getResultValue() != null) {
-                            expandedExecutionViewer.show(
-                                executionStatusTable.getScene() != null ? executionStatusTable.getScene().getWindow() : null,
-                                "Inspect Result - Step " + row.getStep() + " (" + row.getStepName() + ")",
-                                row.getResultValue().toString()
-                            );
-                        }
-                    });
-                }
-                @Override protected void updateItem(Void item, boolean empty) {
-                    super.updateItem(item, empty);
-                    setGraphic(empty ? null : btn);
-                }
-            });
-        }
-    }
+    private void configureExecutionStatusTable() { processExecutionCoordinator().configureExecutionStatusTable(executionView()); }
 
     private String t(String key, Object... args) {
         try {

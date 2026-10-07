@@ -36,3 +36,13 @@ Tras extracción, tres Maven seriales con informes borrados antes de cada ejecuc
 ## Bloqueo y retirada
 
 La primera puerta de extracción detectó una asignación incorrecta de propietario en el ajuste del test: se buscó `connectionReversed` en ProcessConnectionCoordinator, aunque sigue en el controlador. Es un error de este encargo, no un fallo preexistente. Se activa la regla de parada; no se inicia fase 8. La extracción y el ajuste del test se retiran íntegramente. Quedan solamente el mapa corregido y la evidencia de caracterización base, con controlador de 1340 líneas. Una reanudación deberá mover solo nodeError/aad/iv/ivLabel, comprobar failed en sus dos propietarios y mantener connectionReversed en el controlador.
+
+## Continuación autorizada
+
+Se retoma tras la retirada documentada: el ajuste asigna nodeError/aad/iv/ivLabel/failed a ProcessExecutionCoordinator, y mantiene failed/connectionReversed en ProcessDesignerController. Antes de las tres puertas, `mvn -o -q test -Plow-cpu -Dtest=SpecializedFeedbackHeadlessTest` pasa 2/2, sin errores ni omisiones. No se elimina ninguna comprobación de idioma o presencia.
+
+El coordinador toma como punto de partida el borrador backup/process-designer-3-wip, cotejado con la base. La tabla se obtiene del supplier al pulsar inspección; no se retiene un snapshot de tabla. El controlador conserva wrappers, handlers y initialize. Líneas tras extracción: 1030, desde 1340. Las reglas de redacción y los tests de privacidad permanecen sin modificaciones.
+
+## Cierre de continuación
+
+Las tres puertas pasan en serie: headless 445 informes / 2911 pruebas / 0 fallos / 0 errores / 1 omitida; UI opt-in 125 / 541 / 0 / 0 / 0; UI con opciones CI 125 / 541 / 0 / 0 / 0. Digests de ejecución y privacidad intactos y comprobados en ambas puertas UI. SpecializedFeedbackHeadlessTest pasó 2/2 previamente. No hubo fallo intermitente de ExpandedViewerLifecycleUITest. La extracción queda verificada y separada de paleta/eventos.

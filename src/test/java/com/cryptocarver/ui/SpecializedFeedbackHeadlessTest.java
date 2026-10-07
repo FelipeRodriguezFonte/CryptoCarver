@@ -45,10 +45,13 @@ class SpecializedFeedbackHeadlessTest {
                 "module.pades.feedback.tokenKey", "module.pades.feedback.coordinates",
                 "module.pades.feedback.reportRequired", "module.pades.feedback.operation",
                 "module.pades.feedback.statusValidated"));
-        controllerKeys.put("ProcessDesignerController", List.of(
+        // Phase 7: retain source-presence and EN/ES checks at each implementation owner.
+        controllerKeys.put("ProcessExecutionCoordinator", List.of(
                 "module.process.feedback.nodeError", "module.process.feedback.aad",
                 "module.process.feedback.iv", "module.process.feedback.failed",
-                "module.process.feedback.connectionReversed", "module.process.feedback.ivLabel"));
+                "module.process.feedback.ivLabel"));
+        controllerKeys.put("ProcessDesignerController", List.of(
+                "module.process.feedback.failed", "module.process.feedback.connectionReversed"));
         controllerKeys.put("WssSecurityController", List.of(
                 "module.wss.feedback.keyStoreRequired", "module.wss.feedback.keyAliasRequired",
                 "module.wss.feedback.keyStoreLoad", "module.wss.feedback.statusSaved"));
