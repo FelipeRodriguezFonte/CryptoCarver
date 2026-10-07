@@ -1,6 +1,6 @@
 # Encargo 76 — mapa de fase 1
 
-Base: 257dd2b. Estado: detenido antes de extraer por defecto previo de privacidad.
+Registro inicial (parada conservada). Base: 257dd2b. Estado en aquella ejecución: detenido antes de extraer por defecto previo de privacidad.
 No se mueve ningún método ni clave en esta entrega.
 
 | Método / dato | Propietario actual | Propietario previsto | Dependencias |
@@ -55,3 +55,46 @@ calculada por CipherController con AppSettings.isFullLab(). El analizador no lee
 El mapa de extracción no cambia: no se mueven métodos ni claves. La fase 0 se detiene en
 su paso 3 porque Outcome.inspectorOutput sigue exponiendo texto recuperado bajo MASKED
 y REDACTED. Véase encrypted-file-analyzer-0-characterization-failures.md y el informe 76.
+
+
+## Mapa operativo de la segunda continuación (antes de extraer)
+
+Base de producción: privacidad de archivos corregida en ab8a9fc, comprobación de inspector
+real en 1df985e. Las puertas de fase 0 preceden a la extracción. Se mantienen los
+contratos lingüísticos descritos arriba: ninguna clave se mueve, ninguna reasignación
+a tests existentes. SpecializedFeedbackHeadlessTest y PaymentsValidationHeadlessTest
+se ejecutarán aislados antes de las puertas de esta fase.
+
+| Elemento | Destino | Dependencias / decisión |
+| --- | --- | --- |
+| formatAnalysisReport | EncryptedFileAnalysisReportWriter (static, paquete) | Cuerpo intacto; AnalysisCandidate, Path, List; llama al formatPercent compartido |
+| writeHtmlReport | EncryptedFileAnalysisReportWriter (static, paquete) | Cuerpo intacto; Files, UTF-8, Path, List, candidato, htmlEscape y formatPercent |
+| htmlEscape | Escritor (private static) | Cuerpo intacto, solo escape de entidades |
+| formatPercent | Analizador (static, paquete) | Mismo String.format y Locale.ROOT; compartido con los detalles del inspector |
+| AnalysisCandidate | Analizador, clase anidada con acceso de paquete | Solo los campos consumidos por el escritor tienen acceso de paquete; constructor, plaintext y paddingEvidence permanecen privados |
+| ranking, porcentajes, evidencia, descifrado, entradas/opciones | Analizador | Sin traslados ni cambios de lógica |
+| CSV, directorio, informe sin candidatos | Analizador | Sin traslado en fase 1 |
+
+El escritor no modifica candidatos ni la confianza. No recibe settings ni decide
+privacidad; consume la vista previa ya protegida por la fase 0.
+
+Caracterización sobre código corregido: se reutilizan los SHA-256 FULL_LAB de la
+reproducción y los casos UI existentes. Se fijan además TXT/HTML protegidos dentro
+de la reproducción ya creada y se añade exclusivamente muestreo/sin candidatos
+(EncryptedFileAnalysisRefactorCharacterizationTest, semilla 7601). No se duplican CBC,
+Base64, contenedor o GCM. Se normalizan ruta, timestamp del directorio y CRLF; no se
+fijan excepciones del CSV ni iteración de mapas. Ningún test nuevo cambia Shelf o historia;
+la fixture de inspector real restaura todas las superficies que sí utiliza.
+
+
+Extracción aplicada según este mapa: analizador 1639 → 1396 líneas; escritor nuevo
+257 líneas. Se conservan todos los literales Java. Caracterización focal antes y después:
+5 informes / 19 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0.
+Contratos de claves aislados antes de puertas: 2 informes / 4 pruebas / 0 fallos /
+0 errores / 0 omitidas / exit 0. Ningún propietario de clave cambia.
+
+
+Puertas de fase 1 aprobadas sin excepción GC:
+G1 454 informes / 2929 pruebas / 0 fallos / 0 errores / 1 omitida / exit 0;
+G2 y G3, cada una, 132 informes / 552 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0.
+Se borraron los informes antes de cada puerta. No se retira la extracción porque las tres pasan.

@@ -200,9 +200,9 @@ Cada ejecución borra target/surefire-reports antes de Maven; los recuentos proc
 | 0 | G1 | 453 | 2927 | 0 | 0 | 1 | 0 — limpia |
 | 0 | G2 | 132 | 552 | 0 | 0 | 0 | 0 — limpia |
 | 0 | G3 | 132 | 552 | 0 | 0 | 0 | 0 — limpia |
-| 1 | G1 | — | — | — | — | — | Pendiente |
-| 1 | G2 | — | — | — | — | — | Pendiente |
-| 1 | G3 | — | — | — | — | — | Pendiente |
+| 1 | G1 | 454 | 2929 | 0 | 0 | 1 | 0 — limpia |
+| 1 | G2 | 132 | 552 | 0 | 0 | 0 | 0 — limpia |
+| 1 | G3 | 132 | 552 | 0 | 0 | 0 | 0 — limpia |
 | 2 | G1 | — | — | — | — | — | Pendiente |
 | 2 | G2 | — | — | — | — | — | Pendiente |
 | 2 | G3 | — | — | — | — | — | Pendiente |
@@ -224,3 +224,33 @@ G1 y G2 (además de su ejecución aislada anterior a esta continuación), pasan:
 No se reasigna ninguna clave ni se modifica ningún test previo al encargo.
 G1 confirma también las cinco pruebas headless de privacidad y las dos de inspector real.
 La tabla operativa de nueve puertas se actualiza con los XML de cada ejecución.
+
+
+## Fase 1 — extracción de informes
+
+Base: 9e3ad06. EncryptedFileAnalysisReportWriter recibe formatAnalysisReport,
+writeHtmlReport y htmlEscape sin cambiar sus cuerpos. formatPercent queda compartido,
+estático, en el analizador; AnalysisCandidate sigue allí, con acceso de paquete solo
+para los campos que lee el escritor. plaintext, paddingEvidence y constructor privados.
+No cambia la selección ni la confianza. Ninguna clave de idioma cambia de propietario.
+
+Antes y después de extraer: 5 informes / 19 pruebas / 0 fallos / 0 errores / 0 omitidas /
+exit 0 (batería original, reproducción de privacidad, inspector real y dos huecos nuevos).
+Se amplía únicamente la reproducción propia para fijar TXT/HTML protegidos; se añaden
+muestreo y sin candidatos con semilla 7601. Se mantienen todos los digests tras extraer.
+Las capturas provisionales se anotan en el documento de fallos de fase 1; no descubren
+un defecto nuevo. Contratos de claves aislados: 2 informes / 4 pruebas / 0 fallos / 0
+errores / 0 omitidas / exit 0. Se conservan todos los literales Java. Higiene: 0 / 325.
+
+Líneas: analizador 1639 → 1396; escritor nuevo 257; analyze permanece con 311.
+Se retira también la comprobación auxiliar sobre contenido de inspectorOutput de la
+reproducción propia: esa capa no define privacidad. El roundtrip sigue cubierto por el
+test original, y la superficie por el shell real. G1 se ejecutó aún con esa comprobación
+adicional y pasó; tras retirarla la reproducción aislada pasa 1 informe / 5 pruebas /
+0 fallos / 0 errores / 0 omitidas / exit 0. Producción idéntica entre G1 y G2.
+
+
+Puertas de fase 1 aprobadas sin excepción GC:
+G1 454 informes / 2929 pruebas / 0 fallos / 0 errores / 1 omitida / exit 0;
+G2 y G3, cada una, 132 informes / 552 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0.
+Se borraron los informes antes de cada puerta. No se retira la extracción porque las tres pasan.

@@ -45,7 +45,6 @@ class EncryptedFileAnalysisPrivacyReproductionTest {
             var outcome = new EncryptedFileAnalyzer(new EncryptedFileAnalyzer.CipherInputs(
                     DataConverter.bytesToHex(iv), "", false, "", AppSettings.isFullLab())).analyze(source, key, options);
             assertTrue(outcome.hasCandidate());
-            assertArrayEquals(plaintext, outcome.inspectorOutput());
             Path htmlPath;
             Path textPath;
             try (Stream<Path> files = Files.walk(dir)) {
@@ -63,7 +62,9 @@ class EncryptedFileAnalysisPrivacyReproductionTest {
                     () -> assertFalse(text.contains(keyHex), "report.txt exposes invented key"),
                     () -> assertFalse(html.contains(keyHex), "report.html exposes invented key"),
                     () -> assertFalse(text.contains(marker), "report.txt exposes recovered text"),
-                    () -> assertFalse(html.contains(marker), "report.html exposes recovered text"));
+                    () -> assertFalse(html.contains(marker), "report.html exposes recovered text"),
+                    () -> assertEquals("9c8ab4ca13ab56bd3c38b8d97fa09a7ac6f2a53a37f892cb3093a7eb46b33d4e", digest(text)),
+                    () -> assertEquals("9ba6bb0a128385ce1d07ceba171bb3782ee23b9acaa55fd42b7e9feba47c4c41", digest(html)));
         } finally {
             // No controller, history, Shelf or status service is instantiated or mutated.
             AppSettings.setInstanceForTesting(previous);
