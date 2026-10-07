@@ -4,6 +4,15 @@ import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.ClipboardEntry;
 import com.cryptocarver.model.ClipboardShelfManager;
 import com.cryptocarver.model.LanguagePreference;
+import com.cryptocarver.model.HistoryManager;
+import com.cryptocarver.model.HistoryCommandPolicy;
+import com.cryptocarver.model.OperationDetail;
+import com.cryptocarver.model.OperationResult;
+import com.cryptocarver.model.ShelfPackage;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.Label;
+import javafx.stage.Window;
+import java.nio.file.Files;
 import com.cryptocarver.model.SecretVisibilityProfile;
 import com.cryptocarver.service.I18nService;
 import org.junit.jupiter.api.*;
@@ -96,6 +105,93 @@ class JoseHistoryAliasUITest {
                 assertEquals(PRIVATE_JWKS, fixture.area("jwksSecretArea").getText());
             } catch (Exception error) { throw new RuntimeException(error); }
         });
+    }
+
+    @Test void privateAliasContentUsesCanonicalPolicyAcrossRestrictedProfiles() throws Exception {
+        HistoryManager history = new HistoryManager(tempDir.resolve("history.json"));
+        try {
+            UiTestLifecycleExtension.onFx(() -> {
+                try (var fixture = new JoseCharacterizationSupport()) {
+                    assertTrue(com.nimbusds.jose.jwk.JWKSet.parse(PRIVATE_JWKS).getKeys().get(0).isPrivate());
+                    TextArea area = fixture.area("jwksSecretArea");
+                    ResultAreaTracker tracker = new ResultAreaTracker();
+                    tracker.register(area); tracker.markUpdated(area); tracker.focus(area);
+                    ResultCaptureCoordinator capture = new ResultCaptureCoordinator(() -> null, () -> null,
+                            () -> null, () -> null, () -> tracker, () -> null, () -> "JOSE", () -> "JOSE",
+                            () -> AppSettings.getInstance().getSecretVisibilityProfile(), message -> { },
+                            (title, message) -> { }, (control, selected) -> { });
+                    Label status = new Label();
+                    List<String> clipboard = new ArrayList<>();
+                    ResultViewerCoordinator viewerActions = new ResultViewerCoordinator(tracker, null,
+                            a -> { }, a -> { }, a -> { }, a -> { }, () -> "JOSE", () -> false,
+                            capture::resolveResultText, capture::classificationForResultArea,
+                            () -> AppSettings.isFullLab(), status::setText, clipboard::add, entry -> { },
+                            new ResultViewerCoordinator.ShelfServices() {
+                                public String capture(TextArea a) { return capture.resolveShelfCaptureText(a); }
+                                public boolean blockedByVisibility(TextArea a) { return capture.isShelfCaptureBlockedByVisibility(a); }
+                                public boolean isCurrentSelection(TextArea a) { return tracker.isCurrentSelection(a, false); }
+                                public OperationResult snapshot() { return null; }
+                                public String activeOperation() { return "JOSE"; }
+                                public ClipboardShelfManager manager() { return ClipboardShelfManager.getInstance(); }
+                                public boolean isPrimaryCipherOutput(TextArea a) { return false; }
+                                public ShelfPackage createCipherPackage() { return null; }
+                            });
+                    for (SecretVisibilityProfile profile : List.of(SecretVisibilityProfile.MASKED, SecretVisibilityProfile.REDACTED)) {
+                        AppSettings.getInstance().setSecretVisibilityProfile(profile);
+                        for (String oldKey : List.of("jwksArea", "JOSEController.jwksArea")) {
+                            area.setEditable(true);
+                            // Session restores may contain inputs stored during FULL_LAB.
+                            UiStateSnapshot.restore(fixture.controller, Map.of(oldKey, PRIVATE_JWKS));
+                            assertEquals(PRIVATE_JWKS, area.getText());
+                            assertEquals("jwksSecretArea", area.getId());
+                            assertEquals(OperationDetail.Classification.SECRET, capture.classificationForResultArea(area));
+                            assertTrue(capture.isShelfCaptureBlockedByVisibility(area));
+                            var recipe = UiStateSnapshot.captureHistoryRecipe(fixture.controller);
+                            assertEquals("[REDACTED_SECRET]", recipe.get("JOSEController.jwksSecretArea"));
+                            assertFalse(recipe.containsKey("JOSEController.jwksArea"));
+                            history.addHistoryItem(HistoryCommandPolicy.create("JWKS alias test", List.of(), recipe,
+                                    "JSON", "JSON", "JOSE", navigation -> true));
+                            assertFalse(Files.readString(tempDir.resolve("history.json")).contains(PRIVATE_VALUE));
+                            assertTrue(history.getHistoryItems().stream()
+                                    .noneMatch(item -> item.getParameters().toString().contains(PRIVATE_VALUE)));
+
+                            // Exercise the shared output policy as well as the actual expanded viewer.
+                            area.setEditable(false);
+                            assertEquals(profile == SecretVisibilityProfile.MASKED ? "***MASKED***" : "",
+                                    capture.renderResultArea(area));
+                            assertFalse(capture.resolveShelfCaptureText(area).contains(PRIVATE_VALUE));
+                            viewerActions.addToClipboardShelfSecure(area, null);
+                            viewerActions.copySecure(area, null, false);
+                            assertTrue(clipboard.isEmpty());
+                            assertEquals(originalShelf, ClipboardShelfManager.getInstance().getEntries());
+                            assertFalse(status.getText().contains(PRIVATE_VALUE));
+                            ExpandedTextViewer expanded = new ExpandedTextViewer();
+                            try {
+                                expanded.show(null, "JWKS alias privacy 77", capture.resolveCurrentOutputText());
+                                var window = Window.getWindows().stream().filter(w -> w instanceof javafx.stage.Stage stage
+                                        && "JWKS alias privacy 77".equals(stage.getTitle())).findFirst().orElseThrow();
+                                var content = window.getScene().getRoot().lookupAll(".text-area").stream()
+                                        .map(TextArea.class::cast).map(TextArea::getText).toList();
+                                assertFalse(content.isEmpty());
+                                assertTrue(content.stream().noneMatch(text -> text.contains(PRIVATE_VALUE)));
+                            } finally { expanded.dispose(); area.setEditable(true); }
+
+                            // History reopen must clear the private input and identify it for re-entry,
+                            // exactly like a recipe already using the canonical id.
+                            var redacted = UiStateSnapshot.restoreHistoryRecipe(fixture.controller, Map.of(oldKey, PRIVATE_JWKS));
+                            assertEquals("", area.getText()); assertTrue(redacted.contains(area));
+                            area.setText(PRIVATE_JWKS);
+                            var direct = UiStateSnapshot.restoreHistoryRecipe(fixture.controller,
+                                    Map.of("JOSEController.jwksSecretArea", PRIVATE_JWKS));
+                            assertEquals("", area.getText()); assertEquals(direct, redacted);
+                            var marker = UiStateSnapshot.restoreHistoryRecipe(fixture.controller,
+                                    Map.of(oldKey, "[REDACTED_SECRET]"));
+                            assertEquals("", area.getText()); assertTrue(marker.contains(area));
+                        }
+                    }
+                } catch (Exception error) { throw new RuntimeException(error); }
+            });
+        } finally { history.clearHistory(); }
     }
 
 }
