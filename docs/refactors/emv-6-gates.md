@@ -16,3 +16,21 @@ Logs y manifiestos: target/emv75-phase6-G*.log y target/emv75-phase6-gate-result
 ## Continuación posterior
 
 Se recuperó ODA en e9e3944. La nueva G1 falla solo en los tres tests GC: 450 informes / 2918 pruebas / 3 fallos / 0 errores / 1 omitida / exit 1. Clase aislada con opciones G1: 1/3/3/0/0/1 con extracción y en base 45e5a1b, mismos fallos. La excepción autorizada cubre únicamente G2/G3; no se ejecutaron estas ni HCE, y se retiró nuevamente ODA. Ver el registro completo en emv-75-report.md.
+
+## Segunda continuación: ODA aceptada
+
+Recuperación solo en código, idéntica a 06dd269, en 626ee3b. La excepción del usuario ahora cubre G1/G2/G3. Los únicos fallos de cada puerta son exactamente los tres tests GC de ExpandedViewerLifecycleUITest, mismos métodos y diagnóstico, reproducidos por la clase aislada con las opciones correspondientes en base 45e5a1b. Se conserva el exit 1 de Maven; aceptación por excepción, no puertas limpias.
+
+| Ejecución | Commit | Informes | Pruebas | Fallos | Errores | Omitidas | Exit |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| G1 | `626ee3b` | 450 | 2918 | 3 | 0 | 1 | 1 |
+| G1-gc-extracted | `626ee3b` | 1 | 3 | 3 | 0 | 0 | 1 |
+| G1-gc-base | `45e5a1b` | 1 | 3 | 3 | 0 | 0 | 1 |
+| G2 | `626ee3b` | 130 | 548 | 3 | 0 | 0 | 1 |
+| G2-gc-extracted | `626ee3b` | 1 | 3 | 3 | 0 | 0 | 1 |
+| G2-gc-base | `45e5a1b` | 1 | 3 | 3 | 0 | 0 | 1 |
+| G3 | `626ee3b` | 130 | 548 | 3 | 0 | 0 | 1 |
+| G3-gc-extracted | `626ee3b` | 1 | 3 | 3 | 0 | 0 | 1 |
+| G3-gc-base | `45e5a1b` | 1 | 3 | 3 | 0 | 0 | 1 |
+
+Guard exclusivo previo: SpecializedFeedbackHeadlessTest,EmvOdaPaneTranslationTest, exit 0. Informes borrados antes de cada ejecución. Logs/manifiesto: target/emv75-oda-cont2-*.log y target/emv75-oda-cont2-results.json. Puertas completas sin -Dtest; selección solo para reintento/contraste aislado. Ningún cambio al test GC ni a tests existentes. Controlador: 810 líneas. ODA permanece extraída y se permite comenzar HCE.
