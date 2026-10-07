@@ -27,8 +27,12 @@ Los fallos anteriores a fijarlos están en `process-designer-6-characterization-
 
 ## Aserción de propietario
 
-`SpecializedFeedbackHeadlessTest` debe buscar `module.process.feedback.nodeError`, `aad`, `iv` e `ivLabel` en ProcessExecutionCoordinator tras mover el preflight; `failed` se usa tanto en ProcessPreflightPresenter como en el render del coordinador; `connectionReversed` pertenece a ProcessConnectionCoordinator. Se hará explícita cada asignación de propietario, manteniendo las aserciones de presencia y paridad EN/ES. No se usan comentarios del controlador para simular propiedad.
+`SpecializedFeedbackHeadlessTest` debe buscar `module.process.feedback.nodeError`, `aad`, `iv` e `ivLabel` en ProcessExecutionCoordinator tras mover el preflight; `failed` se localiza en el View del controlador para ProcessPreflightPresenter y en el render del coordinador; `connectionReversed` permanece en el controlador (`handleReverseConnection`, línea 773 de la base). Se hará explícita cada asignación de propietario, manteniendo las aserciones de presencia y paridad EN/ES. No se usan comentarios del controlador para simular propiedad.
 
 ## Puertas
 
 Tras extracción, tres Maven seriales con informes borrados antes de cada ejecución: headless low-cpu, opt-in UI low-cpu y UI con opciones CI. Una imposibilidad de pantalla o un fallo distinto de ExpandedViewerLifecycleUITest detiene el encargo antes de fase 8.
+
+## Bloqueo y retirada
+
+La primera puerta de extracción detectó una asignación incorrecta de propietario en el ajuste del test: se buscó `connectionReversed` en ProcessConnectionCoordinator, aunque sigue en el controlador. Es un error de este encargo, no un fallo preexistente. Se activa la regla de parada; no se inicia fase 8. La extracción y el ajuste del test se retiran íntegramente. Quedan solamente el mapa corregido y la evidencia de caracterización base, con controlador de 1340 líneas. Una reanudación deberá mover solo nodeError/aad/iv/ivLabel, comprobar failed en sus dos propietarios y mantener connectionReversed en el controlador.
