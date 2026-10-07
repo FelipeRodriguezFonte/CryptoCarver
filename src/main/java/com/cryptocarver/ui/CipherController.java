@@ -1,6 +1,7 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.SymmetricCipher;
+import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.utils.OperationHistory;
 import javafx.fxml.FXML;
@@ -768,7 +769,8 @@ public class CipherController {
                 ivField != null ? ivField.getText() : "",
                 aadField != null ? aadField.getText() : "",
                 aadField != null && !aadField.isDisabled(),
-                gcmTagField != null ? gcmTagField.getText() : "");
+                gcmTagField != null ? gcmTagField.getText() : "",
+                AppSettings.isFullLab());
     }
 
     private byte[] getSymmetricKeyBytes(String operation) {

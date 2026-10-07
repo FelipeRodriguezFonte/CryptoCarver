@@ -5,6 +5,9 @@ import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.SecretVisibilityProfile;
 import com.cryptocarver.util.DataConverter;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.Test;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -40,7 +43,7 @@ class EncryptedFileAnalysisPrivacyReproductionTest {
             var options = new EncryptedFileAnalyzer.FileAnalysisOptions(new int[] {64}, true, false, 8,
                     EncryptedFileAnalyzer.FileDataEncoding.RAW, 262144);
             var outcome = new EncryptedFileAnalyzer(new EncryptedFileAnalyzer.CipherInputs(
-                    DataConverter.bytesToHex(iv), "", false, "")).analyze(source, key, options);
+                    DataConverter.bytesToHex(iv), "", false, "", AppSettings.isFullLab())).analyze(source, key, options);
             assertTrue(outcome.hasCandidate());
             assertArrayEquals(plaintext, outcome.inspectorOutput());
             Path htmlPath;
@@ -67,4 +70,44 @@ class EncryptedFileAnalysisPrivacyReproductionTest {
             // @TempDir removes input, settings and all generated reports, also on assertion failure.
         }
     }
+    @Test
+    void fullLabKeepsTheOriginalReportBytesAndPreview() throws Exception {
+        Random random = new Random(76L);
+        byte[] key = new byte[16];
+        byte[] iv = new byte[16];
+        random.nextBytes(key);
+        random.nextBytes(iv);
+        String marker = "Invented confidential recovered text for assignment 76.";
+        byte[] plaintext = (marker + "\n" + marker + "\n").getBytes(StandardCharsets.US_ASCII);
+        Path source = dir.resolve("privacy.bin");
+        Files.write(source, SymmetricCipher.encrypt(plaintext, key, "AES-128", "CBC", "PKCS5Padding", iv, null));
+        var options = new EncryptedFileAnalyzer.FileAnalysisOptions(new int[] {64}, true, false, 8,
+                EncryptedFileAnalyzer.FileDataEncoding.RAW, 262144);
+        var outcome = new EncryptedFileAnalyzer(new EncryptedFileAnalyzer.CipherInputs(
+                DataConverter.bytesToHex(iv), "", false, "", true)).analyze(source, key, options);
+        Path htmlPath;
+        try (Stream<Path> files = Files.walk(dir)) {
+            htmlPath = files.filter(path -> path.getFileName().toString().equals("report.html"))
+                    .findFirst().orElseThrow();
+        }
+        String text = Files.readString(htmlPath.resolveSibling("report.txt"));
+        String html = Files.readString(htmlPath);
+        String csv = Files.readString(htmlPath.resolveSibling("attempts.csv"));
+        assertTrue(text.contains(marker));
+        assertTrue(html.contains(marker));
+        assertTrue(csv.contains(marker));
+        assertEquals(outcome.reportText(), text);
+        assertAll(
+                () -> assertEquals("2adf3008b59fdb915e72e81b388fbc758dc5a92a8c346bff2a75aa390ff97f7b", digest(text)),
+                () -> assertEquals("112d49157698153337d875683c0cb20b3b0383b36f65bc9bbe460ead3f64e1fb", digest(html)));
+    }
+
+    private String digest(String value) throws Exception {
+        String normalized = value.replace(dir.toAbsolutePath().toString(), "<DIR>")
+                .replaceAll("analysis_privacy\\.bin_\\d{8}_\\d{6}", "analysis_privacy.bin_<TS>")
+                .replace("\r\n", "\n");
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(normalized.getBytes(StandardCharsets.UTF_8)));
+    }
+
 }

@@ -30,7 +30,13 @@ import java.util.Map;
 final class EncryptedFileAnalyzer {
 
     /** IV/nonce, AAD and tag as typed in the cipher screen, read once before the analysis starts. */
-    record CipherInputs(String ivHex, String aadText, boolean aadEnabled, String tagHex) {
+    record CipherInputs(String ivHex, String aadText, boolean aadEnabled, String tagHex,
+            boolean allowRecoveredTextPreview) {
+        /** Callers must explicitly authorize plaintext previews; omission protects generated files. */
+        CipherInputs(String ivHex, String aadText, boolean aadEnabled, String tagHex) {
+            this(ivHex, aadText, aadEnabled, tagHex, false);
+        }
+
         CipherInputs {
             ivHex = ivHex == null ? "" : ivHex.trim();
             aadText = aadText == null ? "" : aadText;
@@ -796,7 +802,7 @@ final class EncryptedFileAnalyzer {
                 totalScore,
                 quality.inferredEncoding,
                 qualitySummary,
-                quality.preview,
+                inputs.allowRecoveredTextPreview() ? quality.preview : "[REDACTED_SECRET]",
                 paddingEvidence != null ? paddingEvidence.summary : "");
     }
 
