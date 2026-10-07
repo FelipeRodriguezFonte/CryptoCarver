@@ -4,7 +4,6 @@ import com.cryptocarver.crypto.EmvTlv;
 
 import com.cryptocarver.crypto.EMVOperations;
 import com.cryptocarver.crypto.EmvOdaOperations;
-import com.cryptocarver.crypto.EmvSecureMessaging;
 import com.cryptocarver.crypto.VisaHceOperations;
 import com.cryptocarver.crypto.MastercardDataStorage;
 import com.cryptocarver.crypto.MastercardIccDynamicNumber;
@@ -114,6 +113,30 @@ public class EMVController {
                 }
             }
         }
+    }
+
+    private EmvSecureMessagingCoordinator emvSecureMessagingCoordinator;
+    private EmvSecureMessagingCoordinator emvSecureMessagingCoordinator() {
+        if (emvSecureMessagingCoordinator == null) {
+            emvSecureMessagingCoordinator = new EmvSecureMessagingCoordinator(new EmvSecureMessagingCoordinator.View(
+                    () -> smMkSmiField,
+                    () -> smMkSmcField,
+                    () -> smPanSeqField,
+                    () -> smUdkSmiField,
+                    () -> smUdkSmcField,
+                    () -> smAcField,
+                    () -> smCommandNumberField,
+                    () -> smAtcField,
+                    () -> smUdkAField,
+                    () -> smHeaderField,
+                    () -> smPinField,
+                    () -> smSkMacField,
+                    () -> smSkEncField,
+                    () -> smDataField,
+                    () -> smSchemeCombo,
+                    () -> smResultArea), () -> mainController);
+        }
+        return emvSecureMessagingCoordinator;
     }
 
     private StatusReporter mainController;
@@ -444,90 +467,24 @@ public class EMVController {
     // ISSUER-SCRIPT SECURE MESSAGING (all cryptography in EmvSecureMessaging)
     // ============================================================================
 
-    private boolean smVisa() {
-        return smSchemeCombo != null && SM_VISA.equals(smSchemeCombo.getValue());
-    }
+
 
     private static String smText(TextInputControl field) {
         return field == null || field.getText() == null ? "" : field.getText().replaceAll("\\s+", "").toUpperCase(java.util.Locale.ROOT);
     }
 
-    private void smShow(String text) {
-        smResultArea.setText(text);
-        smResultArea.setVisible(true);
-        smResultArea.setManaged(true);
-    }
 
-    private void smPublish(String operation, String report, java.util.List<com.cryptocarver.model.OperationDetail> details) {
-        if (mainController == null) return;
-        mainController.publish(OperationResult.forOperation(operation)
-                .output(report.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                .status(t("module.emv.sm.status")).build());
-    }
+
+
 
     /** Fills every field with the worked example the external tool ships for the selected scheme. */
-    public void handleSmLoadExample() {
-        if (smVisa()) {
-            smMkSmiField.clear(); smMkSmcField.clear(); smPanSeqField.clear();
-            smUdkSmiField.setText("94E3194C02105E3B153438D562D5A49D");
-            smUdkSmcField.setText("94E3194C02105E3B153438D562D5A49D");
-            smAcField.setText("EFB5340A1BF07421");
-            smCommandNumberField.clear();
-            smAtcField.setText("0003");
-            smUdkAField.setText("64C8621A76A2EA9EF23D5749FE1A64F1");
-            smHeaderField.setText("8424000218");
-        } else {
-            smMkSmiField.setText("862F13DF807A13B9D9AEAEC885FE7CA4");
-            smMkSmcField.setText("BF89B32308CDADDC04B952C7DF0715E0");
-            smPanSeqField.setText("7430100000157500");
-            smUdkSmiField.clear(); smUdkSmcField.clear();
-            smAcField.setText("51DB71A5DCC47F8A");
-            smCommandNumberField.setText("1");
-            smAtcField.setText("0010");
-            smUdkAField.clear();
-            smHeaderField.setText("8424000210");
-        }
-        smPinField.setText("4222");
-        smSkMacField.clear(); smSkEncField.clear(); smDataField.clear();
-        smShow(t("module.emv.sm.exampleLoaded", smSchemeCombo.getValue()));
-    }
+    public void handleSmLoadExample() { emvSecureMessagingCoordinator().handleSmLoadExample(); }
 
     public void handleSmDeriveSessionKeys() { emvSessionKeyCoordinator().handleSmDeriveSessionKeys(); }
 
-    public void handleSmEncipherPin() {
-        try {
-            String pin = smPinField.getText() == null ? "" : smPinField.getText().trim();
-            if (!pin.matches("\\d{4,12}")) throw new IllegalArgumentException(t("module.emv.sm.pinInvalid"));
-            String encrypted = smVisa()
-                    ? EmvSecureMessaging.visaEncryptedPin(smText(smSkEncField), smText(smUdkAField), pin)
-                    : EmvSecureMessaging.mastercardEncryptedPin(smText(smSkEncField), pin);
-            smDataField.setText(encrypted);
-            String report = (smVisa() ? "Visa PIN data (08 || PIN block XOR UDK A || 80..), TDES ECB\n"
-                    : "Mastercard ISO format 2 PIN block, TDES ECB\n") + "Enciphered PIN: " + encrypted + '\n';
-            smShow(report);
-            // The PIN itself is never published.
-            smPublish("Secure Messaging PIN", report, java.util.List.of(
-                    com.cryptocarver.model.OperationDetail.publicDetail("Scheme", smSchemeCombo.getValue()),
-                    com.cryptocarver.model.OperationDetail.publicDetail("Enciphered PIN", encrypted)));
-        } catch (Exception e) {
-            smShow(t("module.emv.sm.error", e.getMessage()));
-        }
-    }
+    public void handleSmEncipherPin() { emvSecureMessagingCoordinator().handleSmEncipherPin(); }
 
-    public void handleSmGenerateMac() {
-        try {
-            String mac = EmvSecureMessaging.commandMac(smText(smSkMacField), smText(smHeaderField), smText(smAtcField),
-                    smText(smAcField), smText(smDataField));
-            String command = smText(smHeaderField) + smText(smDataField) + mac.substring(0, 8);
-            String report = "MAC (ISO 9797-1 alg. 3): " + mac + '\n' + "Command with 4-byte MAC: " + command + '\n';
-            smShow(report);
-            smPublish("Secure Messaging MAC", report, java.util.List.of(
-                    com.cryptocarver.model.OperationDetail.publicDetail("Scheme", smSchemeCombo.getValue()),
-                    com.cryptocarver.model.OperationDetail.publicDetail("MAC", mac)));
-        } catch (Exception e) {
-            smShow(t("module.emv.sm.error", e.getMessage()));
-        }
-    }
+    public void handleSmGenerateMac() { emvSecureMessagingCoordinator().handleSmGenerateMac(); }
 
     // The controller validates field shape and delegates all EMV calculations.
     private String emvHex(TextField field, String labelKey, int bytes) {
