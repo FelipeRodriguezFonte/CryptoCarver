@@ -3,9 +3,6 @@ package com.cryptocarver.ui;
 import com.cryptocarver.crypto.EmvTlv;
 
 import com.cryptocarver.crypto.EMVOperations;
-import com.cryptocarver.crypto.EmvOdaOperations;
-import com.cryptocarver.crypto.EmvSecureMessaging;
-import com.cryptocarver.crypto.VisaHceOperations;
 import com.cryptocarver.crypto.MastercardDataStorage;
 import com.cryptocarver.crypto.MastercardIccDynamicNumber;
 import com.cryptocarver.model.OperationDetail;
@@ -114,6 +111,82 @@ public class EMVController {
                 }
             }
         }
+    }
+
+    private EmvSecureMessagingCoordinator emvSecureMessagingCoordinator;
+    private EmvSecureMessagingCoordinator emvSecureMessagingCoordinator() {
+        if (emvSecureMessagingCoordinator == null) {
+            emvSecureMessagingCoordinator = new EmvSecureMessagingCoordinator(new EmvSecureMessagingCoordinator.View(
+                    () -> smMkSmiField,
+                    () -> smMkSmcField,
+                    () -> smPanSeqField,
+                    () -> smUdkSmiField,
+                    () -> smUdkSmcField,
+                    () -> smAcField,
+                    () -> smCommandNumberField,
+                    () -> smAtcField,
+                    () -> smUdkAField,
+                    () -> smHeaderField,
+                    () -> smPinField,
+                    () -> smSkMacField,
+                    () -> smSkEncField,
+                    () -> smDataField,
+                    () -> smSchemeCombo,
+                    () -> smResultArea), () -> mainController);
+        }
+        return emvSecureMessagingCoordinator;
+    }
+
+    private EmvOdaCoordinator emvOdaCoordinator;
+    private EmvOdaCoordinator emvOdaCoordinator() {
+        if (emvOdaCoordinator == null) {
+            emvOdaCoordinator = new EmvOdaCoordinator(new EmvOdaCoordinator.View(
+                    () -> odaIccCertificateArea,
+                    () -> odaSsadArea,
+                    () -> odaStaticDataArea,
+                    () -> odaSdadArea,
+                    () -> odaTerminalDataField,
+                    () -> odaCidField,
+                    () -> odaTransactionDataArea,
+                    () -> odaCaModulusArea,
+                    () -> odaCaExponentField,
+                    () -> odaIssuerCertificateArea,
+                    () -> odaIssuerRemainderField,
+                    () -> odaIssuerExponentField,
+                    () -> odaIccRemainderField,
+                    () -> odaIccExponentField,
+                    () -> odaPanField,
+                    () -> odaResultArea), () -> mainController);
+        }
+        return emvOdaCoordinator;
+    }
+
+    private EmvHceCoordinator emvHceCoordinator;
+    private EmvHceCoordinator emvHceCoordinator() {
+        if (emvHceCoordinator == null) {
+            emvHceCoordinator = new EmvHceCoordinator(new EmvHceCoordinator.View(
+                    () -> hceUdkField,
+                    () -> hceYearField,
+                    () -> hceHoursField,
+                    () -> hceCounterField,
+                    () -> hceMsdLukField,
+                    () -> hceQvsdcLukField,
+                    () -> hceMsdAtcField,
+                    () -> hceDeviceTypeField,
+                    () -> hceAmountField,
+                    () -> hceOtherAmountField,
+                    () -> hceCountryField,
+                    () -> hceTvrField,
+                    () -> hceCurrencyField,
+                    () -> hceDateField,
+                    () -> hceTypeField,
+                    () -> hceUnField,
+                    () -> hceAipField,
+                    () -> hceQvsdcAtcField,
+                    () -> hceCvrField,
+                    () -> hceResultArea), () -> mainController);
+        }
+        return emvHceCoordinator;
     }
 
     private StatusReporter mainController;
@@ -444,90 +517,18 @@ public class EMVController {
     // ISSUER-SCRIPT SECURE MESSAGING (all cryptography in EmvSecureMessaging)
     // ============================================================================
 
-    private boolean smVisa() {
-        return smSchemeCombo != null && SM_VISA.equals(smSchemeCombo.getValue());
-    }
-
     private static String smText(TextInputControl field) {
         return field == null || field.getText() == null ? "" : field.getText().replaceAll("\\s+", "").toUpperCase(java.util.Locale.ROOT);
     }
 
-    private void smShow(String text) {
-        smResultArea.setText(text);
-        smResultArea.setVisible(true);
-        smResultArea.setManaged(true);
-    }
-
-    private void smPublish(String operation, String report, java.util.List<com.cryptocarver.model.OperationDetail> details) {
-        if (mainController == null) return;
-        mainController.publish(OperationResult.forOperation(operation)
-                .output(report.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                .status(t("module.emv.sm.status")).build());
-    }
-
     /** Fills every field with the worked example the external tool ships for the selected scheme. */
-    public void handleSmLoadExample() {
-        if (smVisa()) {
-            smMkSmiField.clear(); smMkSmcField.clear(); smPanSeqField.clear();
-            smUdkSmiField.setText("94E3194C02105E3B153438D562D5A49D");
-            smUdkSmcField.setText("94E3194C02105E3B153438D562D5A49D");
-            smAcField.setText("EFB5340A1BF07421");
-            smCommandNumberField.clear();
-            smAtcField.setText("0003");
-            smUdkAField.setText("64C8621A76A2EA9EF23D5749FE1A64F1");
-            smHeaderField.setText("8424000218");
-        } else {
-            smMkSmiField.setText("862F13DF807A13B9D9AEAEC885FE7CA4");
-            smMkSmcField.setText("BF89B32308CDADDC04B952C7DF0715E0");
-            smPanSeqField.setText("7430100000157500");
-            smUdkSmiField.clear(); smUdkSmcField.clear();
-            smAcField.setText("51DB71A5DCC47F8A");
-            smCommandNumberField.setText("1");
-            smAtcField.setText("0010");
-            smUdkAField.clear();
-            smHeaderField.setText("8424000210");
-        }
-        smPinField.setText("4222");
-        smSkMacField.clear(); smSkEncField.clear(); smDataField.clear();
-        smShow(t("module.emv.sm.exampleLoaded", smSchemeCombo.getValue()));
-    }
+    public void handleSmLoadExample() { emvSecureMessagingCoordinator().handleSmLoadExample(); }
 
     public void handleSmDeriveSessionKeys() { emvSessionKeyCoordinator().handleSmDeriveSessionKeys(); }
 
-    public void handleSmEncipherPin() {
-        try {
-            String pin = smPinField.getText() == null ? "" : smPinField.getText().trim();
-            if (!pin.matches("\\d{4,12}")) throw new IllegalArgumentException(t("module.emv.sm.pinInvalid"));
-            String encrypted = smVisa()
-                    ? EmvSecureMessaging.visaEncryptedPin(smText(smSkEncField), smText(smUdkAField), pin)
-                    : EmvSecureMessaging.mastercardEncryptedPin(smText(smSkEncField), pin);
-            smDataField.setText(encrypted);
-            String report = (smVisa() ? "Visa PIN data (08 || PIN block XOR UDK A || 80..), TDES ECB\n"
-                    : "Mastercard ISO format 2 PIN block, TDES ECB\n") + "Enciphered PIN: " + encrypted + '\n';
-            smShow(report);
-            // The PIN itself is never published.
-            smPublish("Secure Messaging PIN", report, java.util.List.of(
-                    com.cryptocarver.model.OperationDetail.publicDetail("Scheme", smSchemeCombo.getValue()),
-                    com.cryptocarver.model.OperationDetail.publicDetail("Enciphered PIN", encrypted)));
-        } catch (Exception e) {
-            smShow(t("module.emv.sm.error", e.getMessage()));
-        }
-    }
+    public void handleSmEncipherPin() { emvSecureMessagingCoordinator().handleSmEncipherPin(); }
 
-    public void handleSmGenerateMac() {
-        try {
-            String mac = EmvSecureMessaging.commandMac(smText(smSkMacField), smText(smHeaderField), smText(smAtcField),
-                    smText(smAcField), smText(smDataField));
-            String command = smText(smHeaderField) + smText(smDataField) + mac.substring(0, 8);
-            String report = "MAC (ISO 9797-1 alg. 3): " + mac + '\n' + "Command with 4-byte MAC: " + command + '\n';
-            smShow(report);
-            smPublish("Secure Messaging MAC", report, java.util.List.of(
-                    com.cryptocarver.model.OperationDetail.publicDetail("Scheme", smSchemeCombo.getValue()),
-                    com.cryptocarver.model.OperationDetail.publicDetail("MAC", mac)));
-        } catch (Exception e) {
-            smShow(t("module.emv.sm.error", e.getMessage()));
-        }
-    }
+    public void handleSmGenerateMac() { emvSecureMessagingCoordinator().handleSmGenerateMac(); }
 
     // The controller validates field shape and delegates all EMV calculations.
     private String emvHex(TextField field, String labelKey, int bytes) {
@@ -559,67 +560,13 @@ public class EMVController {
                 .details(details).status(t(statusKey)).build());
     }
 
-    public void handleHceLoadExample() {
-        hceUdkField.setText("94E3194C02105E3B153438D562D5A49D");
-        hceYearField.setText("26"); hceHoursField.setText("6431"); hceCounterField.setText("01");
-        hceMsdLukField.clear(); hceQvsdcLukField.clear();
-        hceMsdAtcField.setText("0001"); hceDeviceTypeField.setText("AAAA000000000001");
-        hceAmountField.setText("000000001000"); hceOtherAmountField.setText("000000000000");
-        hceCountryField.setText("0710"); hceTvrField.setText("0000000000");
-        hceCurrencyField.setText("0710"); hceDateField.setText("130205");
-        hceTypeField.setText("00"); hceUnField.setText("30901B6A");
-        hceAipField.setText("3C00"); hceQvsdcAtcField.setText("0055");
-        hceCvrField.setText("03A4A082");
-        emvShow(hceResultArea, t("module.emv.hce.exampleLoaded"));
-    }
+    public void handleHceLoadExample() { emvHceCoordinator().handleHceLoadExample(); }
 
-    public void handleHceLuk() {
-        try {
-            String udk = emvHex(hceUdkField, "module.emv.hce.udk", 16);
-            String year = smText(hceYearField), hours = smText(hceHoursField), counter = smText(hceCounterField);
-            if (!year.matches("\\d{1,2}")) throw new IllegalArgumentException(t("module.emv.hce.yearInvalid"));
-            if (!hours.matches("\\d{4}")) throw new IllegalArgumentException(t("module.emv.hce.hoursInvalid"));
-            if (!counter.matches("\\d{2}")) throw new IllegalArgumentException(t("module.emv.hce.counterInvalid"));
-            String luk = VisaHceOperations.limitedUseKey(udk, year, hours, counter);
-            hceMsdLukField.setText(luk); hceQvsdcLukField.setText(luk);
-            emvShow(hceResultArea, t("module.emv.hce.lukResult", luk));
-            emvPublish("module.emv.hce.lukAction", "module.emv.hce.status", luk, true,
-                    java.util.List.of(OperationDetail.secretDetail("UDK", udk), OperationDetail.secretDetail("LUK", luk)));
-        } catch (Exception e) { emvShow(hceResultArea, t("module.emv.hce.error", e.getMessage())); }
-    }
+    public void handleHceLuk() { emvHceCoordinator().handleHceLuk(); }
 
-    public void handleHceMsd() {
-        try {
-            String luk = emvHex(hceMsdLukField, "module.emv.hce.luk", 16);
-            String atc = emvHex(hceMsdAtcField, "module.emv.hce.atc", 2);
-            String device = emvHex(hceDeviceTypeField, "module.emv.hce.deviceType", 8);
-            String value = VisaHceOperations.msdVerificationValue(luk, atc, device);
-            emvShow(hceResultArea, t("module.emv.hce.msdResult", value));
-            emvPublish("module.emv.hce.msdAction", "module.emv.hce.status", value, false,
-                    java.util.List.of(OperationDetail.secretDetail("LUK", luk), OperationDetail.publicDetail("MSD", value)));
-        } catch (Exception e) { emvShow(hceResultArea, t("module.emv.hce.error", e.getMessage())); }
-    }
+    public void handleHceMsd() { emvHceCoordinator().handleHceMsd(); }
 
-    public void handleHceQvsdc() {
-        try {
-            String luk = emvHex(hceQvsdcLukField, "module.emv.hce.luk", 16);
-            String terminal = emvHex(hceAmountField, "module.emv.hce.amount", 6)
-                    + emvHex(hceOtherAmountField, "module.emv.hce.otherAmount", 6)
-                    + emvHex(hceCountryField, "module.emv.hce.country", 2)
-                    + emvHex(hceTvrField, "module.emv.hce.tvr", 5)
-                    + emvHex(hceCurrencyField, "module.emv.hce.currency", 2)
-                    + emvHex(hceDateField, "module.emv.hce.date", 3)
-                    + emvHex(hceTypeField, "module.emv.hce.type", 1)
-                    + emvHex(hceUnField, "module.emv.hce.un", 4);
-            String chip = emvHex(hceAipField, "module.emv.hce.aip", 2)
-                    + emvHex(hceQvsdcAtcField, "module.emv.hce.atc", 2)
-                    + emvHex(hceCvrField, "module.emv.hce.cvr", 4);
-            String value = VisaHceOperations.qvsdcCryptogram(luk, terminal, chip);
-            emvShow(hceResultArea, t("module.emv.hce.qvsdcResult", value));
-            emvPublish("module.emv.hce.qvsdcAction", "module.emv.hce.status", value, false,
-                    java.util.List.of(OperationDetail.secretDetail("LUK", luk), OperationDetail.publicDetail("qVSDC", value)));
-        } catch (Exception e) { emvShow(hceResultArea, t("module.emv.hce.error", e.getMessage())); }
-    }
+    public void handleHceQvsdc() { emvHceCoordinator().handleHceQvsdc(); }
 
     public void handleDsLoadExample() {
         dsIdField.setText("5168624300900697"); dsOperatorIdField.setText("8199829983998499");
@@ -809,180 +756,28 @@ public class EMVController {
     @FXML private TextArea odaTransactionDataArea;
     @FXML private TextArea odaResultArea;
 
-    /** The test card's Unpredictable Number, so DDA and CDA stay reproducible. */
-    private static final String TEST_UNPREDICTABLE_NUMBER = "01020304";
-    private static final String TEST_PAN = "4761739001010119";
+    @FXML
+    public void handleOdaRecoverKeys() { emvOdaCoordinator().handleOdaRecoverKeys(); }
 
     @FXML
-    public void handleOdaRecoverKeys() {
-        runOda(() -> {
-            StringBuilder report = new StringBuilder();
-            EmvOdaOperations.IssuerCertificate issuer = recoverIssuer();
-            report.append(EmvOdaOperations.describe(issuer));
-            if (!text(odaIccCertificateArea).isEmpty()) {
-                report.append('\n').append(EmvOdaOperations.describe(recoverIcc(issuer)));
-            }
-            return report.toString();
-        }, "EMV ODA Key Recovery");
-    }
+    public void handleOdaVerifySda() { emvOdaCoordinator().handleOdaVerifySda(); }
 
     @FXML
-    public void handleOdaVerifySda() {
-        runOda(() -> {
-            EmvOdaOperations.IssuerCertificate issuer = recoverIssuer();
-            if (!issuer.passed()) {
-                return EmvOdaOperations.describe(issuer)
-                        + "\nThe issuer key did not come back clean, so the SSAD below was not checked.\n";
-            }
-            return EmvOdaOperations.describe(EmvOdaOperations.verifyStaticApplicationData(
-                    text(odaSsadArea), issuer.issuerPublicKey(), text(odaStaticDataArea)));
-        }, "EMV SDA");
-    }
+    public void handleOdaVerifyDda() { emvOdaCoordinator().handleOdaVerifyDda(); }
 
     @FXML
-    public void handleOdaVerifyDda() {
-        runOda(() -> {
-            EmvOdaOperations.IccCertificate icc = recoverIcc(recoverIssuer());
-            if (!icc.passed()) {
-                return EmvOdaOperations.describe(icc)
-                        + "\nThe ICC key did not come back clean, so the dynamic signature was not checked.\n";
-            }
-            return EmvOdaOperations.describe(EmvOdaOperations.verifyDynamicApplicationData(
-                    text(odaSdadArea), icc.iccPublicKey(), text(odaTerminalDataField)));
-        }, "EMV DDA");
-    }
-
-    @FXML
-    public void handleOdaVerifyCda() {
-        runOda(() -> {
-            EmvOdaOperations.IccCertificate icc = recoverIcc(recoverIssuer());
-            if (!icc.passed()) {
-                return EmvOdaOperations.describe(icc)
-                        + "\nThe ICC key did not come back clean, so the combined signature was not checked.\n";
-            }
-            return EmvOdaOperations.describe(EmvOdaOperations.verifyCombinedApplicationData(
-                    text(odaSdadArea), icc.iccPublicKey(), text(odaTerminalDataField),
-                    text(odaCidField), text(odaTransactionDataArea)));
-        }, "EMV CDA");
-    }
+    public void handleOdaVerifyCda() { emvOdaCoordinator().handleOdaVerifyCda(); }
 
     /**
      * Personalises a throwaway card and fills every field with it, so the pane
      * is usable without a reader. The keys exist for the length of this click.
      */
     @FXML
-    public void handleOdaIssueTestCard() {
-        runOda(() -> {
-            java.security.KeyPair ca = odaKeyPair(1024);
-            java.security.KeyPair issuer = odaKeyPair(768);
-            java.security.KeyPair icc = odaKeyPair(512);
-
-            String staticData = "70115A0844AAAAAAAAAAAAAA5F3401009F0702FF00";
-            String expiry = java.time.YearMonth.now().plusYears(3).format(
-                    java.time.format.DateTimeFormatter.ofPattern("MMyy"));
-
-            EmvOdaOperations.IssuedCertificate issuerCertificate = EmvOdaOperations.signIssuerCertificate(
-                    EmvOdaOperations.RsaPrivateKey.of((java.security.interfaces.RSAPrivateKey) ca.getPrivate()),
-                    EmvOdaOperations.RsaPublicKey.of((java.security.interfaces.RSAPublicKey) issuer.getPublic()),
-                    TEST_PAN.substring(0, 8), expiry, "000001");
-            EmvOdaOperations.IssuedCertificate iccCertificate = EmvOdaOperations.signIccCertificate(
-                    EmvOdaOperations.RsaPrivateKey.of((java.security.interfaces.RSAPrivateKey) issuer.getPrivate()),
-                    EmvOdaOperations.RsaPublicKey.of((java.security.interfaces.RSAPublicKey) icc.getPublic()),
-                    TEST_PAN, expiry, "000002", staticData);
-
-            String ssad = EmvOdaOperations.signStaticApplicationData(
-                    EmvOdaOperations.RsaPrivateKey.of((java.security.interfaces.RSAPrivateKey) issuer.getPrivate()),
-                    "1234", staticData);
-
-            String transactionData = "000000010000000000000000097801020304";
-            String dynamicData = EmvOdaOperations.combinedDynamicData("1122334455667788", "80",
-                    "A1B2C3D4E5F60718", EmvOdaOperations.transactionDataHashCode(transactionData));
-            String sdad = EmvOdaOperations.signDynamicApplicationData(
-                    EmvOdaOperations.RsaPrivateKey.of((java.security.interfaces.RSAPrivateKey) icc.getPrivate()),
-                    dynamicData, TEST_UNPREDICTABLE_NUMBER);
-
-            set(odaCaModulusArea, EmvOdaOperations.RsaPublicKey.of(
-                    (java.security.interfaces.RSAPublicKey) ca.getPublic()).modulusHex());
-            set(odaCaExponentField, EmvOdaOperations.RsaPublicKey.of(
-                    (java.security.interfaces.RSAPublicKey) ca.getPublic()).exponentHex());
-            set(odaIssuerCertificateArea, issuerCertificate.certificate());
-            set(odaIssuerRemainderField, issuerCertificate.remainder());
-            set(odaIssuerExponentField, issuerCertificate.exponent());
-            set(odaIccCertificateArea, iccCertificate.certificate());
-            set(odaIccRemainderField, iccCertificate.remainder());
-            set(odaIccExponentField, iccCertificate.exponent());
-            set(odaStaticDataArea, staticData);
-            set(odaPanField, TEST_PAN);
-            set(odaSsadArea, ssad);
-            set(odaSdadArea, sdad);
-            set(odaTerminalDataField, TEST_UNPREDICTABLE_NUMBER);
-            set(odaCidField, "80");
-            set(odaTransactionDataArea, transactionData);
-
-            return t("module.emv.oda.testCardIssued");
-        }, "EMV ODA Test Card");
-    }
+    public void handleOdaIssueTestCard() { emvOdaCoordinator().handleOdaIssueTestCard(); }
 
     @FXML
-    public void handleOdaClear() {
-        for (TextInputControl field : new TextInputControl[] {
-                odaCaModulusArea, odaCaExponentField, odaIssuerCertificateArea, odaIssuerRemainderField,
-                odaIssuerExponentField, odaIccCertificateArea, odaIccRemainderField, odaIccExponentField,
-                odaStaticDataArea, odaPanField, odaSsadArea, odaSdadArea, odaTerminalDataField,
-                odaCidField, odaTransactionDataArea, odaResultArea}) {
-            if (field != null) field.clear();
-        }
-    }
-
-    private EmvOdaOperations.IssuerCertificate recoverIssuer() {
-        return EmvOdaOperations.recoverIssuerPublicKey(
-                text(odaIssuerCertificateArea), text(odaIssuerRemainderField), text(odaIssuerExponentField),
-                EmvOdaOperations.RsaPublicKey.of(text(odaCaModulusArea), text(odaCaExponentField)),
-                text(odaPanField));
-    }
-
-    private EmvOdaOperations.IccCertificate recoverIcc(EmvOdaOperations.IssuerCertificate issuer) {
-        if (issuer.issuerPublicKey() == null) {
-            throw new IllegalArgumentException(t("module.emv.oda.noIssuerKey"));
-        }
-        return EmvOdaOperations.recoverIccPublicKey(
-                text(odaIccCertificateArea), text(odaIccRemainderField), text(odaIccExponentField),
-                issuer.issuerPublicKey(), text(odaStaticDataArea), text(odaPanField));
-    }
+    public void handleOdaClear() { emvOdaCoordinator().handleOdaClear(); }
 
     /** EMV allows exponent 3 and 65537 only; a bench card uses 3, as most do. */
-    private static java.security.KeyPair odaKeyPair(int bits) throws Exception {
-        java.security.KeyPairGenerator generator = java.security.KeyPairGenerator.getInstance("RSA");
-        generator.initialize(new java.security.spec.RSAKeyGenParameterSpec(bits, java.math.BigInteger.valueOf(3)));
-        return generator.generateKeyPair();
-    }
 
-    private interface OdaStep {
-        String run() throws Exception;
-    }
-
-    private void runOda(OdaStep step, String operation) {
-        try {
-            String report = step.run();
-            if (odaResultArea != null) odaResultArea.setText(report);
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation(operation)
-                        .output(report.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                        .status(t("module.emv.oda.status"))
-                        .build());
-            }
-        } catch (Exception e) {
-            if (odaResultArea != null) {
-                odaResultArea.setText(t("module.emv.oda.error", String.valueOf(e.getMessage())));
-            }
-        }
-    }
-
-    private static String text(TextInputControl field) {
-        return field == null || field.getText() == null ? "" : field.getText().trim();
-    }
-
-    private static void set(TextInputControl field, String value) {
-        if (field != null) field.setText(value);
-    }
 }
