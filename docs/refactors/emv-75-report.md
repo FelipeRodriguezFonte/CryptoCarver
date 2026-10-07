@@ -1,6 +1,6 @@
 # Encargo 75: EMV, paradas y continuaciones
 
-Estado actual tras la segunda continuación: **SM validada; ODA aceptada por excepción GC contrastada; HCE bloqueada antes de extraer por filtración de LUK en historial. Controlador: 810 líneas.** El detalle más reciente está en la última sección.
+Estado final tras la tercera continuación: **Secure Messaging, ODA y HCE extraídos; privacidad LUK corregida; HCE pasa sus tres puertas limpias. EMVController: 783 líneas.** El cierre y la tabla de nueve puertas están al final; se conservan todos los registros anteriores.
 
 ## Registro inicial y primera parada
 
@@ -227,3 +227,70 @@ El usuario autoriza exclusivamente añadir `luk` a HISTORY_SENSITIVE_TOKENS de U
 Inventario de los **1511 ids FXML distintos**, usando los mismos límites camel-case de nameWords, y revisión de declaraciones de controles Java: los únicos controles que incorporan el token nuevo son **hceMsdLukField y hceQvsdcLukField**, ambos TextField de EMVController. Antes no se clasificaban como sensibles; después sí. Ningún otro control cambia. hceUdkField ya era sensible y sigue igual. Inventario local: target/emv75-luk-classification-inventory.json.
 
 La reproducción EmvHceCharacterizationUITest pasa a verde **sin modificar sus aserciones ni su código**. Comando focalizado con UiStateSnapshotTest existente: `mvn -o -q test -Plow-cpu -DrunUiTests=true -Dtest=EmvHceCharacterizationUITest,UiStateSnapshotTest`; dos informes seleccionados / 11 pruebas / 0 fallos, errores u omitidas / exit 0. Los tests existentes se mantienen intactos en este paso; ninguno depende de LUK en claro. Log: target/emv75-luk-fix-focused.log.
+
+### Paso 2: test dirigido de recetas LUK
+
+Commit `5836f5e`: UiStateSnapshotTest añade **un método y una fixture separada**, hceLukRecipesRespectVisibilityAndFullLabRestoration y HceRecipeController, con los dos nombres reales de campo. No se añade ningún campo a DummyController ni se cambia ninguno de sus diez tests previos.
+
+En MASKED/REDACTED se comprueba [REDACTED_SECRET] en ambos parámetros y limpieza del contenido al restaurar, con los dos destinos de reintroducción. En FULL_LAB se comprueban conservación exacta y restauración. Usa valor inventado fijo, AppSettings temporal restaurado en finally, y verifica que Shelf permanece intacto. No modifica historial global; solo trabaja con mapas de recetas. La pasada exclusiva UiStateSnapshotTest da 1 informe / 11 pruebas / 0 fallos, errores u omitidas / exit 0. Log: target/emv75-luk-directed.log.
+
+Esta es la **única clase de tests existente en e002737 que se modifica**, por la autorización expresa del paso 2. La modificación es aditiva; no se ajusta ni relaja ninguna aserción anterior. Todos los tests existentes pasan en las puertas finales: ninguno depende de que LUK se guarde en claro. ExpandedViewerLifecycleUITest permanece intacto.
+
+## Tercera continuación: caracterización, extracción y cierre HCE
+
+### Pasos 3 y 4
+
+`0e9a8a9` fija SHA-256 HCE **sobre código sin extraer**, ya corregida la privacidad: `e6708244e8cd007ed2712fc608d1032f752894f01998b444c12ae44865c807ea`. La pasada focalizada vuelve a pasar antes de extraer. El único cambio posterior en el test de reproducción es el digest esperado, habilitando la comprobación de transcripción; las aserciones que detectaron el LUK en historial no cambian. Se conserva el registro rojo y la parada en emv-7-characterization-failures.md.
+
+`5e80b48` extrae EmvHceCoordinator: cuatro acciones, record View con Supplier<TextField>/Supplier<TextArea>, Supplier<StatusReporter>, getter perezoso y cuatro delegados de una línea. Los campos FXML y sus ids permanecen en EMVController. smText/emvHex/emvShow/emvPublish se copian como helpers privados y sus versiones del controlador permanecen para otros consumidores. Se conserva exactamente el multiconjunto de literales de handlers/helpers, comprobado contra 0e9a8a9; las sustituciones operan sobre identificadores fuera de literales. Se conserva comportamiento criptográfico, validación, mensajes, publicación y efectos sobre controles. El cambio de privacidad autorizado es independiente.
+
+La pasada posterior a extraer de EmvHceCharacterizationUITest,EmvVisaHceControllerTest,UiStateSnapshotTest pasa: **3 informes / 15 pruebas / 0 fallos, errores u omitidas / exit 0**. Digest, contratos FXML y test dirigido pasan. Los guards SpecializedFeedbackHeadlessTest,EmvOdaPaneTranslationTest se ejecutan **en invocación exclusiva** antes de las puertas y pasan, sin reasignaciones de claves necesarias ni cambios a esos tests.
+
+### Paso 5: puertas finales HCE
+
+`c64b23e` registra las tres puertas HCE en [emv-7-gates.md](emv-7-gates.md). Las tres pasan limpias; ExpandedViewerLifecycleUITest pasa **3/3 en cada una**, sin reintento ni necesidad de contraste con base. La base prevista era 0e9a8a9 (privacidad corregida y digest fijado, sin extracción). La excepción de GC no se invoca en HCE. Las puertas completas no seleccionan/excluyen ninguna clase; no se modifican anotaciones del test GC.
+
+Antes de cada puerta se borra target/surefire-reports, y se cuentan exclusivamente los XML nuevos. Comandos exactos:
+
+```sh
+mvn -o -q test -Plow-cpu
+mvn -o -q test -Plow-cpu -DrunUiTests=true
+mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false test
+```
+
+Logs/manifiesto: target/emv75-hce-cont3-*.log y target/emv75-hce-cont3-results.json. Las tres caracterizaciones (SM, ODA y HCE) pasan en cada puerta, sin omitidas, igual que los once tests de UiStateSnapshot. Los XML confirman Mac OS X / Homebrew Java 25. No se ejecutó CI Linux/Java 17 en esta sesión; las nuevas aserciones y digests no dependen de rutas, fechas, tiempos, excepciones de proveedores ni orden de iteración indefinido.
+
+### Nueve puertas efectivas al finalizar
+
+Los registros de paradas y ejecuciones anteriores se mantienen íntegros. SM conserva su validación original; ODA conserva la aceptación autorizada de la segunda continuación, con contraste 3/3 sobre 45e5a1b para cada puerta y recuentos completos arriba; HCE aporta las puertas limpias de esta continuación. ODA y SM también pasan sus caracterizaciones en las puertas HCE finales.
+
+| Fase | Puerta | Informes | Pruebas | Fallos | Errores | Omitidas | Exit | Resultado |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 5 | G1 | 449 | 2917 | 0 | 0 | 1 | 0 | Limpia |
+| 5 | G2 | 129 | 547 | 0 | 0 | 0 | 0 | Limpia |
+| 5 | G3 | 129 | 547 | 0 | 0 | 0 | 0 | Limpia |
+| 6 | G1 | 450 | 2918 | 3 | 0 | 1 | 1 | Excepción GC contrastada |
+| 6 | G2 | 130 | 548 | 3 | 0 | 0 | 1 | Excepción GC contrastada |
+| 6 | G3 | 130 | 548 | 3 | 0 | 0 | 1 | Excepción GC contrastada |
+| 7 | G1 | 451 | 2920 | 0 | 0 | 1 | 0 | Limpia |
+| 7 | G2 | 131 | 550 | 0 | 0 | 0 | 0 | Limpia |
+| 7 | G3 | 131 | 550 | 0 | 0 | 0 | 0 | Limpia |
+
+Respecto a e002737, G1 final pasa de 448/2916/1 a 451/2920/1 y G3 final de 128/546/0 a 131/550/0 (informes/pruebas/omitidas): tres clases nuevas de caracterización y una prueba dirigida añadida a UiStateSnapshotTest.
+
+### Paso 6: entrega y commits de esta continuación
+
+**Encargo 75 completado: EMVController 988 → 783 líneas**, con Secure Messaging, ODA y HCE en sus coordinadores. La derivación SM permanece en EmvSessionKeyCoordinator, como indica el mapa. Maps emv-5/6/7 mantienen la propiedad de las claves runtime, con los consumidores compartidos explícitos y la UI declarativa en ModuleTextCatalog/ModuleI18n. No se cambiaron ids FXML, crypto/, pom.xml, ModernMainController, StatusReporter ni OperationResult. UiStateSnapshot cambia exclusivamente el token luk autorizado; comprobación exacta contra 01d4cb5. No se hicieron ajustes por dependencias del LUK en claro.
+
+Higiene final, con comandos exactos del job quality-gates: **0 estilos en línea FXML / 325 emojis de 325**, sin añadidos. git diff --check pasa. Sin imágenes, .local.md, DMG ni ejecutables añadidos. Todos los Maven se ejecutan secuencialmente en CryptoCarver-emv-3, sin compilar el repositorio principal. Claves inventadas únicamente. La fixture restituye AppSettings/Shelf y limpia historial aislado; el test dirigido no toca historial global.
+
+| Paso | Commit | Contenido |
+| --- | --- | --- |
+| 1 | `4b8a669` | Token luk y alcance de la corrección de privacidad |
+| 2 | `5836f5e` | Test dirigido de recetas y restauración |
+| 3 | `0e9a8a9` | Digest HCE fijado antes de extraer |
+| 4 | `5e80b48` | EmvHceCoordinator y delegados |
+| 5 | `c64b23e` | Tres puertas HCE limpias |
+| 6 | Commit que contiene esta sección (`docs: complete EMV report with privacy correction and final gates`) | Informe final conservando todas las paradas y continuaciones |
+
+Rama codex/emv-3 limpia al terminar, sin push ni merge. Las paradas anteriores se conservan como evidencia histórica; sus bloqueos quedan resueltos mediante las autorizaciones explícitas posteriores.
