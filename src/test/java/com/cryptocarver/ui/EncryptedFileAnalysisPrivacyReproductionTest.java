@@ -52,8 +52,11 @@ class EncryptedFileAnalysisPrivacyReproductionTest {
             textPath = htmlPath.resolveSibling("report.txt");
             String text = Files.readString(textPath);
             String html = Files.readString(htmlPath);
+            String csv = Files.readString(htmlPath.resolveSibling("attempts.csv"));
             String keyHex = DataConverter.bytesToHex(key);
             assertAll(profile.name(),
+                    () -> assertFalse(csv.contains(keyHex), "attempts.csv exposes invented key"),
+                    () -> assertFalse(csv.contains(marker), "attempts.csv preview exposes recovered text"),
                     () -> assertFalse(text.contains(keyHex), "report.txt exposes invented key"),
                     () -> assertFalse(html.contains(keyHex), "report.html exposes invented key"),
                     () -> assertFalse(text.contains(marker), "report.txt exposes recovered text"),
