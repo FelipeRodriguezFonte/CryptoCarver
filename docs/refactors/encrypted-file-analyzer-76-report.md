@@ -1,7 +1,8 @@
 # Encargo 76 — registro de las dos paradas
 
-Estado actual: archivos corregidos por autorización expresa; detenido en fase 0, paso 3,
-por texto recuperado en Outcome.inspectorOutput. Véase la continuación al final.
+Estado actual: segunda continuación en marcha; el bloqueo de Outcome.inspectorOutput
+se resuelve mediante comprobación de la superficie real, sin cambiar producción.
+Las dos paradas siguientes se conservan como registro histórico.
 
 ## Parada original (registro hasta 8b2588f)
 
@@ -156,3 +157,33 @@ macOS ARM64; no se afirma ejecución Linux/Java 17. No se fijan nuevos digests p
 
 La parada original está en 8b2588f. No hay commits de extracción. El commit de auditoría
 se identifica con `git log -1 --format='%h %s'` al terminar esta continuación.
+
+
+## Segunda continuación — corrección de la capa de comprobación
+
+La aserción añadida por este encargo sobre el contenido de Outcome.inspectorOutput
+se retiró por estar en una capa interna. CipherController.java:710–714 entrega entrada,
+salida y detalles a StatusReporter.updateInspector; ModernMainController.java:1054–1066
+convierte los detalles y los entrega al presenter. OperationInspectorPresenter.java:32–33
+convierte ambos arrays con byteCount; :176–177 devuelve solo su longitud. :43–45 pinta
+la operación y esos recuentos. El contenido de los arrays no se pinta ni se guarda allí.
+No se cambia producción por este punto ni se reduce un contrato de privacidad visible.
+
+EncryptedFileAnalysisInspectorPrivacyUITest carga el shell FXML real con Stage/Scene,
+ejecuta CipherController.handleAnalyzeEncryptedFile y verifica el presenter real,
+los recuentos exactos, algoritmo, score y confianza. Recorre controles, tooltips y textos
+accesibles del inspector, sin marcador ni clave, y reportaría el fx:id propio o del
+contenedor de un control dinámico si hubiera exposición. Se ejercitan MASKED y REDACTED.
+La fixture existente restaura settings, idioma, Shelf, historia aislada y ventanas;
+se aísla/restaura además OperationHistory legado y su ruta sin escribir en la original.
+Los inputs y los informes son @TempDir. No se modifica ningún test previo al encargo.
+
+Ejecución focal inicial: 2 informes / 7 pruebas / 0 fallos / 0 errores / 0 omitidas /
+exit 0 (reproducción headless + inspector real). El Shelf rechaza captura cuando no
+hay resultado registrado en el shell; no se atribuye a ese rechazo una validación de
+captura de contenido. La comprobación exigida del inspector sí es contra controles reales.
+La segunda parada fue una conclusión de test incorrecta, no un nuevo defecto de producción.
+La primera parada sigue describiendo el defecto real de archivos, corregido con autorización.
+
+Paso 1: commit `test: verify encrypted file privacy in real shell inspector`.
+Paso 2: commit `docs: explain encrypted file inspector privacy assertion correction`.

@@ -59,3 +59,11 @@ La reproducción de archivos quedó verde sin cambiar sus aserciones. El nuevo c
 del inspector queda rojo intencionalmente. La suite completa no está verde. No se ejecutan
 G1/G2/G3 ni las dos fases de refactor tras descubrir este bloqueo. La corrección de archivos
 se conserva, pues no es una extracción fallida ni se ha ejecutado una puerta.
+
+## Segunda continuación: resolución del paso 3
+
+Los fallos sobre los bytes de Outcome se retiran: no son una superficie visible.
+El presenter real solo pinta byteCount(input/output). La nueva comprobación UI
+con shell real pasa para ambos perfiles (2 informes / 7 pruebas / 0 fallos / 0 errores /
+0 omitidas / exit 0 junto con la reproducción headless). No se modifica producción.
+El informe 76 contiene las líneas del recorrido que justifican la corrección del test.
