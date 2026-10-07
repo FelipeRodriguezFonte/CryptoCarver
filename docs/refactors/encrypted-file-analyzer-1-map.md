@@ -47,3 +47,11 @@ no requieren reasignación para estos métodos.
 
 La reproducción falla en la base intacta. No se fijan nuevos SHA-256: la regla de parada
 por defecto previo impide consolidar esta salida como contrato. Véase el documento de fallos.
+
+## Continuación autorizada: nuevo bloqueo de fase 0
+
+La exposición en TXT/HTML/CSV se corrige mediante autorización explícita en CipherInputs,
+calculada por CipherController con AppSettings.isFullLab(). El analizador no lee AppSettings.
+El mapa de extracción no cambia: no se mueven métodos ni claves. La fase 0 se detiene en
+su paso 3 porque Outcome.inspectorOutput sigue exponiendo texto recuperado bajo MASKED
+y REDACTED. Véase encrypted-file-analyzer-0-characterization-failures.md y el informe 76.

@@ -33,3 +33,29 @@ Se borraron los XML antes de cada ejecución. Las aserciones de reproducción de
 son las mismas. El test FULL_LAB conserva previews en los tres archivos y los hashes
 anteriores de TXT/HTML. Su autorización true atraviesa la rama que conserva quality.preview
 sin transformar; CSV conserva el escritor original. Comprobación de otras superficies pendiente.
+
+## Paso 3: parada por inspector
+
+Tras la corrección de archivos (ab8a9fc), se añade una comprobación independiente de todas
+las superficies de Outcome indicadas. Comando:
+
+```sh
+mvn -o -q test -Plow-cpu '-Dtest=EncryptedFileAnalysisPrivacyReproductionTest#restrictedOutcomeSurfacesMustNotExposeRecoveredTextOrKey'
+```
+
+Tras borrar target/surefire-reports: 1 informe / 2 pruebas / 2 fallos / 0 errores /
+0 omitidas / exit 1. Ambos perfiles fallan exclusivamente en
+«Outcome.inspectorOutput exposes recovered text». reportText, status, inspectorDetails,
+historyInput e historyResult no contienen el marcador recuperado ni la clave inventada.
+La comprobación hexadecimal de los bytes del inspector tampoco encuentra la clave.
+
+Causa: analyze devuelve best.plaintext (truncado a 4096 bytes si es necesario) como
+inspectorOutput. CipherController transmite ese campo directamente a updateInspector.
+No se corrige esa salida: la autorización se limita a los archivos y el paso 3 exige parar.
+No se instancian Shelf, historial, visor expandido ni reporter UI en este test: se caracteriza
+el resultado que el controlador entrega a esas superficies, sin afirmar una validación UI completa.
+
+La reproducción de archivos quedó verde sin cambiar sus aserciones. El nuevo contrato
+del inspector queda rojo intencionalmente. La suite completa no está verde. No se ejecutan
+G1/G2/G3 ni las dos fases de refactor tras descubrir este bloqueo. La corrección de archivos
+se conserva, pues no es una extracción fallida ni se ha ejecutado una puerta.
