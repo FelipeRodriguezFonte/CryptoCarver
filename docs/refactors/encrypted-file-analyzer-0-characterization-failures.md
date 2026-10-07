@@ -64,6 +64,16 @@ se conserva, pues no es una extracción fallida ni se ha ejecutado una puerta.
 
 Los fallos sobre los bytes de Outcome se retiran: no son una superficie visible.
 El presenter real solo pinta byteCount(input/output). La nueva comprobación UI
-con shell real pasa para ambos perfiles (2 informes / 7 pruebas / 0 fallos / 0 errores /
-0 omitidas / exit 0 junto con la reproducción headless). No se modifica producción.
+con shell real pasa para ambos perfiles (ejecución focal exit 0; recuento no archivado).
+G1 acredita posteriormente las cinco pruebas headless y las dos de inspector real. No se modifica producción.
 El informe 76 contiene las líneas del recorrido que justifican la corrección del test.
+
+
+## Puertas de fase 0 (segunda continuación)
+
+- G1: 453 informes / 2927 pruebas / 0 fallos / 0 errores / 1 omitida / exit 0.
+- G2: 132 informes / 552 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0.
+- G3: 132 informes / 552 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0.
+
+Todas limpias; no hay excepción GC. Se borraron los informes antes de cada puerta.
+Entorno efectivo comprobado en XML: Java 25, macOS ARM64.

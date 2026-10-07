@@ -119,7 +119,7 @@ La reproducción de archivos sigue verde y todas sus aserciones originales perma
 La nueva reproducción del inspector falla intencionalmente: la suite completa no está verde.
 La corrección autorizada se conserva. No se invoca la excepción GC.
 
-### Nueve puertas — estado tras la continuación
+### Nueve puertas — registro de la primera continuación
 
 Los comandos G1/G2/G3 son exactamente los registrados en la tabla original.
 
@@ -178,8 +178,9 @@ La fixture existente restaura settings, idioma, Shelf, historia aislada y ventan
 se aísla/restaura además OperationHistory legado y su ruta sin escribir en la original.
 Los inputs y los informes son @TempDir. No se modifica ningún test previo al encargo.
 
-Ejecución focal inicial: 2 informes / 7 pruebas / 0 fallos / 0 errores / 0 omitidas /
-exit 0 (reproducción headless + inspector real). El Shelf rechaza captura cuando no
+Ejecución focal inicial del inspector real: exit 0. El recuento focal no se archivó
+antes de la siguiente ejecución; la comprobación completa queda acreditada por G1
+(453 informes / 2927 pruebas / 0 fallos / 0 errores / 1 omitida / exit 0). El Shelf rechaza captura cuando no
 hay resultado registrado en el shell; no se atribuye a ese rechazo una validación de
 captura de contenido. La comprobación exigida del inspector sí es contra controles reales.
 La segunda parada fue una conclusión de test incorrecta, no un nuevo defecto de producción.
@@ -187,3 +188,39 @@ La primera parada sigue describiendo el defecto real de archivos, corregido con 
 
 Paso 1: commit `test: verify encrypted file privacy in real shell inspector`.
 Paso 2: commit `docs: explain encrypted file inspector privacy assertion correction`.
+
+
+<!-- EFA76_GATE_TABLE_BEGIN -->
+## Nueve puertas — segunda continuación
+
+Cada ejecución borra target/surefire-reports antes de Maven; los recuentos proceden solo de sus TEST-*.xml. No hay Maven simultáneos ni ejecución en el repositorio principal.
+
+| Fase | Puerta | Informes | Pruebas | Fallos | Errores | Omitidas | Exit / estado |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 0 | G1 | 453 | 2927 | 0 | 0 | 1 | 0 — limpia |
+| 0 | G2 | 132 | 552 | 0 | 0 | 0 | 0 — limpia |
+| 0 | G3 | 132 | 552 | 0 | 0 | 0 | 0 — limpia |
+| 1 | G1 | — | — | — | — | — | Pendiente |
+| 1 | G2 | — | — | — | — | — | Pendiente |
+| 1 | G3 | — | — | — | — | — | Pendiente |
+| 2 | G1 | — | — | — | — | — | Pendiente |
+| 2 | G2 | — | — | — | — | — | Pendiente |
+| 2 | G3 | — | — | — | — | — | Pendiente |
+
+G1: `mvn -o -q test -Plow-cpu`.
+G2: `mvn -o -q test -Plow-cpu -DrunUiTests=true`.
+G3: `mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false test`.
+
+G2 activa el perfil UI explícito; G1 ejecuta además la batería headless. Entorno efectivo de los forks comprobado en sus XML: Java 25, macOS ARM64. Las menciones históricas a Java 21 procedían de java -version del shell, no de Surefire; no prueban el runtime efectivo. No se afirma ejecución Linux/Java 17.
+<!-- EFA76_GATE_TABLE_END -->
+
+
+### Paso 3 de la segunda continuación — fase 0 aprobada
+
+G1, G2 y G3 pasan limpias. No se aplica la excepción GC. Los contratos de claves
+SpecializedFeedbackHeadlessTest y PaymentsValidationHeadlessTest, aislados entre
+G1 y G2 (además de su ejecución aislada anterior a esta continuación), pasan:
+2 informes / 4 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0.
+No se reasigna ninguna clave ni se modifica ningún test previo al encargo.
+G1 confirma también las cinco pruebas headless de privacidad y las dos de inspector real.
+La tabla operativa de nueve puertas se actualiza con los XML de cada ejecución.
