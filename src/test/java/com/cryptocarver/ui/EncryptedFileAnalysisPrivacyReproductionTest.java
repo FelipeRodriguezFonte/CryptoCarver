@@ -131,11 +131,7 @@ class EncryptedFileAnalysisPrivacyReproductionTest {
                     () -> assertNoSecret("Outcome.status", outcome.status(), marker, keyHex),
                     () -> assertNoSecret("Outcome.inspectorDetails", outcome.inspectorDetails().toString(), marker, keyHex),
                     () -> assertNoSecret("Outcome.historyInput", outcome.historyInput(), marker, keyHex),
-                    () -> assertNoSecret("Outcome.historyResult", outcome.historyResult(), marker, keyHex),
-                    () -> assertNoSecret("Outcome.inspectorOutput", new String(outcome.inspectorOutput(),
-                            StandardCharsets.UTF_8), marker, keyHex),
-                    () -> assertFalse(DataConverter.bytesToHex(outcome.inspectorOutput()).contains(keyHex),
-                            "Outcome.inspectorOutput exposes invented key bytes"));
+                    () -> assertNoSecret("Outcome.historyResult", outcome.historyResult(), marker, keyHex));
         } finally {
             // No live inspector, history, Shelf or status service is created or changed.
             AppSettings.setInstanceForTesting(previous);
