@@ -172,3 +172,42 @@ Higiene ejecutada con el bloque literal de quality-gates: **inline=0, emoji=325*
 - `HEAD — docs(wallet): record mandatory G1 stop after history correction` (este cierre).
 
 Rama limpia al terminar. La reproducción SD-JWT queda verde; las ocho reproducciones de Wallet pendientes de A permanecen rojas y documentadas.
+
+
+## Tercera continuación: aceptación puntual y correcciones A
+
+El usuario acepta exclusivamente la G1 intermedia posterior a B (459 XML / 2957 pruebas / 8 fallos / 0 errores / 1 omitida / exit 1). Los ocho casos son mdoc Inspect JWK/PEM y Status List Describe JWK/PEM, cada uno bajo MASKED y REDACTED. Se conserva la parada anterior como registro histórico; esta aceptación permite continuar desde A y no exime ninguna puerta posterior.
+
+### Corrección mdoc Inspect
+
+Reproducción separada en cc4898d y corrección en 8239353. El informe y los valores decodificados de namespaces se comprueban con PrivateKeyMaterialDetector; fuera de FULL_LAB, el aviso module.wallet.privateJwkHidden sustituye el resultado local y el publicado. El helper compartido aplica lo mismo a Verify. La verificación y su estado no cambian. FULL_LAB mantiene la salida.
+
+### Corrección Status List Describe
+
+Reproducción separada en 8a9b318 y corrección en 682c4e1. Se detecta material privado en token o informe; fuera de FULL_LAB se publica el aviso y se muestra en statusListResolveOutputArea. FULL_LAB mantiene la salida. Resolve usa datos locales, sin conexiones.
+
+Las dos reproducciones originales no se modifican: ejecución dirigida conjunta, 2 XML / 21 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0. También pasan dentro de las tres puertas. No se ha ajustado ningún test existente para admitir una salida privada.
+
+### Puertas vigentes tras A y bases GC
+
+Se borró target/surefire-reports antes de cada ejecución. Base de comparación de fase 0: fb674d9. Los únicos fallos de cada puerta son closingTableViewerDropsItsSnapshotAndScene, shellShutdownClosesAnOpenResultWindow y closingTextViewerReleasesItsSceneWhileViewerRemainsAlive, de ExpandedViewerLifecycleUITest. Se ejecutó la clase aislada en la base con las mismas opciones de cada puerta, sin modificarla ni excluirla.
+
+| Fase | Puerta | XML | Pruebas | Fallos | Errores | Omitidas | Exit | Resultado |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| 0 | G1 | 459 | 2957 | 3 | 0 | 1 | 1 | Excepción GC comprobada |
+| 0 base aislada | G1 GC | 1 | 3 | 3 | 0 | 0 | 1 | Mismos tres casos |
+| 0 | G2 | 136 | 578 | 3 | 0 | 0 | 1 | Excepción GC comprobada |
+| 0 base aislada | G2 GC | 1 | 3 | 3 | 0 | 0 | 1 | Mismos tres casos |
+| 0 | G3 | 136 | 578 | 3 | 0 | 0 | 1 | Excepción GC comprobada |
+| 0 base aislada | G3 GC | 1 | 3 | 3 | 0 | 0 | 1 | Mismos tres casos |
+| 1 | G1 | — | — | — | — | — | — | Pendiente |
+| 1 | G2 | — | — | — | — | — | — | Pendiente |
+| 1 | G3 | — | — | — | — | — | — | Pendiente |
+| 2 | G1 | — | — | — | — | — | — | Pendiente |
+| 2 | G2 | — | — | — | — | — | — | Pendiente |
+| 2 | G3 | — | — | — | — | — | — | Pendiente |
+| 3 | G1 | — | — | — | — | — | — | Pendiente |
+| 3 | G2 | — | — | — | — | — | — | Pendiente |
+| 3 | G3 | — | — | — | — | — | — | Pendiente |
+
+WalletController corregido: 1003 líneas frente a 971 originales. Higiene: inline=0, emoji=325 (bloque literal CI). Advertencia Wallet / eIDAS preexistente conservada. No se tocan los ficheros protegidos; UiStateSnapshot conserva únicamente B. Ejecución local OpenJDK 25/macOS, release 17; no se afirma validación Linux/Java 17. Los logs y XML se archivaron por ejecución durante la validación.
