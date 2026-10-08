@@ -200,9 +200,9 @@ Se borró target/surefire-reports antes de cada ejecución. Base de comparación
 | 0 base aislada | G2 GC | 1 | 3 | 3 | 0 | 0 | 1 | Mismos tres casos |
 | 0 | G3 | 136 | 578 | 3 | 0 | 0 | 1 | Excepción GC comprobada |
 | 0 base aislada | G3 GC | 1 | 3 | 3 | 0 | 0 | 1 | Mismos tres casos |
-| 1 | G1 | — | — | — | — | — | — | Pendiente |
-| 1 | G2 | — | — | — | — | — | — | Pendiente |
-| 1 | G3 | — | — | — | — | — | — | Pendiente |
+| 1 | G1 | 460 | 2958 | 3 | 0 | 1 | 1 | Excepción GC comprobada |
+| 1 | G2 | 137 | 579 | 3 | 0 | 0 | 1 | Excepción GC comprobada |
+| 1 | G3 | 137 | 579 | 3 | 0 | 0 | 1 | Excepción GC comprobada |
 | 2 | G1 | — | — | — | — | — | — | Pendiente |
 | 2 | G2 | — | — | — | — | — | — | Pendiente |
 | 2 | G3 | — | — | — | — | — | — | Pendiente |
@@ -211,3 +211,17 @@ Se borró target/surefire-reports antes de cada ejecución. Base de comparación
 | 3 | G3 | — | — | — | — | — | — | Pendiente |
 
 WalletController corregido: 1003 líneas frente a 971 originales. Higiene: inline=0, emoji=325 (bloque literal CI). Advertencia Wallet / eIDAS preexistente conservada. No se tocan los ficheros protegidos; UiStateSnapshot conserva únicamente B. Ejecución local OpenJDK 25/macOS, release 17; no se afirma validación Linux/Java 17. Los logs y XML se archivaron por ejecución durante la validación.
+
+## Fase 1: SD-JWT
+
+Mapa, caracterización y extracción guardados en commits separados. Digest SHA-256 comprobado sobre código sin extraer y después de extraer. Se conservan las reproducciones de privacidad. Contratos existentes dirigidos antes de puertas: 5 XML / 47 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0; ningún test existente ajustado.
+
+La primera invocación de contratos seleccionó cero pruebas al activar el grupo UI; no se contó como validación y se repitió sin activar ese perfil. Caracterización fijada sin fallos previos, repetición fijada limpia; tras extracción 2 XML / 10 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0. WalletController: 1003 → 907 líneas; WalletSdJwtCoordinator: 260.
+
+| Comparación aislada en base de fase | XML | Pruebas | Fallos | Errores | Omitidas | Exit |
+|---|---:|---:|---:|---:|---:|---:|
+| G1 sobre f0f99ed44dde30bb046962217bc6306ce808b860 | 1 | 3 | 3 | 0 | 0 | 1 |
+| G2 sobre f0f99ed44dde30bb046962217bc6306ce808b860 | 1 | 3 | 3 | 0 | 0 | 1 |
+| G3 sobre f0f99ed44dde30bb046962217bc6306ce808b860 | 1 | 3 | 3 | 0 | 0 | 1 |
+
+Solo los mismos tres casos de ExpandedViewerLifecycleUITest fallan en cada comparación; clase sin cambios y sin exclusiones.

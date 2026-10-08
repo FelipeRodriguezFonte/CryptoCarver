@@ -1,6 +1,6 @@
 # Wallet fase 1 — mapa previo a extracción
 
-Base de fase: registrar commit de caracterización antes de extraer. Controller antes: 1003 líneas; tras extracción prevista: 907. Coordinador previsto: 260 líneas.
+Base de fase para GC: f0f99ed (caracterización fijada antes de extraer). Controller antes: 1003 líneas; tras extracción prevista: 907. Coordinador previsto: 260 líneas.
 
 ## Movimiento y conservación
 
