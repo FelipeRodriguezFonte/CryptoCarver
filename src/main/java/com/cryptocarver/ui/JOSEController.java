@@ -58,6 +58,14 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 public class JOSEController implements Initializable {
+    private JoseSectionCoordinator sectionCoordinator;
+    private JoseSectionCoordinator sectionCoordinator() {
+        if (sectionCoordinator == null) sectionCoordinator = new JoseSectionCoordinator(
+                () -> new JoseSectionCoordinator.View(joseContainer, jwtSection, jweSection,
+                        jwkSection, jwaSection, inspectorSection), () -> statusReporter);
+        return sectionCoordinator;
+    }
+
     private JoseInitializationCoordinator initializationCoordinator;
     private JoseInitializationCoordinator initializationCoordinator() {
         if (initializationCoordinator == null) initializationCoordinator = new JoseInitializationCoordinator(
@@ -180,64 +188,7 @@ public class JOSEController implements Initializable {
                 com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
     }
 
-    public void showSection(String sectionName) {
-        if (joseContainer != null) {
-            joseContainer.setManaged(true);
-            joseContainer.setVisible(true);
-        }
-        if (jwtSection != null) {
-            jwtSection.setManaged(false);
-            jwtSection.setVisible(false);
-        }
-        if (jweSection != null) {
-            jweSection.setManaged(false);
-            jweSection.setVisible(false);
-        }
-        if (jwkSection != null) {
-            jwkSection.setManaged(false);
-            jwkSection.setVisible(false);
-        }
-
-        if (jwaSection != null) {
-            jwaSection.setManaged(false);
-            jwaSection.setVisible(false);
-        }
-        if (inspectorSection != null) {
-            inspectorSection.setManaged(false);
-            inspectorSection.setVisible(false);
-        }
-
-        if (sectionName == null)
-            return;
-
-        if (sectionName.startsWith("JWT")) {
-            if (jwtSection != null) {
-                jwtSection.setManaged(true);
-                jwtSection.setVisible(true);
-            }
-        } else if (sectionName.startsWith("JWE")) {
-            if (jweSection != null) {
-                jweSection.setManaged(true);
-                jweSection.setVisible(true);
-            }
-        } else if (sectionName.startsWith("JWK")) {
-            if (jwkSection != null) {
-                jwkSection.setManaged(true);
-                jwkSection.setVisible(true);
-            }
-        } else if (sectionName.startsWith("JWA")) {
-            if (jwaSection != null) {
-                jwaSection.setManaged(true);
-                jwaSection.setVisible(true);
-            }
-        } else if (sectionName.startsWith("Token Inspector")) {
-            if (inspectorSection != null) {
-                inspectorSection.setManaged(true);
-                inspectorSection.setVisible(true);
-            }
-        }
-
-    }
+    public void showSection(String sectionName) { sectionCoordinator().showSection(sectionName); }
 
     @FXML
     public void handleReset() {
