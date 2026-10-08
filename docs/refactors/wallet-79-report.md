@@ -203,9 +203,9 @@ Se borró target/surefire-reports antes de cada ejecución. Base de comparación
 | 1 | G1 | 460 | 2958 | 3 | 0 | 1 | 1 | Excepción GC comprobada |
 | 1 | G2 | 137 | 579 | 3 | 0 | 0 | 1 | Excepción GC comprobada |
 | 1 | G3 | 137 | 579 | 3 | 0 | 0 | 1 | Excepción GC comprobada |
-| 2 | G1 | — | — | — | — | — | — | Pendiente |
-| 2 | G2 | — | — | — | — | — | — | Pendiente |
-| 2 | G3 | — | — | — | — | — | — | Pendiente |
+| 2 | G1 | 461 | 2959 | 3 | 0 | 1 | 1 | Excepción GC comprobada |
+| 2 | G2 | 138 | 580 | 3 | 0 | 0 | 1 | Excepción GC comprobada |
+| 2 | G3 | 138 | 580 | 3 | 0 | 0 | 1 | Excepción GC comprobada |
 | 3 | G1 | — | — | — | — | — | — | Pendiente |
 | 3 | G2 | — | — | — | — | — | — | Pendiente |
 | 3 | G3 | — | — | — | — | — | — | Pendiente |
@@ -225,3 +225,17 @@ La primera invocación de contratos seleccionó cero pruebas al activar el grupo
 | G3 sobre f0f99ed44dde30bb046962217bc6306ce808b860 | 1 | 3 | 3 | 0 | 0 | 1 |
 
 Solo los mismos tres casos de ExpandedViewerLifecycleUITest fallan en cada comparación; clase sin cambios y sin exclusiones.
+
+## Fase 2: mdoc
+
+Mapa, caracterización y extracción guardados en commits separados. Digest SHA-256 comprobado sobre código sin extraer y después de extraer. Se conservan las reproducciones de privacidad. Contratos existentes dirigidos antes de puertas: 5 XML / 47 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0; ningún test existente ajustado.
+
+| Comparación aislada en base de fase | XML | Pruebas | Fallos | Errores | Omitidas | Exit |
+|---|---:|---:|---:|---:|---:|---:|
+| G1 sobre c228a94c03c54431fa8ae59db3eeffe899e9456e | 1 | 3 | 3 | 0 | 0 | 1 |
+| G2 sobre c228a94c03c54431fa8ae59db3eeffe899e9456e | 1 | 3 | 3 | 0 | 0 | 1 |
+| G3 sobre c228a94c03c54431fa8ae59db3eeffe899e9456e | 1 | 3 | 3 | 0 | 0 | 1 |
+
+Solo los mismos tres casos de ExpandedViewerLifecycleUITest fallan en cada comparación; clase sin cambios y sin exclusiones.
+
+WalletController fase 2: 907 → 861 líneas; WalletMdocCoordinator: 187. Caracterización fijada limpia antes de extracción; tras extracción 2 XML / 13 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0. El fallo de fixture previo al digest y los dos intentos dirigidos de compilación por el import están descritos en wallet-2-characterization-failures.md. No falló ninguna puerta por esos motivos.
