@@ -6,7 +6,6 @@ import com.cryptocarver.crypto.CborInspector;
 import com.cryptocarver.crypto.EidasCertificateInspector;
 import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.MdocOperations;
-import com.cryptocarver.crypto.StatusListOperations;
 import com.cryptocarver.crypto.OpenId4VpInspector;
 import com.cryptocarver.crypto.TrustedListInspector;
 import com.cryptocarver.crypto.TrustedEntityListJsonInspector;
@@ -157,6 +156,7 @@ public class WalletController implements Initializable {
     @FXML private TextArea adesOutputArea;
 
     private StatusReporter statusReporter;
+    private WalletStatusListCoordinator walletStatusListCoordinator;
     private WalletMdocCoordinator walletMdocCoordinator;
     private WalletSdJwtCoordinator walletSdJwtCoordinator;
     private ModuleI18n.Binding moduleI18n;
@@ -303,6 +303,23 @@ public class WalletController implements Initializable {
         return walletMdocCoordinator;
     }
 
+    private WalletStatusListCoordinator statusListCoordinator() {
+        if (walletStatusListCoordinator == null) {
+            walletStatusListCoordinator = new WalletStatusListCoordinator(new WalletStatusListCoordinator.View(
+                    () -> statusListBitsCombo,
+                    () -> statusListStatusesArea,
+                    () -> statusListUriField,
+                    () -> statusListAlgoCombo,
+                    () -> statusListKeyArea,
+                    () -> statusListOutputArea,
+                    () -> statusListTokenArea,
+                    () -> statusListIndexField,
+                    () -> statusListVerifyKeyArea,
+                    () -> statusListResolveOutputArea), () -> statusReporter);
+        }
+        return walletStatusListCoordinator;
+    }
+
     // ---------------------------------------------------------------- SD-JWT
 
     @FXML
@@ -335,78 +352,13 @@ public class WalletController implements Initializable {
     // ----------------------------------------------------------- status list
 
     @FXML
-    private void handleStatusListIssue() {
-        try {
-            String statuses = textOf(statusListStatusesArea);
-            String uri = textOf(statusListUriField);
-            String key = textOf(statusListKeyArea);
-            if (isBlank(statuses)) { showValidation(t("module.wallet.statusesRequired"), "statusListStatusesArea"); return; }
-            if (isBlank(uri)) { showValidation(t("module.wallet.uriRequired"), "statusListUriField"); return; }
-            if (isBlank(key)) { showValidation(t("module.wallet.keyRequired"), "statusListKeyArea"); return; }
-
-            JWSAlgorithm algorithm = JWSAlgorithm.parse(valueOf(statusListAlgoCombo, "ES256"));
-            String token = StatusListOperations.issueStatusListToken(
-                    parseStatuses(statuses), parseInt(valueOf(statusListBitsCombo, "1"), 1), uri,
-                    Instant.now(), null, -1, algorithm, JOSEService.createSigner(algorithm, key));
-
-            statusListOutputArea.setText(token);
-            updateStatus(t("module.wallet.status.issued"));
-            publish("Status List Issue", token, "URI", uri);
-        } catch (Exception e) {
-            fail(e, "statusListStatusesArea", "status list issue");
-        }
-    }
+    private void handleStatusListIssue() { statusListCoordinator().handleStatusListIssue(); }
 
     @FXML
-    private void handleStatusListResolve() {
-        try {
-            String token = textOf(statusListTokenArea);
-            String index = textOf(statusListIndexField);
-            if (isBlank(token)) { showValidation(t("module.wallet.tokenRequired"), "statusListTokenArea"); return; }
-            if (isBlank(index)) { showValidation(t("module.wallet.indexRequired"), "statusListIndexField"); return; }
-
-            // The subject check inside resolve() needs the URI the credential
-            // points at; here the list's own subject is used, because a lone
-            // index has no credential to take it from.
-            String uri = subjectOf(token);
-            String verifyKey = textOf(statusListVerifyKeyArea);
-            JWSAlgorithm algorithm = JWSAlgorithm.parse(valueOf(statusListAlgoCombo, "ES256"));
-
-            StatusListOperations.StatusLookup lookup = StatusListOperations.resolve(
-                    StatusListOperations.statusClaim(uri, parseInt(index, 0)), token,
-                    isBlank(verifyKey) ? null : JOSEService.createVerifier(algorithm, verifyKey));
-
-            String report = "index " + lookup.index() + " -> " + lookup.status()
-                    + " (" + lookup.description() + ")\n"
-                    + (isBlank(verifyKey)
-                            ? "The token's signature was not verified: no key was supplied.\n"
-                            : "");
-            statusListResolveOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.resolved"));
-            publish("Status List Resolve", report, "Index", index);
-        } catch (Exception e) {
-            fail(e, "statusListTokenArea", "status list resolve");
-        }
-    }
+    private void handleStatusListResolve() { statusListCoordinator().handleStatusListResolve(); }
 
     @FXML
-    private void handleStatusListDescribe() {
-        try {
-            String token = textOf(statusListTokenArea);
-            if (isBlank(token)) { showValidation(t("module.wallet.tokenRequired"), "statusListTokenArea"); return; }
-            String report = StatusListOperations.describe(token);
-            if (!com.cryptocarver.model.AppSettings.isFullLab()
-                    && (PrivateKeyMaterialDetector.containsPrivateMaterial(token, 0)
-                        || PrivateKeyMaterialDetector.containsPrivateMaterial(report, 0))) {
-                report = t("module.wallet.privateJwkHidden");
-            }
-            statusListResolveOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("Status List Describe", report);
-        } catch (Exception e) {
-            fail(e, "statusListTokenArea", "status list describe");
-        }
-    }
+    private void handleStatusListDescribe() { statusListCoordinator().handleStatusListDescribe(); }
 
     // ------------------------------------------------------ eIDAS certificate
 
@@ -752,31 +704,11 @@ public class WalletController implements Initializable {
                 .toList();
     }
 
-    private static int[] parseStatuses(String raw) {
-        List<String> values = lines(raw.replace(" ", "\n"));
-        int[] statuses = new int[values.size()];
-        for (int i = 0; i < statuses.length; i++) {
-            statuses[i] = Integer.parseInt(values.get(i));
-        }
-        return statuses;
-    }
 
-    private static int parseInt(String value, int fallback) {
-        try {
-            return Integer.parseInt(value.trim());
-        } catch (RuntimeException e) {
-            return fallback;
-        }
-    }
 
-    /** Reads the {@code sub} of a Status List Token without verifying it: the
-     *  resolve path needs the URI the list claims, and at this point there is no
-     *  credential to take it from. */
-    private static String subjectOf(String token) {
-        String payload = token.split("\\.")[1];
-        String json = new String(java.util.Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
-        return com.google.gson.JsonParser.parseString(json).getAsJsonObject().get("sub").getAsString();
-    }
+
+
+
 
     private static X509Certificate parseCertificate(String pem) throws Exception {
         String normalized = pem.replaceAll("-----BEGIN [^-]+-----|-----END [^-]+-----|\\s", "");
