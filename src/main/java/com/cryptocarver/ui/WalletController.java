@@ -456,8 +456,16 @@ public class WalletController implements Initializable {
                 return;
             }
             PublicKey key = isBlank(issuerKey) ? null : AsymmetricKeyOperations.importPublicKeyPEMAuto(issuerKey);
-            String report = MdocOperations.describe(CborInspector.parseHex(hex), key,
+            byte[] document = CborInspector.parseHex(hex);
+            String report = MdocOperations.describe(document, key,
                     Instant.now(), I18nService.getInstance().getLocale());
+            if (!com.cryptocarver.model.AppSettings.isFullLab()) {
+                boolean privateMaterial = PrivateKeyMaterialDetector.containsPrivateMaterial(report, 0)
+                        || MdocOperations.parse(document).namespaces().values().stream()
+                                .flatMap(List::stream).anyMatch(item ->
+                                        PrivateKeyMaterialDetector.containsPrivateMaterial(item.valueAsText(), 0));
+                if (privateMaterial) report = t("module.wallet.privateJwkHidden");
+            }
             mdocVerifyOutputArea.setText(report);
             updateStatus(t("module.wallet.status.verified"));
             publish(requireIssuerKey ? "mdoc Verify" : "mdoc Inspect", report);
