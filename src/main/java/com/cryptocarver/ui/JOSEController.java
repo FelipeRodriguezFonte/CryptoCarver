@@ -58,6 +58,28 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 public class JOSEController implements Initializable {
+    private JoseInitializationCoordinator initializationCoordinator;
+    private JoseInitializationCoordinator initializationCoordinator() {
+        if (initializationCoordinator == null) initializationCoordinator = new JoseInitializationCoordinator(
+                () -> new JoseInitializationCoordinator.View(joseContainer, jwtAcceptNoneCheck,
+                        jwtAlgoCombo, jwtAlgo2Combo, jweKeyAlgoCombo, jweContentAlgoCombo,
+                        jweKeyFormatCombo, jweDecryptKeyFormatCombo, jwtSecretFormatCombo, jwtValidateSecretFormatCombo,
+                        detachedSecretFormatCombo, nestedSecretFormatCombo, detachedAlgoCombo, jweSerializationCombo,
+                        jwsSerializationCombo, detachedSerializationCombo, nestedSignAlgoCombo, nestedKeyAlgoCombo,
+                        nestedContentAlgoCombo, jwkKeyTypeCombo, jwkUseCombo, jwksRotateAlgoCombo, jwtTemplateCombo,
+                        jwePbes2IterField, jwtPayloadArea, jwkInputArea, jwkInputLabel, jwkCurveLabel,
+                        jwkCurveCombo, pemToJwkBtn, jwkToPemBtn, jwkUseLabel, jwkKeyOpsLabel,
+                        jwkInspectMetadataBtn, jwkKeyOpsField, jwtAllowedAlgorithmsLabel, jwtExpectedTypeLabel,
+                        jwtExpectedContentTypeLabel, jwtExpectedNonceLabel, jwtAccessTokenLabel,
+                        jwtAuthorizationCodeLabel, jwtExpectedJktLabel, jwtExpectedX5tLabel,
+                        jwtUnderstoodCritLabel, jwtProtectedHeaderLabel, jwtRfc9068Check, jwtIgnoreCritCheck,
+                        jwtTrustHeaderKeyCheck, jwtKeyArea, jwtKeyArea2, detachedSigningKeyArea,
+                        nestedSigningKeyArea, jwtSecurityWarningLabel, detachedSecurityWarningLabel,
+                        nestedSecurityWarningLabel, jweSecurityWarningLabel, detachedStatusLabel,
+                        jwtValidateTokenArea, jwtValidateKeyArea, jwePublicKeyArea, jweInputArea, jwePrivateKeyArea),
+                () -> statusReporter, jwkCoordinator(), jwtCoordinator());
+        return initializationCoordinator;
+    }
     private JoseJwkCoordinator jwkCoordinator;
     private final JoseInspectorCoordinator inspectorCoordinator = new JoseInspectorCoordinator();
     private JoseJwkCoordinator jwkCoordinator() {
@@ -83,52 +105,13 @@ public class JOSEController implements Initializable {
     }
 
 
-    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
-    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
-
     private final DialogService dialogService = new DialogService();
 
     private final ExpandedTextViewer expandedInspectorViewer = new ExpandedTextViewer();
-    private ModuleI18n.Binding moduleI18n;
-
-    /** JWS algorithms the module can sign and verify. */
-    private static final List<String> JWS_ALGORITHMS = List.of(
-            "HS256", "HS384", "HS512",
-            "RS256", "RS384", "RS512",
-            "ES256", "ES256K", "ES384", "ES512",
-            "PS256", "PS384", "PS512",
-            "EdDSA", "none");
 
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
     }
-
-    private void refreshCapabilityLabels() {
-        jwkCoordinator().refreshCurveLabel();
-        jwtCoordinator().refreshCertificateLabels();
-        if (jwtAcceptNoneCheck != null) jwtAcceptNoneCheck.setText(t("module.jose.acceptNone"));
-        if (jwtTrustHeaderKeyCheck != null) jwtTrustHeaderKeyCheck.setText(t("module.jose.trustHeaderKey"));
-        if (jwtProtectedHeaderLabel != null) jwtProtectedHeaderLabel.setText(t("module.jose.protectedHeaderAdditional"));
-        if (jwtAllowedAlgorithmsLabel != null) jwtAllowedAlgorithmsLabel.setText(t("module.jose.jwtAllowedAlgorithms"));
-        if (jwtExpectedTypeLabel != null) jwtExpectedTypeLabel.setText(t("module.jose.jwtExpectedType"));
-        if (jwtExpectedContentTypeLabel != null) jwtExpectedContentTypeLabel.setText(t("module.jose.jwtExpectedContentType"));
-        if (jwtExpectedNonceLabel != null) jwtExpectedNonceLabel.setText(t("module.jose.jwtExpectedNonce"));
-        if (jwtAccessTokenLabel != null) jwtAccessTokenLabel.setText(t("module.jose.jwtAccessToken"));
-        if (jwtAuthorizationCodeLabel != null) jwtAuthorizationCodeLabel.setText(t("module.jose.jwtAuthorizationCode"));
-        if (jwtExpectedJktLabel != null) jwtExpectedJktLabel.setText(t("module.jose.jwtExpectedJkt"));
-        if (jwtExpectedX5tLabel != null) jwtExpectedX5tLabel.setText(t("module.jose.jwtExpectedX5t"));
-        if (jwtUnderstoodCritLabel != null) jwtUnderstoodCritLabel.setText(t("module.jose.jwtUnderstoodCrit"));
-        if (jwtRfc9068Check != null) jwtRfc9068Check.setText(t("module.jose.jwtRfc9068"));
-        if (jwtIgnoreCritCheck != null) jwtIgnoreCritCheck.setText(t("module.jose.jwtIgnoreCrit"));
-        if (jwkUseLabel != null) jwkUseLabel.setText(t("module.jose.jwkUse"));
-        if (jwkKeyOpsLabel != null) jwkKeyOpsLabel.setText(t("module.jose.jwkKeyOps"));
-        if (jwkInspectMetadataBtn != null) jwkInspectMetadataBtn.setText(t("module.jose.inspectMetadata"));
-        if (jwkKeyOpsField != null) jwkKeyOpsField.setPromptText(t("module.jose.jwkKeyOpsPrompt"));
-    }
-
-    private String jwsSecurityWarning(String algorithm, String key, JoseKeyMaterial.SecretEncoding encoding) { return JoseCoordinatorSupport.jwsSecurityWarning(algorithm, key, encoding); }
-
-    private String jweSecurityWarning(String algorithm) { return JoseCoordinatorSupport.jweSecurityWarning(algorithm); }
 
     private String jwtTokenSecurityWarning(String token, String key, JoseKeyMaterial.SecretEncoding encoding) { return JoseCoordinatorSupport.jwtTokenSecurityWarning(token, key, encoding); }
 
@@ -136,214 +119,35 @@ public class JOSEController implements Initializable {
 
     private String metadataWarning(String json, JoseJwkPolicy.Operation operation) { return JoseCoordinatorSupport.metadataWarning(json, operation); }
 
-    private void refreshSecurityWarnings() {
-        setSecurityWarning(jwtSecurityWarningLabel,
-                combineWarnings(jwsSecurityWarning(valueOf(jwtAlgoCombo), textOf(jwtKeyArea), secretEncoding(jwtSecretFormatCombo)),
-                        jwsSecurityWarning(valueOf(jwtAlgo2Combo), textOf(jwtKeyArea2), secretEncoding(jwtSecretFormatCombo))));
-        setSecurityWarning(detachedSecurityWarningLabel,
-                jwsSecurityWarning(valueOf(detachedAlgoCombo), textOf(detachedSigningKeyArea), secretEncoding(detachedSecretFormatCombo)));
-        setSecurityWarning(nestedSecurityWarningLabel,
-                combineWarnings(jwsSecurityWarning(valueOf(nestedSignAlgoCombo), textOf(nestedSigningKeyArea), secretEncoding(nestedSecretFormatCombo)),
-                        jweSecurityWarning(valueOf(nestedKeyAlgoCombo))));
-        setSecurityWarning(jweSecurityWarningLabel, jweSecurityWarning(valueOf(jweKeyAlgoCombo)));
-    }
-
-    private void setSecurityWarning(Label label, String text) {
-        if (label == null) return;
-        label.setText(text == null ? "" : text);
-        label.setAccessibleText(text == null ? "" : text);
-    }
-
-    private String combineWarnings(String first, String second) {
-        if (first == null) return second;
-        return second == null || first.equals(second) ? first : first + "\n" + second;
-    }
-
-    private static String valueOf(ComboBox<String> combo) { return combo == null ? null : combo.getValue(); }
-
-    private void markUnsafeOptions(ComboBox<String> combo) {
-        if (combo == null) return;
-        javafx.util.Callback<javafx.scene.control.ListView<String>, ListCell<String>> cells = view -> new ListCell<>() {
-            @Override protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setAccessibleText(null); return; }
-                boolean unsafe = "none".equalsIgnoreCase(item) || "RSA1_5".equals(item) || "RSA-OAEP".equals(item);
-                String label = unsafe ? item + " — " + t("module.jose.unsafeMarker") : item;
-                setText(label);
-                setAccessibleText(label);
-            }
-        };
-        combo.setCellFactory(cells);
-        combo.setButtonCell(cells.call(null));
-    }
-
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        moduleI18n = ModuleI18n.bind(joseContainer, ModuleTextCatalog.jose());
-        if (jwtAcceptNoneCheck != null) jwtAcceptNoneCheck.setText(t("module.jose.acceptNone"));
-        localeChangeListener = locale -> {
-            updateJwkInputPresentation();
-            refreshCapabilityLabels();
-            jwkCoordinator().initializeCurveControls();
-            jwtCoordinator().initializeDetachedHeaderControls();
-            for (ComboBox<String> combo : java.util.Arrays.asList(jwtAlgoCombo, jwtAlgo2Combo, detachedAlgoCombo,
-                    nestedSignAlgoCombo, jweKeyAlgoCombo, nestedKeyAlgoCombo, jwksRotateAlgoCombo)) {
-                markUnsafeOptions(combo);
-            }
-            refreshSecurityWarnings();
-            if (detachedStatusLabel != null && detachedStatusLabel.getText() != null
-                    && detachedStatusLabel.getText().isBlank()) detachedStatusLabel.setText("");
-        };
-        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
-        // Initialize Combo
-            if (jwtAlgoCombo != null && jwtAlgoCombo.getItems().isEmpty()) {
-                jwtAlgoCombo.getItems().addAll(JWS_ALGORITHMS);
-                jwtAlgoCombo.getSelectionModel().selectFirst();
-            }
-            if (jwtAlgo2Combo != null && jwtAlgo2Combo.getItems().isEmpty()) {
-                jwtAlgo2Combo.getItems().addAll(JWS_ALGORITHMS);
-                jwtAlgo2Combo.getSelectionModel().selectFirst();
-            }
-
-            // Init JWE Combos
-            if (jweKeyAlgoCombo != null && jweKeyAlgoCombo.getItems().isEmpty()) {
-                jweKeyAlgoCombo.getItems().setAll(JweComposer.KEY_ALGORITHMS);
-                jweKeyAlgoCombo.getSelectionModel().selectFirst();
-            }
-            if (jweContentAlgoCombo != null && jweContentAlgoCombo.getItems().isEmpty()) {
-                jweContentAlgoCombo.getItems().setAll(JweComposer.CONTENT_ALGORITHMS);
-                jweContentAlgoCombo.getSelectionModel().select("A256GCM");
-            }
-            for (ComboBox<String> format : java.util.Arrays.asList(jweKeyFormatCombo, jweDecryptKeyFormatCombo,
-                    jwtSecretFormatCombo, jwtValidateSecretFormatCombo, detachedSecretFormatCombo,
-                    nestedSecretFormatCombo)) {
-                if (format != null && format.getItems().isEmpty()) {
-                    for (JoseKeyMaterial.SecretEncoding encoding : JoseKeyMaterial.SecretEncoding.values()) {
-                        format.getItems().add(encoding.label());
-                    }
-                    format.getSelectionModel().selectFirst();
-                }
-            }
-            if (jwePbes2IterField != null && jwePbes2IterField.getText().isBlank()) {
-                jwePbes2IterField.setText(String.valueOf(JweComposer.DEFAULT_PBES2_ITERATIONS));
-            }
-
-            if (detachedAlgoCombo != null && detachedAlgoCombo.getItems().isEmpty()) {
-                detachedAlgoCombo.getItems().setAll(JWS_ALGORITHMS);
-                detachedAlgoCombo.getSelectionModel().selectFirst();
-            }
-            if (jweSerializationCombo != null && jweSerializationCombo.getItems().isEmpty()) {
-                for (JweComposer.Serialization serialization : JweComposer.Serialization.values()) {
-                    jweSerializationCombo.getItems().add(serialization.label());
-                }
-                jweSerializationCombo.getSelectionModel().selectFirst();
-            }
-            for (ComboBox<String> serialization : java.util.Arrays.asList(jwsSerializationCombo, detachedSerializationCombo)) {
-                if (serialization != null && serialization.getItems().isEmpty()) {
-                    serialization.getItems().setAll("Compact", "Flattened JSON", "General JSON");
-                    serialization.getSelectionModel().selectFirst();
-                }
-            }
-
-            // Init Nested Combos
-            if (nestedSignAlgoCombo != null && nestedSignAlgoCombo.getItems().isEmpty()) {
-                nestedSignAlgoCombo.getItems().setAll(JWS_ALGORITHMS);
-                nestedSignAlgoCombo.getSelectionModel().select("HS256");
-            }
-            if (nestedKeyAlgoCombo != null && nestedKeyAlgoCombo.getItems().isEmpty()) {
-                nestedKeyAlgoCombo.getItems().setAll(JweComposer.KEY_ALGORITHMS);
-                nestedKeyAlgoCombo.getSelectionModel().selectFirst();
-            }
-            if (nestedContentAlgoCombo != null && nestedContentAlgoCombo.getItems().isEmpty()) {
-                nestedContentAlgoCombo.getItems().setAll(JweComposer.CONTENT_ALGORITHMS);
-                nestedContentAlgoCombo.getSelectionModel().select("A256GCM");
-            }
-
-            // Init JWK Combo
-            if (jwkKeyTypeCombo != null && jwkKeyTypeCombo.getItems().isEmpty()) {
-                jwkKeyTypeCombo.getItems().setAll("RSA", "EC", "OKP", "OCT");
-                jwkKeyTypeCombo.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
-                    if (newV == null)
-                        return;
-                    updateJwkInputPresentation();
-                });
-                jwkKeyTypeCombo.getSelectionModel().selectFirst();
-            }
-            if (jwkUseCombo != null && jwkUseCombo.getItems().isEmpty()) {
-                jwkUseCombo.getItems().setAll("sig", "enc");
-                jwkUseCombo.getSelectionModel().selectFirst();
-            }
-            refreshCapabilityLabels();
-            if (jwksRotateAlgoCombo != null && jwksRotateAlgoCombo.getItems().isEmpty()) {
-                jwksRotateAlgoCombo.getItems().setAll(
-                        "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES256K", "ES384", "ES512", "EdDSA",
-                        "RSA1_5", "RSA-OAEP", "ECDH-ES", "ECDH-ES-X448", "ECDH-ES+A128KW", "ECDH-ES+A192KW", "ECDH-ES+A256KW",
-                        "HS256", "HS384", "HS512", "A128KW", "A256KW", "A128GCM", "A256GCM", "dir");
-                jwksRotateAlgoCombo.getSelectionModel().selectFirst();
-            }
-
-            jwkCoordinator().initializeCurveControls();
-            jwtCoordinator().initializeDetachedHeaderControls();
-            for (ComboBox<String> combo : java.util.Arrays.asList(jwtAlgoCombo, jwtAlgo2Combo, detachedAlgoCombo,
-                    nestedSignAlgoCombo, jweKeyAlgoCombo, nestedKeyAlgoCombo, jwksRotateAlgoCombo)) {
-                markUnsafeOptions(combo);
-                if (combo != null) combo.valueProperty().addListener((obs, oldValue, newValue) -> refreshSecurityWarnings());
-            }
-            for (TextInputControl key : java.util.Arrays.asList(jwtKeyArea, jwtKeyArea2, detachedSigningKeyArea, nestedSigningKeyArea)) {
-                if (key != null) key.textProperty().addListener((obs, oldValue, newValue) -> refreshSecurityWarnings());
-            }
-            refreshSecurityWarnings();
-
-        IngestionUIHelper.bindField(jwtKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-        IngestionUIHelper.bindField(jwtValidateTokenArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.JWT);
-        IngestionUIHelper.bindField(jwtValidateKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-        IngestionUIHelper.bindField(jwePublicKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-        IngestionUIHelper.bindField(jweInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.JWT);
-        IngestionUIHelper.bindField(jwePrivateKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-
-            // Init JWA Table
-            if (jwaTable != null && jwaTable.getItems().isEmpty()) {
-                initJwaTable();
-            }
-
-            // Init Template Combo
-            if (jwtTemplateCombo != null && jwtTemplateCombo.getItems().isEmpty()) {
-                jwtTemplateCombo.getItems().addAll(
-                        "OAuth2 Access Token (JWT)",
-                        "OIDC ID Token",
-                        "DPoP Proof",
-                        "Custom (Empty)");
-                jwtTemplateCombo.setOnAction(e -> {
-                    String sel = jwtTemplateCombo.getValue();
-                    if (sel == null)
-                        return;
-                    String tmpl = "{}";
-                    long now = System.currentTimeMillis() / 1000;
-                    if (sel.contains("Access Token")) {
-                        tmpl = "{\n  \"iss\": \"https://auth.server.com\",\n  \"sub\": \"user_123\",\n  \"aud\": \"https://api.server.com\",\n  \"iat\": "
-                                + now + ",\n  \"exp\": " + (now + 3600) + ",\n  \"scope\": \"read write\"\n}";
-                    } else if (sel.contains("ID Token")) {
-                        tmpl = "{\n  \"iss\": \"https://auth.server.com\",\n  \"sub\": \"user_123\",\n  \"aud\": \"client_id_456\",\n  \"iat\": "
-                                + now + ",\n  \"exp\": " + (now + 3600) + ",\n  \"nonce\": \"n-0S6_WzA2Mj\"\n}";
-                    } else if (sel.contains("DPoP")) {
-                        tmpl = "{\n  \"jti\": \"" + java.util.UUID.randomUUID().toString()
-                                + "\",\n  \"htm\": \"POST\",\n  \"htu\": \"https://resource.server.org/protected\",\n  \"iat\": "
-                                + now + "\n}";
-                    }
-                    if (jwtPayloadArea != null) {
-                        jwtPayloadArea.setText(tmpl);
-                    }
-                });
-            }
+        JoseInitializationCoordinator initializer = initializationCoordinator();
+        initializer.bindModuleI18n();
+        initializer.initializeAcceptNoneLabel();
+        initializer.registerLocaleChangeListener();
+        initializer.initializeJwtAlgorithms();
+        initializer.initializeJweAlgorithms();
+        initializer.initializeSecretFormats();
+        initializer.initializePbes2Default();
+        initializer.initializeDetachedAlgorithm();
+        initializer.initializeSerializationCombos();
+        initializer.initializeNestedAlgorithms();
+        initializer.initializeJwkCombos();
+        initializer.refreshCapabilityLabels();
+        initializer.initializeJwksRotationAlgorithms();
+        initializer.initializeCurveControls();
+        initializer.initializeDetachedHeaderControls();
+        initializer.installSecurityWarningListeners();
+        initializer.refreshSecurityWarnings();
+        initializer.initializeIngestionBindings();
+        initializeJwaTableIfNeeded();
+        initializer.initializeTemplates();
     }
 
-    private void updateJwkInputPresentation() {
-        boolean secret = jwkKeyTypeCombo != null && "OCT".equals(jwkKeyTypeCombo.getValue());
-        if (jwkInputLabel != null) jwkInputLabel.setText(t(secret ? "module.jose.inputSecret" : "module.jose.inputPem"));
-        if (jwkInputArea != null) jwkInputArea.setPromptText(t(secret ? "module.jose.inputSecretPrompt" : "module.jose.inputPemPrompt"));
-        if (pemToJwkBtn != null) pemToJwkBtn.setText(t(secret ? "module.jose.secretToJwk" : "module.jose.pemToJwk"));
-        if (jwkToPemBtn != null) jwkToPemBtn.setText(t(secret ? "module.jose.jwkToSecret" : "module.jose.jwkToPem"));
+    private void initializeJwaTableIfNeeded() {
+        if (jwaTable != null && jwaTable.getItems().isEmpty()) initJwaTable();
     }
+
 
     @FXML
     public void handlePopulateJwtKeyShelf() {

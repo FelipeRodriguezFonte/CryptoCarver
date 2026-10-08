@@ -1,0 +1,38 @@
+[
+  {
+    "phase": "phase1",
+    "gate": "G1",
+    "command": "mvn -o -q test -Plow-cpu",
+    "reports": 455,
+    "exit": 0,
+    "failed": [],
+    "tests": 2930,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  {
+    "phase": "phase1",
+    "gate": "G2",
+    "command": "mvn -o -q test -Plow-cpu -DrunUiTests=true",
+    "reports": 133,
+    "exit": 0,
+    "failed": [],
+    "tests": 553,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "phase": "phase1",
+    "gate": "G3",
+    "command": "mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false test",
+    "reports": 133,
+    "exit": 0,
+    "failed": [],
+    "tests": 553,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+]
