@@ -9,6 +9,14 @@ final class PrivateKeyMaterialDetector {
     private PrivateKeyMaterialDetector() { }
 
     static boolean containsPrivateMaterial(Object value, int depth) {
+        try {
+            return detectPrivateMaterial(value, depth);
+        } catch (RuntimeException | StackOverflowError invalidInput) {
+            return false;
+        }
+    }
+
+    private static boolean detectPrivateMaterial(Object value, int depth) {
         if (value == null || depth > 12) return false;
         if (value instanceof Map<?, ?> map) {
             if (map.containsKey("kty") && (map.containsKey("d") || map.containsKey("k"))) return true;
