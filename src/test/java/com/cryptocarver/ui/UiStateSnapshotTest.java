@@ -348,4 +348,46 @@ class UiStateSnapshotTest {
             com.cryptocarver.model.AppSettings.setInstanceForTesting(original);
         }
     }
+
+    /** A neutral field exercises content detection independently of field-name heuristics. */
+    public static class ContentRecipeController {
+        @FXML public TextArea notesArea = new TextArea();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(com.cryptocarver.model.SecretVisibilityProfile.class)
+    void neutralHistoryTextRespectsPrivateContentAndVisibility(
+            com.cryptocarver.model.SecretVisibilityProfile profile,
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path temporary) throws Exception {
+        var previous = com.cryptocarver.model.AppSettings.getInstance();
+        var isolated = new com.cryptocarver.model.AppSettings(temporary.resolve("settings.json"));
+        com.cryptocarver.model.AppSettings.setInstanceForTesting(isolated);
+        try {
+            UiTestLifecycleExtension.onFx(() -> {
+                isolated.setSecretVisibilityProfile(profile);
+                ContentRecipeController controller = new ContentRecipeController();
+                assertFalse(UiStateSnapshot.isHistorySensitiveField("notesArea", controller.notesArea));
+                String[] values = {
+                    "-----BEGIN PRIVATE KEY-----\ninvented-wallet-79-only\n-----END PRIVATE KEY-----",
+                    "{\"kty\":\"EC\",\"d\":\"invented-wallet-79-scalar\"}",
+                    "{\"kty\":\"oct\",\"k\":\"invented-wallet-79-symmetric\"}",
+                    "{\"kty\":\"EC\",\"crv\":\"P-256\",\"x\":\"invented-x\",\"y\":\"invented-y\"}"
+                };
+                for (int i = 0; i < values.length; i++) {
+                    controller.notesArea.setText(values[i]);
+                    var recipe = UiStateSnapshot.captureHistoryRecipe(controller);
+                    String expected = profile == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB || i == 3
+                            ? values[i] : "[REDACTED_SECRET]";
+                    assertEquals(expected, recipe.get("ContentRecipeController.notesArea"),
+                            profile + " fixture " + i);
+                    assertEquals(values[i], controller.notesArea.getText(), "capture must preserve the live editor");
+                    assertEquals(values[i], UiStateSnapshot.capturePortableConfiguration(controller)
+                            .get("ContentRecipeController.notesArea"), "change is restricted to history capture");
+                }
+            });
+        } finally {
+            com.cryptocarver.model.AppSettings.setInstanceForTesting(previous);
+        }
+    }
+
 }

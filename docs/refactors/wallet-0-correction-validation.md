@@ -1,0 +1,13 @@
+# Fase 0 — corrección autorizada, validación previa a ampliar auditoría
+
+1. `3baa72e`: detector extraído literalmente de JoseInspectorCoordinator a PrivateKeyMaterialDetector; solo cambia acceso a package-private. JOSE delega. Ejecución UI `-Dtest=Jose*`, offline, low-cpu, runUiTests=true, test.mode=true, prism.order=sw: **13 XML / 17 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0**. Tests existentes intactos.
+2. SD-JWT Verify e Inspect calculan primero el informe con la misma operación crypto. Bajo perfiles restringidos detectan material privado en informe/token y estructuras decodificadas (header, payload, key binding, disclosures), usando siempre el detector compartido. Sustituyen tanto el área como el output publicado por `module.wallet.privateJwkHidden`. FULL_LAB devuelve el informe antes de aplicar política, sin modificarlo. No se cambian estados de verificación, errores ni controles FXML. Clave EN/ES y fallback por defecto con el mismo texto que la clave JOSE. El aviso no necesita símbolo; no se añade emoji.
+3. Reproducción original, sin modificar el test ni sus aserciones: **1 XML / 9 pruebas / 4 fallos / 0 errores / 0 omitidas / exit 1**. Los dos FULL_LAB y la matriz ordinaria pasan. Los cuatro fallos restringidos ahora son **solo historial e history.json**: controles, resultado del shell, inspector, Shelf, visor expandido y estado pasan.
+
+## Por qué el historial aún falla
+
+La reproducción emite primero un SD-JWT que lleva `cnf.jwk` privado en `sdJwtClaimsArea`. El shell conserva ese campo editable en `HistoryCommand.parameters`, capturado por `UiStateSnapshot.captureHistoryRecipe`. La política existente decide sensibilidad por nombre; `sdJwtClaimsArea` no contiene uno de los tokens sensibles. El secreto permanece en la receta de Issue y vuelve a capturarse durante Verify/Inspect mientras el editor conserva esos claims.
+
+Esta es una ruta de entrada a historial independiente del informe publicado. La corrección solicitada de las salidas no basta para poner la reproducción verde. No se limpia historial, no se borran claims, no se cambia editabilidad, no se renombra el campo, no se tocan UiStateSnapshot ni ModernMainController y no se cambia el test para ocultar el defecto. Antes de declarar la causa se ha inspeccionado la captura real de recetas y el fichero persistido, además de las superficies que enumera el fallo.
+
+La corrección completa de recetas que contienen material privado en un campo de claims requiere ampliar el alcance respecto de los dos informes autorizados. Se conserva la corrección parcial de las salidas y se realiza la ampliación de auditoría pedida, sin comenzar extracción.
