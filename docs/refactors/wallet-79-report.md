@@ -109,6 +109,66 @@ Hallazgos pendientes: recetas de historial con claims privados, fugas mdoc/Statu
 - `50a267d — fix(wallet): hide private SD-JWT verify and inspect reports`
 - `9170be0 — docs(wallet): record corrected outputs and remaining history recipe leak`
 - `6d048a1 — test(wallet): reproduce mdoc and status list private material leaks`
-- `HEAD — docs(wallet): report authorized correction and second privacy stop` (actualización de este informe).
+- `7a3bcaa — docs(wallet): report authorized correction and second privacy stop` (actualización anterior de este informe).
 
 Rama sin cambios pendientes al cerrar; las reproducciones conservan intencionadamente sus fallos pendientes.
+
+
+## Segunda continuación: corrección B del historial
+
+Las dos paradas anteriores se conservan arriba como registro histórico. **La reproducción SD-JWT original ahora pasa sus nueve pruebas sin cambiar su archivo ni sus aserciones.** El cambio B está guardado en `26a1a17`.
+
+UiStateSnapshot incorpora únicamente la condición de sensibilidad por contenido en HISTORY_RECIPE con redacción activa. Un String que el detector identifique como privado se guarda como `[REDACTED_SECRET]` aunque el nombre sea neutro. FULL_LAB, restauración, editores y captura portátil no cambian. El detector conserva sus reglas y protege la detección ante RuntimeException/StackOverflowError de entradas inválidas. Se añaden tests de JSON/base64 inválidos, texto arbitrario, cadenas largas y anidamiento profundo.
+
+Único test existente ampliado en este paso: **UiStateSnapshotTest**, por la autorización B. Se añade un fixture neutro y tres casos de perfil para PEM, JWK d, JWK k y JWK público. No se ajusta ninguna aserción anterior, ni se modifica un test de otro módulo. PrivateKeyMaterialDetectorTest es nuevo. Los dos FULL_LAB SD-JWT siguen pasando.
+
+### G1 inmediatamente después de B: tercera parada
+
+Se ejecutó `mvn -o -q test -Plow-cpu` inmediatamente después de guardar B, antes de A y sin otro Maven simultáneo. Se borraron los informes antes de la ejecución. Resultado: **459 XML / 2957 pruebas / 8 fallos / 0 errores / 1 omitida / exit 1**.
+
+| Clase relevante en esta G1 | Pruebas | Fallos | Errores | Omitidas |
+|---|---:|---:|---:|---:|
+| PrivateKeyMaterialDetectorTest | 2 | 0 | 0 | 0 |
+| UiStateSnapshotTest | 14 | 0 | 0 | 0 |
+| WalletPrivacyCharacterizationUITest | 9 | 0 | 0 | 0 |
+| WalletAdditionalPrivacyCharacterizationUITest | 12 | 8 | 0 | 0 |
+| ExpandedViewerLifecycleUITest | 3 | 0 | 0 | 0 |
+
+Todos los fallos son los ocho casos mdoc/Status List ya reproducidos antes de B y pendientes de A. Ninguna otra clase presenta fallo/error. La G1 incluye UI por defecto y se pidió antes de corregir A; se mantiene la regla explícita de parar ante puerta no limpia. No se excluyen esos casos, no se adelanta A y no se usa la excepción GC: la clase GC pasa. Se registra el bloqueo de secuencia, sin atribuir esos fallos preexistentes a B.
+
+Detalles y campos: [wallet-0-history-g1-failures.md](wallet-0-history-g1-failures.md). Para avanzar hace falta resolver la regla de secuencia y permitir corregir A tras esta G1 con los ocho fallos conocidos, o autorizar repetirla después de A. Esa excepción aún no está autorizada.
+
+### Correcciones A pendientes
+
+mdoc Inspect y Status List Describe siguen con sus reproducciones y permanecen sin corregir porque esta G1 detiene el paso 1 antes del paso 2. No se inicia el resto de manejadores Wallet ni las fases de extracción. No hay extracción que retirar. Los propietarios de module.wallet.* se mantienen.
+
+### Tabla completa de puertas previstas en esta segunda continuación
+
+La G1 previa a A es una ejecución adicional a las doce puertas posteriores solicitadas. Las puertas históricas anteriores siguen registradas en sus secciones; no se mezclan sus recuentos.
+
+| Paso/fase | Puerta | XML | Pruebas | Fallos | Errores | Omitidas | Exit | Resultado |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| B, previa a A | G1 | 459 | 2957 | 8 | 0 | 1 | 1 | Fallida; parada |
+| 0, tras A | G1 | — | — | — | — | — | — | No ejecutada |
+| 0, tras A | G2 | — | — | — | — | — | — | No ejecutada |
+| 0, tras A | G3 | — | — | — | — | — | — | No ejecutada |
+| 1 SD-JWT | G1 | — | — | — | — | — | — | No ejecutada |
+| 1 SD-JWT | G2 | — | — | — | — | — | — | No ejecutada |
+| 1 SD-JWT | G3 | — | — | — | — | — | — | No ejecutada |
+| 2 mdoc | G1 | — | — | — | — | — | — | No ejecutada |
+| 2 mdoc | G2 | — | — | — | — | — | — | No ejecutada |
+| 2 mdoc | G3 | — | — | — | — | — | — | No ejecutada |
+| 3 Status List | G1 | — | — | — | — | — | — | No ejecutada |
+| 3 Status List | G2 | — | — | — | — | — | — | No ejecutada |
+| 3 Status List | G3 | — | — | — | — | — | — | No ejecutada |
+
+### Alcance, higiene y commits de este paso
+
+WalletController permanece en 990 líneas (971 originales); sin coordinadores extraídos. UiStateSnapshot tiene exclusivamente el cambio de condición autorizado. crypto/, pom.xml, ModernMainController, StatusReporter y OperationResult permanecen intactos. Las dos reproducciones Wallet no se modifican.
+
+Higiene ejecutada con el bloque literal de quality-gates: **inline=0, emoji=325**. git diff --check pasa. Se conserva la advertencia de traducción preexistente. JVM Maven/Surefire: OpenJDK 25/macOS, compilación release 17. No se certifica Linux/Java 17. Tests con estado aislado/restaurado; sin material real, imágenes, ejecutables ni red añadida.
+
+- `26a1a17 — fix(history): redact private material in neutral text fields`.
+- `HEAD — docs(wallet): record mandatory G1 stop after history correction` (este cierre).
+
+Rama limpia al terminar. La reproducción SD-JWT queda verde; las ocho reproducciones de Wallet pendientes de A permanecen rojas y documentadas.

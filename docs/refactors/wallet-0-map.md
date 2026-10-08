@@ -59,3 +59,9 @@ El detector JOSE se mueve sin cambios de lógica a PrivateKeyMaterialDetector (u
 La validación original sigue fallando por la receta `WalletController.sdJwtClaimsArea`, que llega al historial independientemente del output. La auditoría ampliada descubre fugas en `mdocVerifyOutputArea` y `statusListResolveOutputArea`; ambos contienen elementos privados incluidos accidentalmente en la estructura de entrada. Véanse wallet-0-correction-validation.md y wallet-0-additional-characterization-failures.md. La segunda parada impide iniciar mapas de fases 1–3.
 
 Precisión del mapa inicial: handleTrustedListFind también lee trustedListXmlArea mediante trustedListXml(); no cambia su propietario ni se toca ese manejador.
+
+## Segunda continuación: B y puerta previa a A
+
+Autorizado UiStateSnapshot únicamente en la condición de captura HISTORY_RECIPE: añade sensibilidad por contenido de String con PrivateKeyMaterialDetector cuando hay redacción activa. La restauración y los demás modos quedan intactos. Se añade una envoltura de protección contra errores de análisis en el detector, sin cambiar sus reglas, y tests de entradas arbitrarias/largas. UiStateSnapshotTest se amplía por petición expresa, con notesArea neutro, sin tocar aserciones anteriores.
+
+G1 inmediatamente posterior a B: 459 XML / 2957 pruebas / 8 fallos / 0 errores / 1 omitida / exit 1. La reproducción SD-JWT pasa completa; los ocho fallos son la reproducción ampliada pendiente de A. Se detiene la secuencia por puerta no limpia antes de A; detalles en wallet-0-history-g1-failures.md. No se trasladan métodos ni propietarios de claves Wallet.
