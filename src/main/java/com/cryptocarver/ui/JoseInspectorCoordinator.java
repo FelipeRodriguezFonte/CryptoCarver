@@ -29,33 +29,9 @@ final class JoseInspectorCoordinator {
                 .map(Text::getText).collect(java.util.stream.Collectors.joining());
     }
 
-    private static boolean containsPrivateMaterial(Object value, int depth) {
-        if (value == null || depth > 12) return false;
-        if (value instanceof Map<?, ?> map) {
-            if (map.containsKey("kty") && (map.containsKey("d") || map.containsKey("k"))) return true;
-            return map.values().stream().anyMatch(child -> containsPrivateMaterial(child, depth + 1));
-        }
-        if (value instanceof List<?> list) return list.stream().anyMatch(child -> containsPrivateMaterial(child, depth + 1));
-        if (value instanceof String text) {
-            if (text.contains("PRIVATE KEY-----")) return true;
-            String trimmed = text.trim();
-            if (trimmed.startsWith("{")) {
-                try { return containsPrivateMaterial(com.nimbusds.jose.util.JSONObjectUtils.parse(trimmed), depth + 1); }
-                catch (Exception invalid) { return trimmed.contains("\"kty\"") && (trimmed.contains("\"d\"") || trimmed.contains("\"k\"")); }
-            }
-            String[] parts = trimmed.split("\\.", -1);
-            if (parts.length == 3 || parts.length == 5) {
-                if (containsPrivateMaterial(new Base64URL(parts[0]).decodeToString(), depth + 1)) return true;
-                if (parts.length == 3 && containsPrivateMaterial(new Base64URL(parts[1]).decodeToString(), depth + 1)) return true;
-            } else if (trimmed.startsWith("ey")) {
-                return containsPrivateMaterial(new Base64URL(trimmed).decodeToString(), depth + 1);
-            }
-        }
-        return false;
-    }
 
     public void inspectToken(String token, TextFlow outputFlow) {
-        boolean privateMaterial = containsPrivateMaterial(token, 0);
+        boolean privateMaterial = PrivateKeyMaterialDetector.containsPrivateMaterial(token, 0);
         privateReports.put(outputFlow, privateMaterial);
         if (privateMaterial && !com.cryptocarver.model.AppSettings.isFullLab()) {
             outputFlow.getChildren().setAll(new Text(privacyWarning()));
