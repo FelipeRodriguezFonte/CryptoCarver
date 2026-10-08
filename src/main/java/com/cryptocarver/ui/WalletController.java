@@ -354,9 +354,10 @@ public class WalletController implements Initializable {
                 report.append("\n\n");
                 verified.notes().forEach(note -> report.append("- ").append(note).append('\n'));
             }
-            sdJwtVerifyOutputArea.setText(report.toString());
+            String visibleReport = sdJwtReportForDisplay(presentation, report.toString());
+            sdJwtVerifyOutputArea.setText(visibleReport);
             updateStatus(t("module.wallet.status.verified"));
-            publish("SD-JWT Verify", report.toString(),
+            publish("SD-JWT Verify", visibleReport,
                     "Key binding", verified.keyBindingPresent() ? "present" : "absent");
         } catch (Exception e) {
             fail(e, "sdJwtVerifyInputArea", "sd-jwt verify");
@@ -368,13 +369,31 @@ public class WalletController implements Initializable {
         try {
             String serialized = textOf(sdJwtInspectInputArea);
             if (isBlank(serialized)) { showValidation(t("module.wallet.sdJwtRequired"), "sdJwtInspectInputArea"); return; }
-            String report = SdJwtOperations.describe(serialized, I18nService.getInstance().getLocale());
+            String report = sdJwtReportForDisplay(serialized,
+                    SdJwtOperations.describe(serialized, I18nService.getInstance().getLocale()));
             sdJwtInspectOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
             publish("SD-JWT Inspect", report);
         } catch (Exception e) {
             fail(e, "sdJwtInspectInputArea", "sd-jwt inspect");
         }
+    }
+
+    /** Keep private material out of both the local result and every published shell surface. */
+    private String sdJwtReportForDisplay(String token, String report) throws Exception {
+        if (com.cryptocarver.model.AppSettings.isFullLab()) return report;
+        boolean privateMaterial = PrivateKeyMaterialDetector.containsPrivateMaterial(report, 0)
+                || PrivateKeyMaterialDetector.containsPrivateMaterial(token, 0);
+        if (!privateMaterial) {
+            SdJwtOperations.ParsedSdJwt parsed = SdJwtOperations.parse(token);
+            privateMaterial = PrivateKeyMaterialDetector.containsPrivateMaterial(parsed.header().toString(), 0)
+                    || PrivateKeyMaterialDetector.containsPrivateMaterial(parsed.payload().toString(), 0)
+                    || PrivateKeyMaterialDetector.containsPrivateMaterial(
+                            parsed.keyBindingClaims() == null ? null : parsed.keyBindingClaims().toString(), 0)
+                    || parsed.disclosures().stream().anyMatch(disclosure ->
+                            PrivateKeyMaterialDetector.containsPrivateMaterial(disclosure.value().toString(), 0));
+        }
+        return privateMaterial ? t("module.wallet.privateJwkHidden") : report;
     }
 
     // ------------------------------------------------------------------ mdoc
