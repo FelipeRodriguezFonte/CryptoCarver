@@ -6,7 +6,6 @@ import com.cryptocarver.crypto.CborInspector;
 import com.cryptocarver.crypto.EidasCertificateInspector;
 import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.MdocOperations;
-import com.cryptocarver.crypto.SdJwtOperations;
 import com.cryptocarver.crypto.StatusListOperations;
 import com.cryptocarver.crypto.OpenId4VpInspector;
 import com.cryptocarver.crypto.TrustedListInspector;
@@ -158,6 +157,7 @@ public class WalletController implements Initializable {
     @FXML private TextArea adesOutputArea;
 
     private StatusReporter statusReporter;
+    private WalletSdJwtCoordinator walletSdJwtCoordinator;
     private ModuleI18n.Binding moduleI18n;
 
     /** Required by FXMLLoader when this controller is used from an fx:include. */
@@ -256,145 +256,49 @@ public class WalletController implements Initializable {
         }
     }
 
+    private WalletSdJwtCoordinator sdJwtCoordinator() {
+        if (walletSdJwtCoordinator == null) {
+            walletSdJwtCoordinator = new WalletSdJwtCoordinator(new WalletSdJwtCoordinator.View(
+                    () -> sdJwtAlgoCombo,
+                    () -> sdJwtIssuerKeyArea,
+                    () -> sdJwtClaimsArea,
+                    () -> sdJwtDisclosableArea,
+                    () -> sdJwtVctField,
+                    () -> sdJwtDecoyField,
+                    () -> sdJwtIssueOutputArea,
+                    () -> sdJwtPresentInputArea,
+                    () -> sdJwtRevealArea,
+                    () -> sdJwtAudienceField,
+                    () -> sdJwtNonceField,
+                    () -> sdJwtHolderKeyArea,
+                    () -> sdJwtPresentOutputArea,
+                    () -> sdJwtVerifyInputArea,
+                    () -> sdJwtVerifyIssuerKeyArea,
+                    () -> sdJwtVerifyHolderKeyArea,
+                    () -> sdJwtVerifyAudienceField,
+                    () -> sdJwtVerifyNonceField,
+                    () -> sdJwtVerifyOutputArea,
+                    () -> sdJwtInspectInputArea,
+                    () -> sdJwtInspectOutputArea), () -> statusReporter);
+        }
+        return walletSdJwtCoordinator;
+    }
+
     // ---------------------------------------------------------------- SD-JWT
 
     @FXML
-    private void handleSdJwtIssue() {
-        try {
-            String claims = textOf(sdJwtClaimsArea);
-            String key = textOf(sdJwtIssuerKeyArea);
-            if (isBlank(claims)) { showValidation(t("module.wallet.claimsRequired"), "sdJwtClaimsArea"); return; }
-            if (isBlank(key)) { showValidation(t("module.wallet.keyRequired"), "sdJwtIssuerKeyArea"); return; }
-
-            JWSAlgorithm algorithm = JWSAlgorithm.parse(valueOf(sdJwtAlgoCombo, "ES256"));
-            List<String> paths = lines(textOf(sdJwtDisclosableArea));
-            int decoys = parseInt(textOf(sdJwtDecoyField), 0);
-            String vct = textOf(sdJwtVctField);
-
-            SdJwtOperations.IssuedSdJwt issued = isBlank(vct)
-                    ? SdJwtOperations.issue(claims, paths, decoys,
-                            SdJwtOperations.HashAlgorithm.SHA_256, algorithm,
-                            JOSEService.createSigner(algorithm, key), null)
-                    : SdJwtOperations.issueVerifiableCredential(claims, vct, null, null, null, paths,
-                            decoys, SdJwtOperations.HashAlgorithm.SHA_256, algorithm,
-                            JOSEService.createSigner(algorithm, key));
-
-            sdJwtIssueOutputArea.setText(issued.serialized());
-            updateStatus(t("module.wallet.status.issued"));
-            publish("SD-JWT Issue", issued.serialized(),
-                    "Disclosures", String.valueOf(issued.disclosures().size()));
-        } catch (Exception e) {
-            fail(e, "sdJwtClaimsArea", "sd-jwt issue");
-        }
-    }
+    private void handleSdJwtIssue() { sdJwtCoordinator().handleSdJwtIssue(); }
 
     @FXML
-    private void handleSdJwtPresent() {
-        try {
-            String serialized = textOf(sdJwtPresentInputArea);
-            if (isBlank(serialized)) { showValidation(t("module.wallet.sdJwtRequired"), "sdJwtPresentInputArea"); return; }
-
-            SdJwtOperations.ParsedSdJwt parsed = SdJwtOperations.parse(serialized);
-            List<String> wanted = lines(textOf(sdJwtRevealArea));
-            List<String> digests = new ArrayList<>();
-            for (SdJwtOperations.Disclosure disclosure : parsed.disclosures()) {
-                if (wanted.isEmpty() || wanted.contains(disclosure.claimName())
-                        || wanted.contains(disclosure.label())) {
-                    digests.add(disclosure.digest());
-                }
-            }
-
-            String audience = textOf(sdJwtAudienceField);
-            String nonce = textOf(sdJwtNonceField);
-            String holderKey = textOf(sdJwtHolderKeyArea);
-            SdJwtOperations.KeyBinding binding = null;
-            if (!isBlank(audience) || !isBlank(nonce) || !isBlank(holderKey)) {
-                // Half a key binding produces a presentation that looks bound and
-                // is not, so all three are demanded together.
-                if (isBlank(audience) || isBlank(nonce) || isBlank(holderKey)) {
-                    showValidation(t("module.wallet.keyBindingIncomplete"), "sdJwtAudienceField");
-                    return;
-                }
-                JWSAlgorithm algorithm = JWSAlgorithm.parse(valueOf(sdJwtAlgoCombo, "ES256"));
-                binding = new SdJwtOperations.KeyBinding(audience, nonce, algorithm,
-                        JOSEService.createSigner(algorithm, holderKey));
-            }
-
-            SdJwtOperations.IssuedSdJwt reconstructed = new SdJwtOperations.IssuedSdJwt(
-                    serialized.split("~", -1)[0], parsed.disclosures(), serialized,
-                    SdJwtOperations.HashAlgorithm.SHA_256);
-            String presentation = SdJwtOperations.present(reconstructed, digests, binding);
-
-            sdJwtPresentOutputArea.setText(presentation);
-            updateStatus(t("module.wallet.status.presented"));
-            publish("SD-JWT Present", presentation, "Disclosures revealed", String.valueOf(digests.size()));
-        } catch (Exception e) {
-            fail(e, "sdJwtPresentInputArea", "sd-jwt present");
-        }
-    }
+    private void handleSdJwtPresent() { sdJwtCoordinator().handleSdJwtPresent(); }
 
     @FXML
-    private void handleSdJwtVerify() {
-        try {
-            String presentation = textOf(sdJwtVerifyInputArea);
-            String issuerKey = textOf(sdJwtVerifyIssuerKeyArea);
-            if (isBlank(presentation)) { showValidation(t("module.wallet.sdJwtRequired"), "sdJwtVerifyInputArea"); return; }
-            if (isBlank(issuerKey)) { showValidation(t("module.wallet.keyRequired"), "sdJwtVerifyIssuerKeyArea"); return; }
-
-            JWSAlgorithm algorithm = JWSAlgorithm.parse(valueOf(sdJwtAlgoCombo, "ES256"));
-            String holderKey = textOf(sdJwtVerifyHolderKeyArea);
-            SdJwtOperations.VerifiedSdJwt verified = SdJwtOperations.verify(presentation,
-                    JOSEService.createVerifier(algorithm, issuerKey),
-                    isBlank(holderKey) ? null : JOSEService.createVerifier(algorithm, holderKey),
-                    blankToNull(textOf(sdJwtVerifyAudienceField)),
-                    blankToNull(textOf(sdJwtVerifyNonceField)));
-
-            StringBuilder report = new StringBuilder(verified.claimsJson());
-            if (!verified.notes().isEmpty()) {
-                report.append("\n\n");
-                verified.notes().forEach(note -> report.append("- ").append(note).append('\n'));
-            }
-            String visibleReport = sdJwtReportForDisplay(presentation, report.toString());
-            sdJwtVerifyOutputArea.setText(visibleReport);
-            updateStatus(t("module.wallet.status.verified"));
-            publish("SD-JWT Verify", visibleReport,
-                    "Key binding", verified.keyBindingPresent() ? "present" : "absent");
-        } catch (Exception e) {
-            fail(e, "sdJwtVerifyInputArea", "sd-jwt verify");
-        }
-    }
+    private void handleSdJwtVerify() { sdJwtCoordinator().handleSdJwtVerify(); }
 
     @FXML
-    private void handleSdJwtInspect() {
-        try {
-            String serialized = textOf(sdJwtInspectInputArea);
-            if (isBlank(serialized)) { showValidation(t("module.wallet.sdJwtRequired"), "sdJwtInspectInputArea"); return; }
-            String report = sdJwtReportForDisplay(serialized,
-                    SdJwtOperations.describe(serialized, I18nService.getInstance().getLocale()));
-            sdJwtInspectOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("SD-JWT Inspect", report);
-        } catch (Exception e) {
-            fail(e, "sdJwtInspectInputArea", "sd-jwt inspect");
-        }
-    }
+    private void handleSdJwtInspect() { sdJwtCoordinator().handleSdJwtInspect(); }
 
-    /** Keep private material out of both the local result and every published shell surface. */
-    private String sdJwtReportForDisplay(String token, String report) throws Exception {
-        if (com.cryptocarver.model.AppSettings.isFullLab()) return report;
-        boolean privateMaterial = PrivateKeyMaterialDetector.containsPrivateMaterial(report, 0)
-                || PrivateKeyMaterialDetector.containsPrivateMaterial(token, 0);
-        if (!privateMaterial) {
-            SdJwtOperations.ParsedSdJwt parsed = SdJwtOperations.parse(token);
-            privateMaterial = PrivateKeyMaterialDetector.containsPrivateMaterial(parsed.header().toString(), 0)
-                    || PrivateKeyMaterialDetector.containsPrivateMaterial(parsed.payload().toString(), 0)
-                    || PrivateKeyMaterialDetector.containsPrivateMaterial(
-                            parsed.keyBindingClaims() == null ? null : parsed.keyBindingClaims().toString(), 0)
-                    || parsed.disclosures().stream().anyMatch(disclosure ->
-                            PrivateKeyMaterialDetector.containsPrivateMaterial(disclosure.value().toString(), 0));
-        }
-        return privateMaterial ? t("module.wallet.privateJwkHidden") : report;
-    }
+
 
     // ------------------------------------------------------------------ mdoc
 
