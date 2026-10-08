@@ -1,4 +1,8 @@
-# Encargo 79 — informe de cierre por parada en fase 0
+# Encargo 79 — informe final
+
+**Estado final: completado.** WalletController pasa de 971 a 793 líneas; SD-JWT, mdoc y Status List extraídos. Auditoría corregida y ambas reproducciones verdes sin cambiar aserciones. Las doce puertas están validadas: nueve con la excepción GC comprobada y las tres finales limpias. La tabla vigente está en «Puertas vigentes tras A y bases GC». Se conserva a continuación el registro histórico de las paradas y sus continuaciones.
+
+## Primera parada (registro histórico)
 
 Rama: `codex/wallet-1`. Worktree: `/Users/feliperodriguezfonte/dev/CryptoCarver-wallet-1`, creado desde `eb3d7448`. No se ha compilado en el repositorio principal ni ejecutado más de un Maven simultáneamente.
 
@@ -206,9 +210,9 @@ Se borró target/surefire-reports antes de cada ejecución. Base de comparación
 | 2 | G1 | 461 | 2959 | 3 | 0 | 1 | 1 | Excepción GC comprobada |
 | 2 | G2 | 138 | 580 | 3 | 0 | 0 | 1 | Excepción GC comprobada |
 | 2 | G3 | 138 | 580 | 3 | 0 | 0 | 1 | Excepción GC comprobada |
-| 3 | G1 | — | — | — | — | — | — | Pendiente |
-| 3 | G2 | — | — | — | — | — | — | Pendiente |
-| 3 | G3 | — | — | — | — | — | — | Pendiente |
+| 3 | G1 | 462 | 2960 | 0 | 0 | 1 | 0 | Limpia |
+| 3 | G2 | 139 | 581 | 0 | 0 | 0 | 0 | Limpia |
+| 3 | G3 | 139 | 581 | 0 | 0 | 0 | 0 | Limpia |
 
 WalletController corregido: 1003 líneas frente a 971 originales. Higiene: inline=0, emoji=325 (bloque literal CI). Advertencia Wallet / eIDAS preexistente conservada. No se tocan los ficheros protegidos; UiStateSnapshot conserva únicamente B. Ejecución local OpenJDK 25/macOS, release 17; no se afirma validación Linux/Java 17. Los logs y XML se archivaron por ejecución durante la validación.
 
@@ -239,3 +243,64 @@ Mapa, caracterización y extracción guardados en commits separados. Digest SHA-
 Solo los mismos tres casos de ExpandedViewerLifecycleUITest fallan en cada comparación; clase sin cambios y sin exclusiones.
 
 WalletController fase 2: 907 → 861 líneas; WalletMdocCoordinator: 187. Caracterización fijada limpia antes de extracción; tras extracción 2 XML / 13 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0. El fallo de fixture previo al digest y los dos intentos dirigidos de compilación por el import están descritos en wallet-2-characterization-failures.md. No falló ninguna puerta por esos motivos.
+
+## Fase 3: Status List
+
+Mapa, caracterización y extracción guardados en commits separados. Digest SHA-256 comprobado sobre código sin extraer y después de extraer. Se conservan las reproducciones de privacidad. Contratos existentes dirigidos antes de puertas: 5 XML / 47 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0; ningún test existente ajustado.
+
+Las tres puertas de esta fase pasan limpias, incluidos los tres tests GC. No se requiere comparación aislada en esta fase. Tras extraer: 2 XML / 13 pruebas / 0 fallos / 0 errores / 0 omitidas / exit 0. WalletController: 861 → 793 líneas; WalletStatusListCoordinator: 199.
+
+## Cierre final del encargo 79
+
+Auditoría de privacidad corregida y verde para los casos reproducidos. Las dos reproducciones conservan exactamente sus archivos y aserciones desde sus commits de creación; 9 + 12 pruebas verdes en todas las puertas. Los dos FULL_LAB SD-JWT se conservan; FULL_LAB mdoc/Status List también. La corrección B es exclusivamente la condición de redacción por contenido en captura HISTORY_RECIPE; la restauración no cambia. La utilidad conserva el detector JOSE y añade protección ante entradas inválidas/desbordamiento de pila.
+
+| Paso | WalletController | Coordinador añadido |
+|---|---:|---:|
+| Base eb3d744 | 971 | — |
+| Privacidad corregida | 1003 | — |
+| SD-JWT | 907 | 260 |
+| mdoc | 861 | 187 |
+| Status List final | 793 | 199 |
+
+Diez manejadores extraídos, con record View, Supplier<StatusReporter>, getter perezoso y delegados de una línea. Los 25 manejadores originales constan en wallet-0-map.md; las 143 claves del bundle EN tienen propietario final en los mapas 1/2/3. Los campos FXML son idénticos a eb3d744. eIDAS, Trusted Lists, CBOR, SCA, OID4VP y AdES siguen en el controlador.
+
+### Tests existentes modificados
+
+Solo UiStateSnapshotTest, por autorización expresa B: se añaden tres casos de perfil con campo neutro, PEM privado, JWK d, JWK k y JWK público. Ninguna aserción anterior se cambia. Ningún test JOSE, GC ni contrato de fuente se modifica. No se reasigna ninguna clave en tests existentes porque los contratos localizados no requieren ese cambio. Los contratos dirigidos pasan 47 pruebas en cada fase antes de sus puertas.
+
+### Hallazgos conservados y límites
+
+Se conservan las dos paradas de privacidad y la parada de secuencia posterior a B como historia del encargo. La aceptación de los ocho casos rojos solo se aplica a aquella G1 intermedia. Los fallos GC de fases 0/1/2 no se corrigen ni excluyen: nueve comparaciones aisladas reproducen los mismos tres casos. En fase 3 pasan los tres, también en G3. Se conserva la advertencia de traducción Wallet / eIDAS. El problema de fixture mdoc y los imports omitido/equivocado se documentan antes de sus puertas; producción y aserciones no se alteran para ocultarlos.
+
+Higiene final, bloque exacto quality-gates: inline=0; emoji=325. git diff --check limpio. crypto/, pom.xml, ModernMainController, StatusReporter y OperationResult intactos respecto a eb3d744. UiStateSnapshot tiene solo B. Ningún FXML cambiado; sin imágenes, .local.md, DMG ni ejecutables añadidos. Un único Maven a la vez, siempre en el worktree autorizado. JVM local Maven/Surefire OpenJDK 25/macOS, release 17; no se afirma haber ejecutado Linux/Java 17. Sin red añadida a estas pruebas. AppSettings, Shelf e historiales restaurados por los fixtures.
+
+### Commits en orden
+
+- `f530770 — docs(wallet): map phase zero privacy surfaces and handlers`
+- `b8ba676 — test(wallet): reproduce private holder JWK exposure in live UI`
+- `a9f81e7 — docs(wallet): report phase zero privacy stop for assignment 79`
+- `3baa72e — refactor(ui): share JOSE private key material detector unchanged`
+- `50a267d — fix(wallet): hide private SD-JWT verify and inspect reports`
+- `9170be0 — docs(wallet): record corrected outputs and remaining history recipe leak`
+- `6d048a1 — test(wallet): reproduce mdoc and status list private material leaks`
+- `7a3bcaa — docs(wallet): report authorized correction and second privacy stop`
+- `26a1a17 — fix(history): redact private material in neutral text fields`
+- `fb674d9 — docs(wallet): record mandatory G1 stop after history correction`
+- `cc4898d — test(wallet): record mdoc inspect reproduction before rule A fix`
+- `8239353 — fix(wallet): protect private material in mdoc inspect reports`
+- `8a9b318 — test(wallet): record status describe reproduction before rule A fix`
+- `682c4e1 — fix(wallet): protect private material in status list descriptions`
+- `4f6fa7b — docs(wallet): validate privacy corrections and phase zero gates`
+- `e6256e3 — docs(wallet): map SD-JWT extraction and final key owners`
+- `f0f99ed — test(wallet): pin SD-JWT shell characterization before extraction`
+- `6266948 — refactor(wallet): extract SD-JWT coordinator`
+- `48c7038 — docs(wallet): record SD-JWT extraction validation`
+- `14ca1c2 — docs(wallet): map mdoc extraction and final key owners`
+- `c228a94 — test(wallet): pin mdoc shell characterization before extraction`
+- `d8cfef9 — refactor(wallet): extract mdoc coordinator`
+- `555520b — docs(wallet): record mdoc extraction validation`
+- `e302655 — docs(wallet): map status list extraction and final key owners`
+- `087717b — test(wallet): pin status list shell characterization before extraction`
+- `64e4ad3 — refactor(wallet): extract status list coordinator`
+
+El último commit de documentación de la rama guarda este cierre y la lista anterior. Rama limpia al entregar.
