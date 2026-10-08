@@ -157,6 +157,7 @@ public class WalletController implements Initializable {
     @FXML private TextArea adesOutputArea;
 
     private StatusReporter statusReporter;
+    private WalletMdocCoordinator walletMdocCoordinator;
     private WalletSdJwtCoordinator walletSdJwtCoordinator;
     private ModuleI18n.Binding moduleI18n;
 
@@ -284,6 +285,24 @@ public class WalletController implements Initializable {
         return walletSdJwtCoordinator;
     }
 
+    private WalletMdocCoordinator mdocCoordinator() {
+        if (walletMdocCoordinator == null) {
+            walletMdocCoordinator = new WalletMdocCoordinator(new WalletMdocCoordinator.View(
+                    () -> mdocDocTypeField,
+                    () -> mdocDigestCombo,
+                    () -> mdocIssuerKeyArea,
+                    () -> mdocSignerCertArea,
+                    () -> mdocDeviceKeyArea,
+                    () -> mdocClaimsArea,
+                    () -> mdocValidityField,
+                    () -> mdocIssueOutputArea,
+                    () -> mdocVerifyInputArea,
+                    () -> mdocVerifyIssuerKeyArea,
+                    () -> mdocVerifyOutputArea), () -> statusReporter);
+        }
+        return walletMdocCoordinator;
+    }
+
     // ---------------------------------------------------------------- SD-JWT
 
     @FXML
@@ -303,80 +322,15 @@ public class WalletController implements Initializable {
     // ------------------------------------------------------------------ mdoc
 
     @FXML
-    private void handleMdocIssue() {
-        try {
-            String claims = textOf(mdocClaimsArea);
-            String key = textOf(mdocIssuerKeyArea);
-            String certificatePem = textOf(mdocSignerCertArea);
-            if (isBlank(claims)) { showValidation(t("module.wallet.claimsRequired"), "mdocClaimsArea"); return; }
-            if (isBlank(key)) { showValidation(t("module.wallet.keyRequired"), "mdocIssuerKeyArea"); return; }
-            if (isBlank(certificatePem)) { showValidation(t("module.wallet.certificateRequired"), "mdocSignerCertArea"); return; }
-
-            Instant now = Instant.now();
-            long days = parseInt(textOf(mdocValidityField), 365);
-            String deviceKeyPem = textOf(mdocDeviceKeyArea);
-
-            byte[] mdoc = MdocOperations.issue(
-                    textOf(mdocDocTypeField),
-                    claims,
-                    valueOf(mdocDigestCombo, "SHA-256"),
-                    new MdocOperations.ValidityInfo(now, now, now.plus(days, ChronoUnit.DAYS), null),
-                    AsymmetricKeyOperations.importPrivateKeyPEMAuto(key),
-                    parseCertificate(certificatePem),
-                    isBlank(deviceKeyPem) ? null : AsymmetricKeyOperations.importPublicKeyPEMAuto(deviceKeyPem));
-
-            String hex = DataConverter.bytesToHex(mdoc).toUpperCase();
-            mdocIssueOutputArea.setText(hex);
-            updateStatus(t("module.wallet.status.issued"));
-            publish("mdoc Issue", hex, "Document type", textOf(mdocDocTypeField));
-        } catch (Exception e) {
-            fail(e, "mdocClaimsArea", "mdoc issue");
-        }
-    }
+    private void handleMdocIssue() { mdocCoordinator().handleMdocIssue(); }
 
     @FXML
-    private void handleMdocVerify() {
-        runMdocReport(true);
-    }
+    private void handleMdocVerify() { mdocCoordinator().handleMdocVerify(); }
 
     @FXML
-    private void handleMdocInspect() {
-        runMdocReport(false);
-    }
+    private void handleMdocInspect() { mdocCoordinator().handleMdocInspect(); }
 
-    /**
-     * Both buttons produce the same report; they differ only in whether an
-     * issuer key is required. Inspecting without one verifies against the
-     * certificate the document carries, which the facade reports as a warning
-     * rather than presenting as a pass.
-     */
-    private void runMdocReport(boolean requireIssuerKey) {
-        try {
-            String hex = textOf(mdocVerifyInputArea);
-            if (isBlank(hex)) { showValidation(t("module.wallet.mdocRequired"), "mdocVerifyInputArea"); return; }
-            String issuerKey = textOf(mdocVerifyIssuerKeyArea);
-            if (requireIssuerKey && isBlank(issuerKey)) {
-                showValidation(t("module.wallet.keyRequired"), "mdocVerifyIssuerKeyArea");
-                return;
-            }
-            PublicKey key = isBlank(issuerKey) ? null : AsymmetricKeyOperations.importPublicKeyPEMAuto(issuerKey);
-            byte[] document = CborInspector.parseHex(hex);
-            String report = MdocOperations.describe(document, key,
-                    Instant.now(), I18nService.getInstance().getLocale());
-            if (!com.cryptocarver.model.AppSettings.isFullLab()) {
-                boolean privateMaterial = PrivateKeyMaterialDetector.containsPrivateMaterial(report, 0)
-                        || MdocOperations.parse(document).namespaces().values().stream()
-                                .flatMap(List::stream).anyMatch(item ->
-                                        PrivateKeyMaterialDetector.containsPrivateMaterial(item.valueAsText(), 0));
-                if (privateMaterial) report = t("module.wallet.privateJwkHidden");
-            }
-            mdocVerifyOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.verified"));
-            publish(requireIssuerKey ? "mdoc Verify" : "mdoc Inspect", report);
-        } catch (Exception e) {
-            fail(e, "mdocVerifyInputArea", "mdoc verify");
-        }
-    }
+
 
     // ----------------------------------------------------------- status list
 
