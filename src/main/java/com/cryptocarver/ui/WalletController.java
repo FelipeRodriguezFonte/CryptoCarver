@@ -537,6 +537,11 @@ public class WalletController implements Initializable {
             String token = textOf(statusListTokenArea);
             if (isBlank(token)) { showValidation(t("module.wallet.tokenRequired"), "statusListTokenArea"); return; }
             String report = StatusListOperations.describe(token);
+            if (!com.cryptocarver.model.AppSettings.isFullLab()
+                    && (PrivateKeyMaterialDetector.containsPrivateMaterial(token, 0)
+                        || PrivateKeyMaterialDetector.containsPrivateMaterial(report, 0))) {
+                report = t("module.wallet.privateJwkHidden");
+            }
             statusListResolveOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
             publish("Status List Describe", report);
