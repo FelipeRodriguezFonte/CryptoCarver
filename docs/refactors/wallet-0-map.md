@@ -51,3 +51,11 @@ Revisados SpecializedFeedbackHeadlessTest, SpecializedI18nTest, Ux19SpecializedH
 ## Alcance y decisión
 
 Auditar primero los diez manejadores SD-JWT/mdoc/Status List en MASKED, REDACTED y FULL_LAB con claves de laboratorio; probar también material privado anidado en credenciales inspeccionadas/verificadas. Una fuga confirmada en superficie visible/persistida detiene las fases 1–3. No se fija digest de una auditoría fallida. Advertencia de traducción preexistente “Wallet / eIDAS”: registrar, no corregir.
+
+## Continuación autorizada, fase 0
+
+El detector JOSE se mueve sin cambios de lógica a PrivateKeyMaterialDetector (utilidad package-private). JoseInspectorCoordinator delega. WalletController incorpora sdJwtReportForDisplay para Verify/Inspect: comprueba informe/token y estructuras decodificadas, conserva FULL_LAB y publica el mismo aviso que muestra el control bajo perfiles restringidos. El nuevo literal `module.wallet.privateJwkHidden` pertenece a WalletController; las versiones EN/ES y fallback están en los bundles. No se mueve ninguna otra clave ni se cambia un fx:id.
+
+La validación original sigue fallando por la receta `WalletController.sdJwtClaimsArea`, que llega al historial independientemente del output. La auditoría ampliada descubre fugas en `mdocVerifyOutputArea` y `statusListResolveOutputArea`; ambos contienen elementos privados incluidos accidentalmente en la estructura de entrada. Véanse wallet-0-correction-validation.md y wallet-0-additional-characterization-failures.md. La segunda parada impide iniciar mapas de fases 1–3.
+
+Precisión del mapa inicial: handleTrustedListFind también lee trustedListXmlArea mediante trustedListXml(); no cambia su propietario ni se toca ese manejador.
