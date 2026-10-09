@@ -93,7 +93,8 @@ public class JOSEController implements Initializable {
     private JoseJwkCoordinator jwkCoordinator() {
         if (jwkCoordinator == null) jwkCoordinator = new JoseJwkCoordinator(
                 () -> new JoseJwkCoordinator.View(jwkInputArea, jwkOutputArea, jwkKeyTypeCombo, jwkKeyIdField,
-                        jwkUseCombo, jwkKeyOpsField, jwksSecretArea, jwksRotateAlgoCombo, jwkCurveCombo, jwkCurveLabel), () -> statusReporter, dialogService);
+                        jwkUseCombo, jwkKeyOpsField, jwksSecretArea, jwksRotateAlgoCombo, jwkCurveCombo, jwkCurveLabel,
+                        jwkSecretFormatCombo), () -> statusReporter, dialogService);
         return jwkCoordinator;
     }
 
@@ -266,6 +267,7 @@ public class JOSEController implements Initializable {
 @FXML
     private ComboBox<String> jwkKeyTypeCombo;
     @FXML private ComboBox<String> jwkCurveCombo;
+    @FXML private ComboBox<String> jwkSecretFormatCombo;
     @FXML private Label jwkCurveLabel;
 @FXML
     private TextArea jwtValidateKeyArea;

@@ -11,8 +11,14 @@ import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWEObjectJSON;
 import com.nimbusds.jose.crypto.MultiEncrypter;
+import com.nimbusds.jose.JWECryptoParts;
+import com.nimbusds.jose.crypto.impl.ContentCryptoProvider;
+import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.OctetKeyPair;
+import com.nimbusds.jose.jwk.OctetSequenceKey;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.AESDecrypter;
 import com.nimbusds.jose.crypto.AESEncrypter;
@@ -125,8 +131,11 @@ public final class JweComposer {
             if (present(headerOptions.kid()) || present(headerOptions.apu()) || present(headerOptions.apv())) {
                 throw new IllegalArgumentException("kid, apu and apv are per recipient; with several recipients they come from each JWK.");
             }
-            JWEObjectJSON object = new JWEObjectJSON(header(null, enc, compress, headerOptions),
-                    new Payload(payload), null, aadMember(aad));
+            JWEHeader shared = header(null, enc, compress, headerOptions);
+            if (recipients.stream().anyMatch(OctetKeyPair.class::isInstance)) {
+                return encryptForRecipients(shared, payload, recipients, aad);
+            }
+            JWEObjectJSON object = new JWEObjectJSON(shared, new Payload(payload), null, aadMember(aad));
             object.encrypt(new MultiEncrypter(new JWKSet(recipients)));
             return object.serializeGeneral();
         }
@@ -134,10 +143,10 @@ public final class JweComposer {
         JWEAlgorithm alg = JWEAlgorithm.parse(keyAlgorithm);
         JWEHeader header = header(alg, enc, compress, headerOptions);
         JWEEncrypter encrypter = encrypter(alg, keyInput, secretEncoding, pbes2Iterations);
-        if (form == Serialization.COMPACT) {
+        if (form == Serialization.COMPACT || !present(aad)) {
             JWEObject object = new JWEObject(header, new Payload(payload));
             object.encrypt(encrypter);
-            return object.serialize();
+            return form == Serialization.COMPACT ? object.serialize() : jsonWithoutAad(object, form);
         }
         JWEObjectJSON object = new JWEObjectJSON(header, new Payload(payload), null, aadMember(aad));
         object.encrypt(encrypter);
@@ -151,6 +160,102 @@ public final class JweComposer {
      */
     private static byte[] aadMember(String aad) {
         return present(aad) ? Base64URL.encode(aad).toString().getBytes(StandardCharsets.US_ASCII) : null;
+    }
+
+    /**
+     * JSON form of an object encrypted as compact. Without {@code aad} the
+     * whole header is protected, so the parameters the algorithm adds
+     * ({@code epk}, {@code p2s}/{@code p2c}, {@code iv}/{@code tag}) are
+     * authenticated exactly as serialized. JWEObjectJSON instead authenticates
+     * them as protected but emits them unprotected, which no one can decrypt.
+     */
+    private static String jsonWithoutAad(JWEObject object, Serialization form) {
+        Map<String, Object> recipient = JSONObjectUtils.newJSONObject();
+        Base64URL encryptedKey = object.getEncryptedKey();
+        if (encryptedKey != null && !encryptedKey.toString().isEmpty()) {
+            recipient.put("encrypted_key", encryptedKey.toString());
+        }
+        Map<String, Object> json = JSONObjectUtils.newJSONObject();
+        json.put("protected", object.getHeader().toBase64URL().toString());
+        if (form == Serialization.GENERAL) json.put("recipients", List.of(recipient));
+        else json.putAll(recipient);
+        if (object.getIV() != null) json.put("iv", object.getIV().toString());
+        json.put("ciphertext", object.getCipherText().toString());
+        if (object.getAuthTag() != null) json.put("tag", object.getAuthTag().toString());
+        return JSONObjectUtils.toJSONString(json);
+    }
+
+    /**
+     * General JSON for a recipient set that includes X25519 / X448 keys.
+     * Nimbus's MultiEncrypter needs optional Tink for those, so each recipient
+     * wraps one shared CEK here, with {@link JoseXdhJwe} for the OKP keys.
+     */
+    private static String encryptForRecipients(JWEHeader shared, String payload, List<JWK> keys, String aad)
+            throws Exception {
+        String protectedB64 = shared.toBase64URL().toString();
+        byte[] aadMember = aadMember(aad);
+        byte[] authenticated = (protectedB64 + (aadMember == null ? "" : "." + new String(aadMember, StandardCharsets.US_ASCII)))
+                .getBytes(StandardCharsets.US_ASCII);
+        byte[] clearText = payload.getBytes(StandardCharsets.UTF_8);
+        // As in MultiEncrypter, a dir recipient's key is the content key the others wrap.
+        javax.crypto.SecretKey cek = null;
+        for (JWK key : keys) {
+            if (!JWEAlgorithm.DIR.getName().equals(key.getAlgorithm().getName())) continue;
+            if (!(key instanceof OctetSequenceKey direct) || cek != null) {
+                throw new IllegalArgumentException("Only one recipient can use dir, and it needs a symmetric (oct) key.");
+            }
+            cek = direct.toSecretKey("AES");
+        }
+        if (cek == null) {
+            cek = ContentCryptoProvider.generateCEK(shared.getEncryptionMethod(), new java.security.SecureRandom());
+        }
+
+        List<Object> recipients = new java.util.ArrayList<>();
+        JWECryptoParts content = null;
+        for (JWK key : keys) {
+            JWEAlgorithm alg = JWEAlgorithm.parse(key.getAlgorithm().getName());
+            if (JWEAlgorithm.ECDH_ES.equals(alg)) {
+                throw new IllegalArgumentException("ECDH-ES derives its own content key and cannot share it with other"
+                        + " recipients; use ECDH-ES+A128KW/A192KW/A256KW (key "
+                        + (key.getKeyID() == null ? "without kid" : key.getKeyID()) + ").");
+            }
+            Map<String, Object> joined = shared.toJSONObject();
+            joined.put("alg", alg.getName());
+            if (key.getKeyID() != null) joined.put("kid", key.getKeyID());
+            Map<String, Object> recipient = JSONObjectUtils.newJSONObject();
+            if (JWEAlgorithm.DIR.equals(alg)) {
+                joined.keySet().removeAll(shared.getIncludedParams());
+                recipient.put("header", joined);
+            } else {
+                JWECryptoParts parts = recipientEncrypter(key, alg, cek).encrypt(JWEHeader.parse(joined), clearText, authenticated);
+                if (content == null) content = parts;
+                Map<String, Object> perRecipient = parts.getHeader().toJSONObject();
+                perRecipient.keySet().removeAll(shared.getIncludedParams());
+                recipient.put("header", perRecipient);
+                recipient.put("encrypted_key", parts.getEncryptedKey().toString());
+            }
+            recipients.add(recipient);
+        }
+
+        Map<String, Object> json = JSONObjectUtils.newJSONObject();
+        json.put("protected", protectedB64);
+        json.put("recipients", recipients);
+        if (aadMember != null) json.put("aad", new String(aadMember, StandardCharsets.US_ASCII));
+        json.put("iv", content.getInitializationVector().toString());
+        json.put("ciphertext", content.getCipherText().toString());
+        json.put("tag", content.getAuthenticationTag().toString());
+        return JSONObjectUtils.toJSONString(json);
+    }
+
+    private static JWEEncrypter recipientEncrypter(JWK key, JWEAlgorithm alg, javax.crypto.SecretKey cek)
+            throws Exception {
+        if (key instanceof OctetKeyPair okp) {
+            return JoseXdhJwe.encrypter(JoseKeyMaterial.publicKey(okp.toPublicJWK().toJSONString()), cek);
+        }
+        if (key instanceof RSAKey rsa) return new RSAEncrypter(rsa.toRSAPublicKey(), cek);
+        if (key instanceof ECKey ecKey) return new ECDHEncrypter(ecKey.toECPublicKey(), cek);
+        if (key instanceof OctetSequenceKey oct) return new AESEncrypter(oct.toSecretKey("AES"), cek);
+        throw new IllegalArgumentException("Unsupported recipient key type for " + alg.getName() + ": " + key.getKeyType());
     }
 
     /** Keys of a JWKS with more than one entry; empty for any other key input. */

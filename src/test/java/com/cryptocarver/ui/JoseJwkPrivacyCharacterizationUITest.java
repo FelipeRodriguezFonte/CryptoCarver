@@ -33,7 +33,7 @@ class JoseJwkPrivacyCharacterizationUITest {
                         audit(p, "oct-json", p.area("jwkOutputArea"), privateValues(oct), profile);
                         p.controller.convertJwkToPem(rsa.toJSONString(), p.area("jwkOutputArea"));
                         audit(p, "private-pem", p.area("jwkOutputArea"), List.of(Base64.getEncoder().encodeToString(((RSAKey)rsa).toRSAPrivateKey().getEncoded()).substring(0, 40)), profile);
-                        var coordinator = new JoseJwkCoordinator(() -> new JoseJwkCoordinator.View(p.area("jwkInputArea"), p.area("jwkOutputArea"), p.combo("jwkKeyTypeCombo"), p.control("jwkKeyIdField"), p.combo("jwkUseCombo"), p.control("jwkKeyOpsField"), p.area("jwksSecretArea"), p.combo("jwksRotateAlgoCombo"), p.combo("jwkCurveCombo"), p.label("jwkCurveLabel")), () -> p.reporter, new DialogService());
+                        var coordinator = new JoseJwkCoordinator(() -> new JoseJwkCoordinator.View(p.area("jwkInputArea"), p.area("jwkOutputArea"), p.combo("jwkKeyTypeCombo"), p.control("jwkKeyIdField"), p.combo("jwkUseCombo"), p.control("jwkKeyOpsField"), p.area("jwksSecretArea"), p.combo("jwksRotateAlgoCombo"), p.combo("jwkCurveCombo"), p.label("jwkCurveLabel"), p.combo("jwkSecretFormatCombo")), () -> p.reporter, new DialogService());
                         String jwks = com.nimbusds.jose.util.JSONObjectUtils.toJSONString(new JWKSet(List.of(rsa, oct)).toJSONObject(false));
                         coordinator.loadedJWKS(jwks);
                         audit(p, "private-and-oct-jwks", p.area("jwksSecretArea"), privateValues(rsa, oct), profile);

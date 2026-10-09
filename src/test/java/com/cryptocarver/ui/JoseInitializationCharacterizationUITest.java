@@ -62,7 +62,7 @@ class JoseInitializationCharacterizationUITest {
                         lines.add(profile + "/detachedCapture=" + statuses);
                     });
                 }
-                digest("61e52224fbedb92086d81b19dbd2f3b2aad54df991d7e9dcb8c637e5b011b6df", lines);
+                digest("e519ff94dad9d26aecb1a4afba4013994f721d0a619d6cad6927d960803724a6", lines);
             } catch (Exception failure) { throw new RuntimeException(failure); }
             finally { I18nService.getInstance().setPreference(previous); }
         });
