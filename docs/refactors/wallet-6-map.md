@@ -1,6 +1,6 @@
 # Fase 6 — SCA, OpenID4VP y AdES (encargo 80)
 
-Base de la fase: el commit de extracción de CBOR.
+Base de la fase: `729cdc9`.
 
 ## Qué se mueve a `WalletScaCoordinator`
 
@@ -17,7 +17,7 @@ Extiende `WalletCoordinatorBase`. La política de material privado viaja con cad
 
 ## Qué se queda en el controlador
 
-Los cinco puntos de entrada `@FXML` como delegados; `initialize` (que rellena `scaTypeCombo`), `showSection`, `handleClear` y `handleLoadExample`, con los auxiliares que estos cuatro siguen usando: `fill`, `hide`, `show`, `textOf`, `setText`, `isBlank`, `clear`, `updateStatus` y `t`. Los auxiliares que ya no usa nadie en el controlador (`lines`, `parseCertificate`, `valueOf`, `blankToNull`, `publish`, `fail`, `showValidation`, `logFailure`) y sus importaciones se eliminan.
+Los cinco puntos de entrada `@FXML` como delegados; `initialize` (que rellena `scaTypeCombo`), `showSection`, `handleClear` y `handleLoadExample`, con los auxiliares que estos cuatro siguen usando: `fill`, `hide`, `show`, `textOf` (campo de texto), `setText`, `isBlank`, `clear`, `updateStatus` y `t`. Los auxiliares que ya no usa nadie en el controlador (`lines`, `parseCertificate`, `valueOf`, `blankToNull`, `publish`, `fail`, `showValidation`, `logFailure`) y sus importaciones se eliminan.
 
 ## Claves de idioma
 
