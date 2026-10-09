@@ -336,8 +336,13 @@
                          This has to be on the command line rather than in systemPropertyVariables:
                          the JVM resolves Locale.getDefault() during startup, before Surefire gets
                          the chance to set properties, so a late user.language is simply ignored.
-                         Tests that care about translation select their locale explicitly. -->
-                    <argLine>-Duser.language=en -Duser.country=US -Xmx2g ${surefire.cpuArgs}</argLine>
+                         Tests that care about translation select their locale explicitly.
+                         SoftRefLRUPolicyMSPerMB=0: the reused fork loads the whole shell in hundreds
+                         of UI tests and JavaFX keeps softly reachable caches for each. With the default
+                         policy they are only dropped at the heap limit, after long runs of full
+                         collections that outlast the 60 s UI waits (measured on 2,986 tests: 262 full
+                         collections and 1,909 MB live against 32 and 1,186 MB with this flag). -->
+                    <argLine>-Duser.language=en -Duser.country=US -Xmx2g -XX:SoftRefLRUPolicyMSPerMB=0 ${surefire.cpuArgs}</argLine>
                 </configuration>
             </plugin>
 
