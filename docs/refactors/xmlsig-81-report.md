@@ -54,18 +54,18 @@ FULL_LAB pasa; MASKED y REDACTED fallan cada uno con cuatro aserciones de no exp
 
 | Fase | Puerta | Informes | Pruebas | Fallos | Errores | Omitidas | Exit | Estado |
 |---|---|---:|---:|---:|---:|---:|---:|---|
-| 0 | G1 | — | — | — | — | — | — | Pendiente: nueva fuga paso 5 |
-| 0 | G2 | — | — | — | — | — | — | Pendiente: nueva fuga paso 5 |
-| 0 | G3 | — | — | — | — | — | — | Pendiente: nueva fuga paso 5 |
-| 1 | G1 | — | — | — | — | — | — | Fase no iniciada |
-| 1 | G2 | — | — | — | — | — | — | Fase no iniciada |
-| 1 | G3 | — | — | — | — | — | — | Fase no iniciada |
-| 2 | G1 | — | — | — | — | — | — | Fase no iniciada |
-| 2 | G2 | — | — | — | — | — | — | Fase no iniciada |
-| 2 | G3 | — | — | — | — | — | — | Fase no iniciada |
-| 3 | G1 | — | — | — | — | — | — | Fase no iniciada |
-| 3 | G2 | — | — | — | — | — | — | Fase no iniciada |
-| 3 | G3 | — | — | — | — | — | — | Fase no iniciada |
+| 0 | G1 | 465 | 2978 | 0 | 0 | 1 | 0 | Limpia |
+| 0 | G2 | 141 | 591 | 0 | 0 | 0 | 0 | Limpia |
+| 0 | G3 | 427 | 2870 | 3 | 0 | 1 | 0 | Detenida: solo fallan los 3 GC, pero no se reproducen en la clase aislada sobre base (3 pasan) |
+| 1 | G1 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
+| 1 | G2 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
+| 1 | G3 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
+| 2 | G1 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
+| 2 | G2 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
+| 2 | G3 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
+| 3 | G1 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
+| 3 | G2 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
+| 3 | G3 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
 
 ## Tests, restauración y hallazgos no corregidos
 
@@ -148,3 +148,51 @@ Logs de la continuación: /tmp/xmlsig-settings-fix.log, /tmp/xmlsig-privacy-fix.
 - `docs: report authorized XML TSA correction and renewed privacy stop` — actualización de este informe y de la tabla de puertas.
 
 El paso 6 y las fases 1–3 no generan commits porque la nueva parada los precede. Rama entregada con los cambios commitados y sin cambios pendientes; la suite completa contiene la reproducción nueva roja por diseño.
+
+
+## Segunda continuación autorizada: historial y publicaciones TSA
+
+Se conserva la primera parada de fase 0(c) por persistencia en ajustes y la segunda parada histórica del paso 5 por persistencia en historial de firma. Las dos se reanudan solo por la autorización explícita de esta continuación. Tras completar las correcciones, G1 y G2 pasan; se aplica una parada nueva tras G3 (detalle abajo). No se iniciaron las extracciones de fases 1–3.
+
+### Corrección B — receta de historial
+
+`UiStateSnapshot.captureHistoryRecipe` ahora detecta una cadena cuyo valor completo sea una URI HTTP(S) con user-info, y guarda la URL sin user-info mientras está activo MASKED o REDACTED. No reemplaza la URL por `[REDACTED_SECRET]`, de modo que el endpoint sigue restaurándose. Solo sanea el texto exacto que constituye la URL; texto común, URL sin credenciales y una URL incrustada en una frase se preservan. FULL_LAB conserva la URL completa, como el resto de secretos en historial. El saneador existente de AppSettings se movió a `TsaUrlSanitizer` sin cambiar su implementación de eliminación del user-info; el uso en este archivo está limitado a URLs HTTP(S).
+
+`UiStateSnapshotTest` comprueba usuario/contraseña, solo usuario, URL pública, texto no-URL y URL incrustada en frase para los tres perfiles. La ejecución dirigida pasó. No se cambió otro comportamiento de UiStateSnapshot.
+
+### Corrección A — publicaciones del controlador XML
+
+Se reutiliza `TsaUrlSanitizer` desde `XMLSignatureController`. Para MASKED y REDACTED, los detalles TSA que publica firma y Request timestamp, el diálogo «TSA Saved», «TSA Profile Saved», el resumen de Test TSA y el texto de resultado de Request timestamp eliminan user-info. Los detalles saneados llegan también al inspector, historial, Shelf y visor mediante OperationResult. FULL_LAB mantiene la política normal y conserva los user-info en estas superficies. AppSettings, ya corregido previamente, sigue eliminando user-info al persistir ajustes en cualquier perfil. La URL completa continúa suministrándose a la petición TSA en curso.
+
+`XMLSignatureSigningPrivacyUITest` verifica la firma real BASELINE-B, el detalle de TSA en historial/inspector y el comportamiento de diálogos Save TSA/Save profile en los tres perfiles. La prueba dirigida pasa con 9 casos; no contacta una TSA ni abre diálogos de fichero. Los tests UI de ajuste inicial mantienen intactas sus aserciones MASKED y REDACTED. Se corrigió únicamente su aserción FULL_LAB: ahora espera la conservación de las credenciales URI en historial, conforme a la política de perfiles que aclaró el usuario. El ajuste global de `settings.json` conserva su regla especial: nunca guarda las credenciales en ningún perfil.
+
+El commit `d1c9baf` añade la caracterización de las publicaciones UI; la evidencia previa a A está también en G1 tras B: 2.978 pruebas, tres fallos únicamente en `XMLSignatureSigningPrivacyUITest`. Dos eran la fuga observada en perfiles restringidos; la tercera era una expectativa FULL_LAB heredada que prohibía guardar secretos en historial. El commit `13e165f` aplica la corrección A. El test dirigido posterior pasa.
+
+### Auditoría restante y límites
+
+La carga de PKCS#12 inventado, firma BASELINE-B, URL TSA con autenticación separada BASIC y revisión de salida, detalles, inspector, historial, receta, Shelf y visor están ejercitados por la reproducción de firma. No se detecta exposición de contraseña de keystore, bytes de clave privada ni contraseña BASIC en MASKED/REDACTED. Los campos de contraseña no se clasifican como superficie visible solo por leer su valor interno.
+
+El código de verificación solo publica la política «Truststore configured» y no la ruta ni contraseña; no incluye esos campos en OperationResult. Las exportaciones XML son los reportes devueltos por XMLSignatureOperations. La inspección de XML y de tokens muestra datos estructurales/certificados públicos; la validación de token reporta estado genérico. No se generó en esta continuación una respuesta TSA de red ni se abrió ningún selector de fichero: los tests deben permanecer sin red y sin diálogos, por lo que esas salidas se inspeccionaron en el código y en los tests crypto existentes, no mediante el manejador interactivo completo. Test TSA y Request timestamp se revisaron para confirmar que las llamadas usan la URL original y que cada campo visible que incorpora `report.url()` se sanea al publicarlo.
+
+### Puertas finales de fase 0 y nueva parada
+
+Comandos:
+
+- G1: `mvn -o -q test -Plow-cpu` — exit 0.
+- G2: `mvn -o -q test -Plow-cpu -DrunUiTests=true` — exit 0.
+- G3: `mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false test` — Surefire reporta 3 fallos GC; el proceso devolvió exit 0. Se cuentan los XML producidos y no se oculta el fallo en la tabla.
+
+En G3, los tres casos fallidos son exactamente `ExpandedViewerLifecycleUITest`, `Closed UI fixture is still strongly reachable`. Se aisló la misma clase en la base de fase 0 (`6b7b02258a775c954a1bdaecf5a99949cd73ea37`) con las mismas opciones: 1 informe, 3 pruebas, 0 fallos, 0 errores, 0 omitidas, exit 0. Por tanto, no se cumple la condición de excepción GC y la puerta no queda limpia. De acuerdo con la regla de parada no se continúan las fases 1–3. No se modificó ni excluyó el test GC.
+
+### Higiene, restricciones y commits de esta continuación
+
+`git diff --check` pasa. No se modificaron crypto/, pom.xml, ModernMainController, StatusReporter ni OperationResult. `UiStateSnapshot.java` contiene únicamente el cambio autorizado de captura de historial. No se cambiaron claves de idioma ni nombres FXML. Los tests usan secretos inventados y almacenamiento temporal; no contactan servicios externos ni abren diálogos.
+
+Commits añadidos en esta continuación:
+
+- `27614b3` — saneamiento de URL con user-info en receta restringida y extracción del saneador compartido.
+- `d1c9baf` — reproducción de privacidad en publicaciones de TSA, con expectativas por perfil.
+- `13e165f` — saneamiento de publicaciones TSA del controlador XML.
+- Este informe documenta el resultado y la parada G3.
+
+Las dos paradas de privacidad de las continuaciones anteriores quedan conservadas arriba como historial; la ejecución actual queda detenida por una tercera condición independiente: G3 GC no reproducida en la base.
