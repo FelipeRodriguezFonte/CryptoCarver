@@ -90,6 +90,19 @@ public class XMLSignatureController {
 
     private byte[] lastTimestampToken;
     private XmlSignatureSigningCoordinator signingCoordinator;
+    private XmlSignatureKeyMaterialCoordinator keyMaterialCoordinator;
+
+    private XmlSignatureKeyMaterialCoordinator keyMaterialCoordinator() {
+        if (keyMaterialCoordinator == null) {
+            keyMaterialCoordinator = new XmlSignatureKeyMaterialCoordinator(new XmlSignatureKeyMaterialCoordinator.View(
+                    () -> xmlSignSourcePkcs11Radio, () -> xmlSignKeyPathField, () -> xmlSignKeyPasswordField,
+                    () -> xmlSignKeyAliasCombo, () -> xmlVerifyTrustStorePathField,
+                    () -> xmlVerifyTrustStorePasswordField, () -> xmlVerifyTrustStoreProfileCombo,
+                    () -> xmlTimestampTrustStoreField, this::chooseFile),
+                    () -> statusReporter);
+        }
+        return keyMaterialCoordinator;
+    }
 
     private XmlSignatureSigningCoordinator signingCoordinator() {
         if (signingCoordinator == null) {
@@ -219,57 +232,10 @@ public class XMLSignatureController {
     }
 
     @FXML
-    public void handleBrowseXMLKey() {
-        File file = chooseFile("Select PKCS#12 KeyStore");
-        if (file != null) {
-            xmlSignKeyPathField.setText(file.getAbsolutePath());
-        }
-    }
+    public void handleBrowseXMLKey() { keyMaterialCoordinator().handleBrowseXMLKey(); }
 
     @FXML
-    public void handleLoadXMLKeys() {
-        if (xmlSignSourcePkcs11Radio != null && xmlSignSourcePkcs11Radio.isSelected()) {
-            try {
-                com.cryptocarver.crypto.hsm.Pkcs11Session session = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession();
-                if (session == null) {
-                    statusReporter.showError("Token Error", t("module.xml.feedback.keyStoreRequired"));
-                    return;
-                }
-                java.util.List<String> aliases = session.listPrivateKeysWithCertificate();
-                xmlSignKeyAliasCombo.getItems().setAll(aliases);
-                if (!aliases.isEmpty()) {
-                    xmlSignKeyAliasCombo.getSelectionModel().selectFirst();
-                }
-                statusReporter.updateStatus(t("module.xml.status.success") + " (" + aliases.size() + " aliases)");
-            } catch (Exception e) {
-                statusReporter.showError("PKCS#11 Error", t("module.xml.error.generic", e.getMessage()));
-            }
-            return;
-        }
-
-        try {
-            String keyPath = xmlSignKeyPathField.getText();
-            String password = xmlSignKeyPasswordField.getText();
-
-            if (keyPath.isEmpty() || password.isEmpty()) {
-                statusReporter.showError(t("module.xml.error.inputTitle"), t("module.xml.error.keyStorePassword"));
-                return;
-            }
-            java.util.List<String> aliases = XMLSignatureOperations.getKeyAliases(keyPath, password);
-            xmlSignKeyAliasCombo.getItems().setAll(aliases);
-
-            if (!aliases.isEmpty()) {
-                xmlSignKeyAliasCombo.getSelectionModel().select(0);
-                statusReporter.updateStatus(t("module.xml.status.success") + " (" + aliases.size() + " keys)");
-            } else {
-                statusReporter.updateStatus(t("module.xml.feedback.aliasRequired"));
-            }
-
-        } catch (Exception e) {
-            statusReporter.showError("Key Load Error", t("module.xml.operationFailed", "Key loading", e.getMessage()));
-            LOG.error("Unable to load XAdES signing keys", e);
-        }
-    }
+    public void handleLoadXMLKeys() { keyMaterialCoordinator().handleLoadXMLKeys(); }
 
     @FXML
     public void handleTestTSA() {
@@ -506,12 +472,7 @@ public class XMLSignatureController {
     }
 
     @FXML
-    public void handleBrowseTimestampTrustStore() {
-        File file = chooseFile("Select TrustStore (PKCS#12 or JKS)");
-        if (file != null) {
-            if (xmlTimestampTrustStoreField != null) xmlTimestampTrustStoreField.setText(file.getAbsolutePath());
-        }
-    }
+    public void handleBrowseTimestampTrustStore() { keyMaterialCoordinator().handleBrowseTimestampTrustStore(); }
 
     private File chooseFile(String title) {
         FileChooser fileChooser = new FileChooser();
@@ -520,24 +481,10 @@ public class XMLSignatureController {
     }
 
     @FXML
-    public void handleBrowseXMLTrustStore() {
-        File file = chooseFile("Select TrustStore (PKCS#12 or JKS)");
-        if (file != null) {
-            xmlVerifyTrustStorePathField.setText(file.getAbsolutePath());
-        }
-    }
+    public void handleBrowseXMLTrustStore() { keyMaterialCoordinator().handleBrowseXMLTrustStore(); }
 
     @FXML
-    public void handleLoadXMLTrustStoreProfile() {
-        String name = xmlVerifyTrustStoreProfileCombo.getValue();
-        if (name == null || name.isBlank()) return;
-        AppSettings.getInstance().getTrustStoreProfiles().stream().filter(profile -> name.equals(profile.name())).findFirst()
-                .ifPresent(profile -> {
-                    xmlVerifyTrustStorePathField.setText(profile.path());
-                    xmlVerifyTrustStorePasswordField.clear();
-                    statusReporter.updateStatus(t("module.xml.feedback.trustStoreLoaded"));
-                });
-    }
+    public void handleLoadXMLTrustStoreProfile() { keyMaterialCoordinator().handleLoadXMLTrustStoreProfile(); }
 
     @FXML
     public void handleSaveSignedXML() { signingCoordinator().handleSaveSignedXML(); }
