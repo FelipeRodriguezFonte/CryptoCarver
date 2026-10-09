@@ -30,6 +30,37 @@ import static org.junit.jupiter.api.Assertions.*;
 class XMLSignatureSigningPrivacyUITest extends EmvExtractionCharacterizationSupport {
     @ParameterizedTest
     @EnumSource(SecretVisibilityProfile.class)
+    void tsaSaveDialogsFollowTheSelectedVisibilityProfile(SecretVisibilityProfile profile) throws Exception {
+        String uriPassword = "invented-dialog-81-" + UUID.randomUUID();
+        String url = "https://invented:" + uriPassword + "@tsa.invalid:8443/tsr?q=lab";
+        onFx(() -> {
+            AppSettings.getInstance().setSecretVisibilityProfile(profile);
+            shell.navigateTo("Sign XML (XAdES)");
+            var controller = (XMLSignatureController) get(shell, "xmlSecurityContainerController");
+            var reporter = new SigningReporter();
+            controller.initModule(reporter);
+            try {
+                combo(controller, "xmlSignTsaUrlText").setValue(url);
+                combo(controller, "xmlSignTsaUrlText").getEditor().setText(url);
+                controller.handleSaveTSA();
+                put(controller, "xmlSignTsaProfileNameField", "invented-profile-81");
+                controller.handleSaveTSASavedProfile();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            String published = String.join("\n", reporter.infos);
+            if (profile == SecretVisibilityProfile.FULL_LAB) {
+                assertTrue(published.contains(uriPassword), "FULL_LAB retains TSA URL credentials in informational dialogs");
+            } else {
+                assertFalse(published.contains(uriPassword), profile + " hides TSA URL credentials in informational dialogs");
+                assertFalse(published.contains("invented@tsa.invalid"), profile + " removes all URL user-info");
+            }
+            assertEquals("https://tsa.invalid:8443/tsr?q=lab", AppSettings.getInstance().getCustomTsaUrl());
+        });
+    }
+
+    @ParameterizedTest
+    @EnumSource(SecretVisibilityProfile.class)
     void signingMustNotPersistTsaUriCredentialsOrExposeLoadedPrivateMaterial(SecretVisibilityProfile profile) throws Exception {
         String keyPassword = "invented-keystore-81-" + UUID.randomUUID();
         String authPassword = "invented-auth-81-" + UUID.randomUUID();
