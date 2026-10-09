@@ -2,7 +2,7 @@
 
 ## Superficie y propiedad
 
-Se extraen únicamente `handleSignXML`, `handleVerifyXML`, `handleInspectSignedXML` y `handleSaveSignedXML` de `XMLSignatureController` a `XmlSignatureSigningCoordinator`. El controlador conserva los cuatro puntos FXML como delegados, y `initialize`, `handleReset`, `handleClear` y `handleXMLSignSourceChanged` permanecen aquí.
+El alcance previsto para la extracción era únicamente `handleSignXML`, `handleVerifyXML`, `handleInspectSignedXML` y `handleSaveSignedXML` de `XMLSignatureController` a `XmlSignatureSigningCoordinator`. El controlador habría conservado los cuatro puntos FXML como delegados, y `initialize`, `handleReset`, `handleClear` y `handleXMLSignSourceChanged` permanecerían aquí. La extracción se retiró después de que G1 detectara una dependencia de test existente del propietario fuente de una clave de idioma.
 
 | Manejo | Campos FXML | Entradas sensibles | Dependencias trasladadas |
 |---|---|---|---|

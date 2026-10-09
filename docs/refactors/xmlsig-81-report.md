@@ -48,24 +48,24 @@ Comando focalizado:
 
 FULL_LAB pasa; MASKED y REDACTED fallan cada uno con cuatro aserciones de no exposición. Las comprobaciones previas de guardado, recarga y control unido a la escena pasan. Es una reproducción roja por diseño, **no una puerta fallida**. No se fija digest de esta prueba: no se alcanzaron las caracterizaciones con transcripción de las fases 1–3, y la contraseña es aleatoria e inventada.
 
-## Las doce puertas de fases (estado actualizado)
+## Las doce puertas de fases (estado de esta continuación)
 
-`—` significa no ejecutada, no cero pruebas. En la entrega inicial se aplicó la parada de fase 0(c). Tras la corrección autorizada se aplica otra parada del paso 5, por una fuga distinta en el historial de firma. Ambas preceden a las puertas de fase 0 y a las tres fases de extracción. No hubo extracción que retirar. Las referencias sobre main siguen siendo históricas, sin certificar el árbol corregido.
+`—` significa no ejecutada, no cero pruebas. Se conservan las tres paradas históricas de privacidad y GC descritas arriba. El contraste independiente resuelve la condición de GC de fase 0 como intermitencia, por lo que G3 se acepta. Una parada nueva en la extracción de fase 1 se documenta al final de este informe.
 
 | Fase | Puerta | Informes | Pruebas | Fallos | Errores | Omitidas | Exit | Estado |
 |---|---|---:|---:|---:|---:|---:|---:|---|
-| 0 | G1 | 465 | 2978 | 0 | 0 | 1 | 0 | Limpia |
+| 0 | G1 | 465 | 2978 | 0 | 0 | 1 | 0 | Limpia en la ejecución completa tras la corrección A |
 | 0 | G2 | 141 | 591 | 0 | 0 | 0 | 0 | Limpia |
-| 0 | G3 | 427 | 2870 | 3 | 0 | 1 | 0 | Detenida: solo fallan los 3 GC, pero no se reproducen en la clase aislada sobre base (3 pasan) |
-| 1 | G1 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
-| 1 | G2 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
-| 1 | G3 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
-| 2 | G1 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
-| 2 | G2 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
-| 2 | G3 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
-| 3 | G1 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
-| 3 | G2 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
-| 3 | G3 | — | — | — | — | — | — | No ejecutada: parada tras G3 |
+| 0 | G3 | 141 | 591 | 0 | 0 | 0 | 0 | Aceptada con evidencia del revisor en `13e165f`; base: 139/581/0 |
+| 1 | G1 | 467 | 2980 | 1 | 0 | 1 | 1 | Detenida; único fallo `SpecializedFeedbackHeadlessTest`, dependencia de propietario fuente movido |
+| 1 | G2 | — | — | — | — | — | — | No ejecutada por parada G1 |
+| 1 | G3 | — | — | — | — | — | — | No ejecutada por parada G1 |
+| 2 | G1 | — | — | — | — | — | — | No ejecutada por parada fase 1 |
+| 2 | G2 | — | — | — | — | — | — | No ejecutada por parada fase 1 |
+| 2 | G3 | — | — | — | — | — | — | No ejecutada por parada fase 1 |
+| 3 | G1 | — | — | — | — | — | — | No ejecutada por parada fase 1 |
+| 3 | G2 | — | — | — | — | — | — | No ejecutada por parada fase 1 |
+| 3 | G3 | — | — | — | — | — | — | No ejecutada por parada fase 1 |
 
 ## Tests, restauración y hallazgos no corregidos
 
@@ -206,3 +206,20 @@ Se aclara la política de perfiles: `settings.json` nunca persiste user-info TSA
 La prueba nueva `XMLSignatureExtendedPrivacyAuditUITest` complementa la auditoría de firma/superficies: fabrica almacenes PKCS#12 y certificados temporales, firma y verifica XML BASELINE-B, inspecciona los tres informes XML exportables y los escribe/lee desde temporales, fabrica un token RFC 3161 local en memoria, crea un truststore TSA y ejercita los handlers reales de inspección XML, inspección del token y validación. Confirma que no se filtran contraseñas inventadas ni bytes codificados de clave privada a las salidas inspeccionadas; tampoco ruta/contraseña de truststore en la validación. La operación de verificación y el contenido de sus exportaciones se caracterizan directamente por `XMLSignatureOperations`, y su publicación shell se sintetiza con el contrato observado; `handleVerifyXML` completo no se invoca porque abre el diálogo de exportación. No se abre selector ni se contacta una TSA.
 
 La ejecución dirigida informada al reanudar fue limpia: **1 informe / 1 prueba / 0 fallos / 0 errores / 0 omitidas / exit 0**. La auditoría de contraseñas BASIC separadas, perfiles TSA y salidas del controlador queda apoyada además por `XMLSignatureSigningPrivacyUITest`; se inspeccionó que verify/truststore y token no publican sus campos separados. No se afirma que se haya probado una exportación elegida desde un diálogo interactivo.
+
+## Parada de fase 1: dependencia de propietario en test existente
+
+El mapa `xmlsig-1-map.md` y la caracterización `XMLSignaturePhase1CharacterizationUITest` quedaron fijados en commits separados. La caracterización, ejecutada antes de extraer y sin diálogos, pasó **1/1** y fija SHA-256 `6fe9a0e7ea7ea421928d23b3ab0295e79faa32ac896ebf5de593e426083caa38`. La primera ejecución abrió el selector de guardado por conservar salida en el control; se interrumpió sin seleccionar nada, se corrigió el test para limpiar la salida, y la repetición pasó. Ese hecho y la transcripción están documentados en `xmlsig-1-characterization-failures.md`.
+
+Se implementó provisionalmente la extracción a `XmlSignatureSigningCoordinator` con `record View`, `Supplier<StatusReporter>` perezoso y cuatro delegados. G1 (`mvn -o -q test -Plow-cpu`) terminó con **467 informes / 2.980 pruebas / 1 fallo / 0 errores / 1 omitida / exit 1**. El único fallo fue `SpecializedFeedbackHeadlessTest.specializedValidationFeedbackHasDistinctEnglishAndSpanishKeys`: espera que la clave `module.xml.feedback.saveRequired` tenga como propietario fuente `XMLSignatureController`, mientras que fase 1 la mueve legítimamente junto con `handleSaveSignedXML`. El contrato observado del comportamiento no falló; falló la aserción de propiedad fuente. Según la regla de puerta no se modifica un test existente para salvar la extracción ni se continúa: la extracción se retiró completamente, dejando el controlador idéntico al commit de caracterización. No hay puerta G1 aceptada para fase 1; G2/G3 y fases 2/3 permanecen sin ejecutar.
+
+La puerta G1 sigue contabilizada como fallida aunque revertir la extracción restaura el propietario anterior, tal como ordena el procedimiento. No se aplica la excepción GC: el único fallo no pertenece a `ExpandedViewerLifecycleUITest`. Se conservan la caracterización y el mapa como evidencia del trabajo.
+
+## Commits añadidos en esta continuación
+
+- `c4ec363` — auditoría ampliada de verificación, XML, token y almacenes de confianza.
+- `8c220ac` — mapa previsto de fase 1 y auditoría de cobertura existente.
+- `0f68250` — caracterización UI previa a extracción y digest SHA-256.
+- Commit actual — evidencia del revisor para G3, recuentos finales disponibles, y parada de fase 1.
+
+El coordinador provisional de fase 1 fue retirado tras G1 y no forma parte de la rama. La rama conserva los cambios commitados de fase 0 y evidencia de fase 1; la extracción de fase 1 no se entrega como cambio funcional.
