@@ -367,7 +367,8 @@ public class WalletController implements Initializable {
         try {
             String pem = textOf(eidasCertArea);
             if (isBlank(pem)) { showValidation(t("module.wallet.certificateRequired"), "eidasCertArea"); return; }
-            String report = EidasCertificateInspector.describe(parseCertificate(pem), I18nService.getInstance().getLocale());
+            String report = WalletPrivateMaterialPolicy.forDisplay(
+                    EidasCertificateInspector.describe(parseCertificate(pem), I18nService.getInstance().getLocale()));
             eidasCertOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
             publish("eIDAS Certificate Inspect", report);
@@ -383,7 +384,8 @@ public class WalletController implements Initializable {
         try {
             byte[] xml = trustedListXml();
             if (xml == null) return;
-            String report = TrustedListInspector.describe(xml, I18nService.getInstance().getLocale());
+            String report = WalletPrivateMaterialPolicy.forDisplay(
+                    TrustedListInspector.describe(xml, I18nService.getInstance().getLocale()));
             trustedListOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
             publish("Trusted List Inspect", report);
@@ -399,9 +401,9 @@ public class WalletController implements Initializable {
             if (isBlank(json)) { showValidation(t("module.wallet.trustedEntityListRequired"), "trustedEntityListJsonArea"); return; }
             String signer = textOf(trustedEntityListSignerCertArea);
             String search = textOf(trustedEntityListSearchCertArea);
-            String report = TrustedEntityListJsonInspector.describe(json.getBytes(StandardCharsets.UTF_8),
+            String report = WalletPrivateMaterialPolicy.forDisplay(TrustedEntityListJsonInspector.describe(json.getBytes(StandardCharsets.UTF_8),
                     I18nService.getInstance().getLocale(), signer.isBlank() ? null : parseCertificate(signer),
-                    search.isBlank() ? null : parseCertificate(search));
+                    search.isBlank() ? null : parseCertificate(search)), json);
             trustedListOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
             publish("Trusted Entity List JSON Inspect", report);
@@ -421,9 +423,10 @@ public class WalletController implements Initializable {
                         .append(result.signingCertificate().getSubjectX500Principal()).append('\n');
             }
             report.append('\n').append(result.trustNote()).append('\n');
-            trustedListOutputArea.setText(report.toString());
+            String text = WalletPrivateMaterialPolicy.forDisplay(report.toString());
+            trustedListOutputArea.setText(text);
             updateStatus(t("module.wallet.status.verified"));
-            publish("Trusted List Verify", report.toString());
+            publish("Trusted List Verify", text);
         } catch (Exception e) {
             fail(e, "trustedListXmlArea", "trusted list verify");
         }
@@ -453,9 +456,10 @@ public class WalletController implements Initializable {
                     report.append("  qualifier: ").append(qualifier).append('\n');
                 }
             }
-            trustedListOutputArea.setText(report.toString());
+            String text = WalletPrivateMaterialPolicy.forDisplay(report.toString());
+            trustedListOutputArea.setText(text);
             updateStatus(t("module.wallet.status.inspected"));
-            publish("Trusted List Find Certificate", report.toString(),
+            publish("Trusted List Find Certificate", text,
                     "Matches", String.valueOf(matches.size()));
         } catch (Exception e) {
             fail(e, "trustedListCertArea", "trusted list find");
@@ -479,11 +483,11 @@ public class WalletController implements Initializable {
             String hex = textOf(cborInputArea);
             if (isBlank(hex)) { showValidation(t("module.wallet.cborRequired"), "cborInputArea"); return; }
             byte[] cbor = CborInspector.parseHex(hex);
-            String report = switch (valueOf(cborViewCombo, "tree")) {
+            String report = WalletPrivateMaterialPolicy.forDisplay(switch (valueOf(cborViewCombo, "tree")) {
                 case "diagnostic" -> CborInspector.diagnostic(cbor);
                 case "summary" -> CborInspector.summary(cbor);
                 default -> CborInspector.tree(cbor);
-            };
+            }, WalletPrivateMaterialPolicy.cborAsJson(cbor));
             cborOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
             publish("CBOR Inspect", report);
@@ -497,7 +501,7 @@ public class WalletController implements Initializable {
         try {
             String hex = textOf(cborInputArea);
             if (isBlank(hex)) { showValidation(t("module.wallet.cborRequired"), "cborInputArea"); return; }
-            String json = CborInspector.toJson(CborInspector.parseHex(hex));
+            String json = WalletPrivateMaterialPolicy.forDisplay(CborInspector.toJson(CborInspector.parseHex(hex)));
             cborOutputArea.setText(json);
             updateStatus(t("module.wallet.status.converted"));
             publish("CBOR to JSON", json);
@@ -511,7 +515,8 @@ public class WalletController implements Initializable {
         try {
             String json = textOf(cborJsonArea);
             if (isBlank(json)) { showValidation(t("module.wallet.jsonRequired"), "cborJsonArea"); return; }
-            String hex = DataConverter.bytesToHex(CborInspector.fromJson(json)).toUpperCase();
+            String hex = WalletPrivateMaterialPolicy.forDisplay(
+                    DataConverter.bytesToHex(CborInspector.fromJson(json)).toUpperCase(), json);
             cborFromJsonOutputArea.setText(hex);
             updateStatus(t("module.wallet.status.converted"));
             publish("JSON to CBOR", hex);
@@ -533,14 +538,16 @@ public class WalletController implements Initializable {
                             Ts12ScaOperations.TransactionType.PAYMENT.urn())),
                     lines(textOf(scaCredentialIdsField)),
                     payload, "sha-256");
-            scaEntryArea.setText(entry);
+            String shown = WalletPrivateMaterialPolicy.forDisplay(entry, payload);
+            scaEntryArea.setText(shown);
             // The entry is also what the verifying pane consumes, so it is put
-            // there too rather than asking the user to copy it across.
-            if (scaTransactionDataArea != null && isBlank(textOf(scaTransactionDataArea))) {
+            // there too rather than asking the user to copy it across. A hidden
+            // entry is not copied: the notice is not transaction data.
+            if (shown.equals(entry) && scaTransactionDataArea != null && isBlank(textOf(scaTransactionDataArea))) {
                 scaTransactionDataArea.setText(entry);
             }
             updateStatus(t("module.wallet.status.issued"));
-            publish("SCA Transaction Data", entry);
+            publish("SCA Transaction Data", shown);
         } catch (Exception e) {
             fail(e, "scaPayloadArea", "sca transaction data");
         }
@@ -565,7 +572,9 @@ public class WalletController implements Initializable {
                     blankToNull(textOf(scaNonceField)),
                     blankToNull(textOf(scaResponseModeField)));
 
-            String text = Ts12ScaOperations.describe(report, I18nService.getInstance().getLocale());
+            String text = WalletPrivateMaterialPolicy.forDisplay(
+                    Ts12ScaOperations.describe(report, I18nService.getInstance().getLocale()),
+                    WalletPrivateMaterialPolicy.sdJwtAsJson(presentation), textOf(scaTransactionDataArea));
             scaOutputArea.setText(text);
             updateStatus(t("module.wallet.status.verified"));
             publish("SCA Verify", text, "Dynamic link", report.acceptable() ? "holds" : "does not hold");
@@ -580,10 +589,10 @@ public class WalletController implements Initializable {
             String request = textOf(oid4vpRequestArea);
             if (isBlank(request)) { showValidation(t("module.wallet.requestRequired"), "oid4vpRequestArea"); return; }
             String key = textOf(oid4vpKeyArea);
-            String report = OpenId4VpInspector.describe(request,
+            String report = WalletPrivateMaterialPolicy.forDisplay(OpenId4VpInspector.describe(request,
                     isBlank(key) ? null
                             : JOSEService.createVerifier(JWSAlgorithm.parse(valueOf(sdJwtAlgoCombo, "ES256")), key),
-                    I18nService.getInstance().getLocale());
+                    I18nService.getInstance().getLocale()), request);
             oid4vpOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
             publish("OpenID4VP Request Inspect", report);
@@ -610,9 +619,9 @@ public class WalletController implements Initializable {
             if (isBlank(document)) { showValidation(t("module.wallet.documentRequired"), "adesDocumentArea"); return; }
             AdesValidationOperations.Result result = AdesValidationOperations.validate(
                     decodeDocument(document), textOf(adesFileNameField), null, null);
-            String text = etsiReport
+            String text = WalletPrivateMaterialPolicy.forDisplay(etsiReport
                     ? result.etsiValidationReportXml()
-                    : AdesValidationOperations.describe(result, I18nService.getInstance().getLocale());
+                    : AdesValidationOperations.describe(result, I18nService.getInstance().getLocale()));
             adesOutputArea.setText(text);
             updateStatus(t("module.wallet.status.verified"));
             publish(etsiReport ? "AdES ETSI Report" : "AdES Validate", text,
