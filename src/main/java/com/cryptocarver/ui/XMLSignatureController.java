@@ -725,8 +725,19 @@ public class XMLSignatureController {
         return "http://timestamp.digicert.com".equals(url) || "https://freetsa.org/tsr".equals(url);
     }
 
+    private boolean hasTsaUserInfo(String url) {
+        try {
+            return java.net.URI.create(url).getRawUserInfo() != null;
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
     private void saveCustomTsa(String url) {
         if (url != null && !url.isBlank() && !isPresetTsa(url)) {
+            if (hasTsaUserInfo(url) && statusReporter != null) {
+                statusReporter.showInfo("TSA", t("module.xml.tsaCredentialsNotSaved"));
+            }
             AppSettings.getInstance().setCustomTsaUrl(url);
         }
     }
