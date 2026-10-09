@@ -196,3 +196,13 @@ Commits añadidos en esta continuación:
 - Este informe documenta el resultado y la parada G3.
 
 Las dos paradas de privacidad de las continuaciones anteriores quedan conservadas arriba como historial; la ejecución actual queda detenida por una tercera condición independiente: G3 GC no reproducida en la base.
+
+## Tercera continuación: evidencia del revisor y auditoría restante
+
+El revisor aporta contraste independiente de `13e165f` frente a la base de fase 0 `55c8247`: G3 completa en rama, **141 informes / 591 pruebas / 0 fallos**, y base, **139 / 581 / 0**. Además, `ExpandedViewerLifecycleUITest` aislado pasó **3/3 en cada una de ocho ejecuciones alternadas** (cuatro por commit). La G3 de fase 0 queda **aceptada**; el resultado previo con tres fallos GC se conserva como incidencia intermitente histórica, no regresión. No se modificó ni excluyó la clase. Se adopta para puertas futuras el protocolo de reintento completo y contraste alternado rama/base autorizado en esta continuación.
+
+Se aclara la política de perfiles: `settings.json` nunca persiste user-info TSA; historial, recetas, inspector, Shelf y visor obedecen la política normal. MASKED y REDACTED no presentan la credencial; FULL_LAB la conserva. La aserción FULL_LAB de `XMLSignatureSigningPrivacyUITest` es propia de este encargo y fue corregida para esperar conservación; las aserciones restringidas quedaron intactas.
+
+La prueba nueva `XMLSignatureExtendedPrivacyAuditUITest` complementa la auditoría de firma/superficies: fabrica almacenes PKCS#12 y certificados temporales, firma y verifica XML BASELINE-B, inspecciona los tres informes XML exportables y los escribe/lee desde temporales, fabrica un token RFC 3161 local en memoria, crea un truststore TSA y ejercita los handlers reales de inspección XML, inspección del token y validación. Confirma que no se filtran contraseñas inventadas ni bytes codificados de clave privada a las salidas inspeccionadas; tampoco ruta/contraseña de truststore en la validación. La operación de verificación y el contenido de sus exportaciones se caracterizan directamente por `XMLSignatureOperations`, y su publicación shell se sintetiza con el contrato observado; `handleVerifyXML` completo no se invoca porque abre el diálogo de exportación. No se abre selector ni se contacta una TSA.
+
+La ejecución dirigida informada al reanudar fue limpia: **1 informe / 1 prueba / 0 fallos / 0 errores / 0 omitidas / exit 0**. La auditoría de contraseñas BASIC separadas, perfiles TSA y salidas del controlador queda apoyada además por `XMLSignatureSigningPrivacyUITest`; se inspeccionó que verify/truststore y token no publican sus campos separados. No se afirma que se haya probado una exportación elegida desde un diálogo interactivo.
