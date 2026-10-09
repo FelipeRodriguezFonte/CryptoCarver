@@ -159,6 +159,7 @@ public class WalletController implements Initializable {
     private WalletStatusListCoordinator walletStatusListCoordinator;
     private WalletMdocCoordinator walletMdocCoordinator;
     private WalletSdJwtCoordinator walletSdJwtCoordinator;
+    private WalletTrustCoordinator walletTrustCoordinator;
     private ModuleI18n.Binding moduleI18n;
 
     /** Required by FXMLLoader when this controller is used from an fx:include. */
@@ -255,6 +256,21 @@ public class WalletController implements Initializable {
             section.setManaged(true);
             section.setVisible(true);
         }
+    }
+
+    private WalletTrustCoordinator trustCoordinator() {
+        if (walletTrustCoordinator == null) {
+            walletTrustCoordinator = new WalletTrustCoordinator(new WalletTrustCoordinator.View(
+                    () -> eidasCertArea,
+                    () -> eidasCertOutputArea,
+                    () -> trustedListXmlArea,
+                    () -> trustedListCertArea,
+                    () -> trustedListOutputArea,
+                    () -> trustedEntityListJsonArea,
+                    () -> trustedEntityListSignerCertArea,
+                    () -> trustedEntityListSearchCertArea), () -> statusReporter);
+        }
+        return walletTrustCoordinator;
     }
 
     private WalletSdJwtCoordinator sdJwtCoordinator() {
@@ -363,117 +379,22 @@ public class WalletController implements Initializable {
     // ------------------------------------------------------ eIDAS certificate
 
     @FXML
-    private void handleEidasCertInspect() {
-        try {
-            String pem = textOf(eidasCertArea);
-            if (isBlank(pem)) { showValidation(t("module.wallet.certificateRequired"), "eidasCertArea"); return; }
-            String report = WalletPrivateMaterialPolicy.forDisplay(
-                    EidasCertificateInspector.describe(parseCertificate(pem), I18nService.getInstance().getLocale()));
-            eidasCertOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("eIDAS Certificate Inspect", report);
-        } catch (Exception e) {
-            fail(e, "eidasCertArea", "eidas certificate inspect");
-        }
-    }
+    private void handleEidasCertInspect() { trustCoordinator().handleEidasCertInspect(); }
 
     // --------------------------------------------------------- trusted list
 
     @FXML
-    private void handleTrustedListInspect() {
-        try {
-            byte[] xml = trustedListXml();
-            if (xml == null) return;
-            String report = WalletPrivateMaterialPolicy.forDisplay(
-                    TrustedListInspector.describe(xml, I18nService.getInstance().getLocale()));
-            trustedListOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("Trusted List Inspect", report);
-        } catch (Exception e) {
-            fail(e, "trustedListXmlArea", "trusted list inspect");
-        }
-    }
+    private void handleTrustedListInspect() { trustCoordinator().handleTrustedListInspect(); }
 
     @FXML
-    private void handleTrustedEntityListJsonInspect() {
-        try {
-            String json = textOf(trustedEntityListJsonArea);
-            if (isBlank(json)) { showValidation(t("module.wallet.trustedEntityListRequired"), "trustedEntityListJsonArea"); return; }
-            String signer = textOf(trustedEntityListSignerCertArea);
-            String search = textOf(trustedEntityListSearchCertArea);
-            String report = WalletPrivateMaterialPolicy.forDisplay(TrustedEntityListJsonInspector.describe(json.getBytes(StandardCharsets.UTF_8),
-                    I18nService.getInstance().getLocale(), signer.isBlank() ? null : parseCertificate(signer),
-                    search.isBlank() ? null : parseCertificate(search)), json);
-            trustedListOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("Trusted Entity List JSON Inspect", report);
-        } catch (Exception e) { fail(e, "trustedEntityListJsonArea", "trusted entity list JSON inspect"); }
-    }
+    private void handleTrustedEntityListJsonInspect() { trustCoordinator().handleTrustedEntityListJsonInspect(); }
 
     @FXML
-    private void handleTrustedListVerify() {
-        try {
-            byte[] xml = trustedListXml();
-            if (xml == null) return;
-            TrustedListInspector.SignatureResult result = TrustedListInspector.verifySignature(xml);
-            StringBuilder report = new StringBuilder();
-            report.append("signature: ").append(result.signatureValid() ? "valid" : "INVALID").append('\n');
-            if (result.signingCertificate() != null) {
-                report.append("signed by: ")
-                        .append(result.signingCertificate().getSubjectX500Principal()).append('\n');
-            }
-            report.append('\n').append(result.trustNote()).append('\n');
-            String text = WalletPrivateMaterialPolicy.forDisplay(report.toString());
-            trustedListOutputArea.setText(text);
-            updateStatus(t("module.wallet.status.verified"));
-            publish("Trusted List Verify", text);
-        } catch (Exception e) {
-            fail(e, "trustedListXmlArea", "trusted list verify");
-        }
-    }
+    private void handleTrustedListVerify() { trustCoordinator().handleTrustedListVerify(); }
 
     @FXML
-    private void handleTrustedListFind() {
-        try {
-            byte[] xml = trustedListXml();
-            if (xml == null) return;
-            String pem = textOf(trustedListCertArea);
-            if (isBlank(pem)) { showValidation(t("module.wallet.certificateRequired"), "trustedListCertArea"); return; }
+    private void handleTrustedListFind() { trustCoordinator().handleTrustedListFind(); }
 
-            List<TrustedListInspector.Match> matches = TrustedListInspector.findCertificate(
-                    TrustedListInspector.parse(xml), parseCertificate(pem));
-
-            StringBuilder report = new StringBuilder();
-            if (matches.isEmpty()) {
-                report.append(t("module.wallet.notInTrustedList")).append('\n');
-            }
-            for (TrustedListInspector.Match match : matches) {
-                report.append(match.service().providerName())
-                        .append(" / ").append(match.service().serviceName())
-                        .append("\n  status   : ").append(match.service().statusLabel())
-                        .append("\n  matched  : ").append(match.matchedBy()).append('\n');
-                for (String qualifier : match.service().qualifiers()) {
-                    report.append("  qualifier: ").append(qualifier).append('\n');
-                }
-            }
-            String text = WalletPrivateMaterialPolicy.forDisplay(report.toString());
-            trustedListOutputArea.setText(text);
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("Trusted List Find Certificate", text,
-                    "Matches", String.valueOf(matches.size()));
-        } catch (Exception e) {
-            fail(e, "trustedListCertArea", "trusted list find");
-        }
-    }
-
-    private byte[] trustedListXml() {
-        String xml = textOf(trustedListXmlArea);
-        if (isBlank(xml)) {
-            showValidation(t("module.wallet.trustedListRequired"), "trustedListXmlArea");
-            return null;
-        }
-        return xml.getBytes(StandardCharsets.UTF_8);
-    }
 
     // ------------------------------------------------------------------ CBOR
 
