@@ -4,6 +4,8 @@ import com.cryptocarver.crypto.XMLSignatureOperations;
 import com.cryptocarver.crypto.TsaDiagnostics;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.AppSettings;
+import com.cryptocarver.model.SecretVisibilityProfile;
+import com.cryptocarver.model.TsaUrlSanitizer;
 import com.cryptocarver.utils.OperationHistory;
 import javafx.stage.FileChooser;
 import javafx.scene.control.*;
@@ -272,7 +274,7 @@ public class XMLSignatureController {
                 TsaDiagnostics.TokenResult result = TsaDiagnostics.timestamp(url, "CryptoCarver TSA diagnostic".getBytes(java.nio.charset.StandardCharsets.UTF_8), "SHA-256", 15000, 20000, 1024*1024, auth);
                 TsaDiagnostics.Report report = result.report();
                 javafx.application.Platform.runLater(() -> statusReporter.showInfo("TSA Test", t("module.xml.status.success")
-                        + "\nURL: " + report.url() + "\nHTTP: " + report.httpStatus() + "\nLatency: " + report.latencyMs()
+                        + "\nURL: " + publishedTsaUrl(report.url()) + "\nHTTP: " + report.httpStatus() + "\nLatency: " + report.latencyMs()
                                 + " ms\nPolicy: " + report.policyOid() + "\nImprint: " + report.imprintAlgorithmOid()
                                 + "\nToken time: " + report.generationTime() + "\nResponse: " + report.responseBytes() + " bytes"));
             } catch (Exception e) {
@@ -293,7 +295,7 @@ public class XMLSignatureController {
             return;
         }
         saveCustomTsa(url);
-        statusReporter.showInfo("TSA Saved", t("module.xml.status.success") + "\n\n" + url);
+        statusReporter.showInfo("TSA Saved", t("module.xml.status.success") + "\n\n" + publishedTsaUrl(url));
     }
 
     @FXML
@@ -330,7 +332,7 @@ public class XMLSignatureController {
         saveCustomTsa(url);
         reloadTsaProfiles();
         xmlSignTsaProfileCombo.setValue(name);
-        statusReporter.showInfo("TSA Profile Saved", name + "\n" + url + "\n\nOnly the endpoint is saved; no credentials are stored.");
+        statusReporter.showInfo("TSA Profile Saved", name + "\n" + publishedTsaUrl(url) + "\n\nOnly the endpoint is saved; no credentials are stored.");
     }
 
     @FXML
@@ -377,7 +379,7 @@ public class XMLSignatureController {
             details.put("Packaging", packaging);
             details.put("Input", inputPath);
             if (tsaUrl != null && !tsaUrl.isEmpty()) {
-                details.put("TSA", tsaUrl);
+                details.put("TSA", publishedTsaUrl(tsaUrl));
             }
 
             if (xmlSignSourcePkcs11Radio != null && xmlSignSourcePkcs11Radio.isSelected()) {
@@ -555,7 +557,7 @@ public class XMLSignatureController {
                             tokenInfo = null;
                         }
                         String text = "--- RFC 3161 Timestamp ---\nFile: " + path + "\nData bytes: " + data.length
-                                + "\n" + hash + ": " + result.dataSha256() + "\nTSA: " + report.url() + "\nHTTP: " + report.httpStatus()
+                                + "\n" + hash + ": " + result.dataSha256() + "\nTSA: " + publishedTsaUrl(report.url()) + "\nHTTP: " + report.httpStatus()
                                 + "\nLatency: " + report.latencyMs() + " ms\nPolicy: " + report.policyOid()
                                 + "\nToken time: " + report.generationTime() + "\nToken bytes: " + report.responseBytes();
                         if (tokenInfo != null) {
@@ -565,7 +567,7 @@ public class XMLSignatureController {
                         }
                         xmlTimestampReportArea.setText(text);
                         Map<String, String> details = new HashMap<>();
-                        details.put("File", path); details.put("Hash", hash); details.put("Imprint", result.dataSha256()); details.put("TSA", url);
+                        details.put("File", path); details.put("Hash", hash); details.put("Imprint", result.dataSha256()); details.put("TSA", publishedTsaUrl(url));
                         details.put("Token bytes", String.valueOf(result.token().length));
                         if (tokenInfo != null) details.put("TSA certificate SHA-256", tokenInfo.signerSha256());
                         statusReporter.publish(OperationResult.forOperation("RFC 3161 Timestamp")
@@ -740,6 +742,14 @@ public class XMLSignatureController {
             }
             AppSettings.getInstance().setCustomTsaUrl(url);
         }
+    }
+
+    /** Keep the complete endpoint for the active TSA request; redact only published copies. */
+    private String publishedTsaUrl(String url) {
+        if (url == null || AppSettings.getInstance().getSecretVisibilityProfile() == SecretVisibilityProfile.FULL_LAB) {
+            return url;
+        }
+        return TsaUrlSanitizer.withoutUserInfo(url);
     }
 
     private void reloadTsaProfiles() {
