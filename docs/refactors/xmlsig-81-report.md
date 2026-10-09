@@ -223,3 +223,74 @@ La puerta G1 sigue contabilizada como fallida aunque revertir la extracción res
 - Commit actual — evidencia del revisor para G3, recuentos finales disponibles, y parada de fase 1.
 
 El coordinador provisional de fase 1 fue retirado tras G1 y no forma parte de la rama. La rama conserva los cambios commitados de fase 0 y evidencia de fase 1; la extracción de fase 1 no se entrega como cambio funcional.
+
+## Cierre por el revisor: extracción de las tres fases
+
+Tras la parada de la fase 1 (G1 con un fallo en `SpecializedFeedbackHeadlessTest` por el propietario en fuente de `module.xml.feedback.saveRequired`), el usuario pidió al revisor terminar el encargo en esta misma rama. Las paradas anteriores se conservan arriba sin cambios.
+
+**Resultado:** `XMLSignatureController` pasa de 747 líneas en la base `55c8247` (768 tras las correcciones de privacidad de la fase 0) a **303**. Tres coordinadores nuevos:
+
+| Coordinador | Líneas | Contenido |
+|---|---:|---|
+| `XmlSignatureSigningCoordinator` | 259 | firma, verificación, inspección y guardado del XML firmado |
+| `XmlSignatureKeyMaterialCoordinator` | 120 | carga de alias (PKCS#12 y PKCS#11), perfiles y selección de truststore |
+| `XmlSignatureTimestampCoordinator` | 335 | TSA, perfiles TSA guardados, petición, inspección y validación de tokens RFC 3161 |
+
+El código se movió literal; solo cambian los accesos a controles (por `View`) y al reporter (por `Supplier<StatusReporter>`, perezoso, porque los tests sustituyen el reporter con `initModule` después de cargar el FXML). No se renombró ningún `fx:id` ni se tocó el FXML.
+
+### Tests existentes modificados
+
+- `SpecializedFeedbackHeadlessTest`: reasignación del propietario de once claves `module.xml.feedback.*`, detallada clave a clave en `xmlsig-1-map.md`, `xmlsig-2-map.md` y `xmlsig-3-map.md`. `keyStoreRequired` y `aliasRequired` se comprueban en sus dos propietarios. No se eliminó ni relajó ninguna aserción; la prohibición de `module.xml.error.required` se amplió a los tres coordinadores.
+- `UiStateSnapshotTest`: solo añadidos (fase 0, cambio B).
+
+Antes de cada tanda de puertas se ejecutaron solos `SpecializedFeedbackHeadlessTest` y `ModernMainControllerFxmlStaticTest` (2 informes / 31 pruebas / 0 fallos) y los tests UI de XML (7 informes / 15 pruebas / 0 fallos al final).
+
+### Caracterizaciones
+
+| Fase | Test | SHA-256 | Verificada sin extraer |
+|---|---|---|---|
+| 1 | `XMLSignaturePhase1CharacterizationUITest` | `6fe9a0e7ea7ea421928d23b3ab0295e79faa32ac896ebf5de593e426083caa38` | sí (Codex, `0f68250`) |
+| 2 | `XMLSignaturePhase2CharacterizationUITest` | `8de3a5f03ef1355e6dc0b62c3adc0b6d326a0a674f40395f17b61295b32aec97` | sí, sobre `f85ffd2` |
+| 3 | `XMLSignaturePhase3CharacterizationUITest` | `ab9156a4c477a23f0e26ea50c398739f569269c95b0bb040af09c9400211de0c` | sí, sobre `7cea3d2` |
+
+Los tres digests pasan sin cambios después de su extracción.
+
+### Puertas de las fases de refactor
+
+Ejecutadas en un worktree desligado sobre el commit exacto de cada extracción, borrando `target/surefire-reports` antes de cada una y contando solo los XML de esa ejecución. Un único Maven a la vez. macOS, Maven con OpenJDK 25.
+
+| Fase | Commit | Puerta | Informes | Pruebas | Fallos | Errores | Omitidas | Exit |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| 1 | `f85ffd2` | G1 | 467 | 2980 | 0 | 0 | 1 | 0 |
+| 1 | `f85ffd2` | G2 | 143 | 593 | 0 | 0 | 0 | 0 |
+| 1 | `f85ffd2` | G3 | 143 | 593 | 0 | 0 | 0 | 0 |
+| 2 | `7cea3d2` | G1 | 468 | 2981 | 0 | 0 | 1 | 0 |
+| 2 | `7cea3d2` | G2 | 144 | 594 | 0 | 0 | 0 | 0 |
+| 2 | `7cea3d2` | G3 | 144 | 594 | 0 | 0 | 0 | 0 |
+| 3 | `28a2a0c` | G1 | 469 | 2982 | 0 | 0 | 1 | 0 |
+| 3 | `28a2a0c` | G2 | 145 | 595 | 0 | 0 | 0 | 0 |
+| 3 | `28a2a0c` | G3 | 145 | 595 | 0 | 0 | 0 | 0 |
+
+Las nueve pasan limpias; no hizo falta la excepción de GC.
+
+### Hallazgos no corregidos
+
+- `handleValidateTimestampToken` pone el estado "Timestamp token validated." aunque el fichero no sea un token válido; el estado no distingue validación correcta de fallida (`xmlsig-3-characterization-failures.md`).
+- Sin cobertura de extremo a extremo por requerir red, token o diálogo: respuesta correcta de `handleTestTSA` y `handleRequestTimestamp`, guardado del token, diálogo de exportación de `handleVerifyXML`, los Browse y la rama PKCS#11 de la carga de alias.
+- Advertencia de traducción preexistente `module.process.category.wallet / eidas`.
+
+### Higiene
+
+Estilos en línea en FXML: **0**. Emojis: **325 de 325**. Sin cambios en `crypto/`, `pom.xml`, `ModernMainController`, `StatusReporter` ni `OperationResult`. `UiStateSnapshot` y `AppSettings` solo con los cambios autorizados de la fase 0.
+
+### Commits del cierre
+
+```text
+f85ffd2 refactor(xml): extract XAdES signing coordinator with reassigned key owners
+2b03528 docs(xml): map key material coordinator extraction and key ownership
+37a62b4 test(xml): characterize signing key loading and trust store profiles
+7cea3d2 refactor(xml): extract signing key material and trust store coordinator
+875f55e docs(xml): map timestamp coordinator extraction and key ownership
+f3f980b test(xml): characterize TSA endpoints, saved profiles and local timestamp tokens
+28a2a0c refactor(xml): extract TSA and timestamp token coordinator
+```
