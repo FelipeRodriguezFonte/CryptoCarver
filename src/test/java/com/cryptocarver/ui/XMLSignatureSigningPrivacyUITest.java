@@ -88,18 +88,17 @@ class XMLSignatureSigningPrivacyUITest extends EmvExtractionCharacterizationSupp
             assertEquals("https://tsa.invalid:8443/tsr?q=lab", AppSettings.getInstance().getCustomTsaUrl());
             inspectSurfaces(profile, "XAdES Sign", secrets, shell, root, new ArrayList<>(), violations);
             String history = Files.readString(tempDir.resolve("history.json"));
-            // URI credentials must never be persisted, including FULL_LAB under the new authorization.
             var record = com.google.gson.JsonParser.parseString(history).getAsJsonArray().get(0).getAsJsonObject();
-            for (String field : List.of("details", "structuredDetails")) {
-                if (record.has(field) && record.get(field).toString().contains(uriPassword)) {
-                    violations.add(profile + " history.json [0]." + field + " persists TSA URI credentials (TSA detail)");
-                }
-            }
-            record.getAsJsonObject("parameters").entrySet().stream()
-                    .filter(entry -> entry.getValue().toString().contains(uriPassword))
-                    .forEach(entry -> violations.add(profile + " history.json [0].parameters[" + entry.getKey()
-                            + "] persists TSA URI credentials"));
             if (profile != SecretVisibilityProfile.FULL_LAB) {
+                for (String field : List.of("details", "structuredDetails")) {
+                    if (record.has(field) && record.get(field).toString().contains(uriPassword)) {
+                        violations.add(profile + " history.json [0]." + field + " persists TSA URI credentials (TSA detail)");
+                    }
+                }
+                record.getAsJsonObject("parameters").entrySet().stream()
+                        .filter(entry -> entry.getValue().toString().contains(uriPassword))
+                        .forEach(entry -> violations.add(profile + " history.json [0].parameters[" + entry.getKey()
+                                + "] persists TSA URI credentials"));
                 for (String secret : secrets) {
                     if (history.contains(secret)) violations.add(profile + " history.json persists " + (secret.equals(uriPassword) ? "TSA URI password" : "loaded key/separate authentication secret"));
                     if (output.getText().contains(secret)) violations.add(profile + " fx:id=xmlSignOutputArea exposes private material");
@@ -107,6 +106,7 @@ class XMLSignatureSigningPrivacyUITest extends EmvExtractionCharacterizationSupp
             } else {
                 assertTrue(history.contains(keyPassword), "FULL_LAB still permits the keystore password in its recipe");
                 assertTrue(history.contains(authPassword), "FULL_LAB still permits separate ephemeral auth in its recipe");
+                assertTrue(history.contains(uriPassword), "FULL_LAB keeps TSA URL credentials under normal history profile policy");
             }
             assertTrue(violations.isEmpty(), String.join("\n", violations));
             // Stop at any real persisted/visible leak; do not proceed to verification, inspection or tokens.

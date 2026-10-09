@@ -156,31 +156,15 @@ public final class AppSettings {
     public synchronized String getCustomTsaUrl() { return data.customTsaUrl == null ? "" : data.customTsaUrl; }
 
     public synchronized void setCustomTsaUrl(String value) {
-        data.customTsaUrl = withoutTsaUserInfo(value == null ? "" : value.trim());
+        data.customTsaUrl = TsaUrlSanitizer.withoutUserInfo(value == null ? "" : value.trim());
         save();
     }
 
-    /** Removes only raw URI user-info, preserving the spelling/escaping of all other components. */
-    private static String withoutTsaUserInfo(String value) {
-        if (value == null) return null;
-        try {
-            java.net.URI uri = new java.net.URI(value);
-            if (uri.getRawUserInfo() == null) return value;
-            String authority = uri.getRawAuthority();
-            int start = value.indexOf("//") + 2;
-            return value.substring(0, start)
-                    + authority.substring(authority.lastIndexOf('@') + 1)
-                    + value.substring(start + authority.length());
-        } catch (java.net.URISyntaxException ignored) {
-            return value;
-        }
-    }
-
     private void sanitizeLoadedTsaUrls() {
-        data.customTsaUrl = withoutTsaUserInfo(data.customTsaUrl);
+        data.customTsaUrl = TsaUrlSanitizer.withoutUserInfo(data.customTsaUrl);
         if (data.tsaProfiles != null) {
             data.tsaProfiles = data.tsaProfiles.stream()
-                    .map(profile -> new TsaProfile(profile.name, withoutTsaUserInfo(profile.url)))
+                    .map(profile -> new TsaProfile(profile.name, TsaUrlSanitizer.withoutUserInfo(profile.url)))
                     .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         }
     }
@@ -193,7 +177,7 @@ public final class AppSettings {
 
     public synchronized void saveTsaProfile(String name, String url) {
         String normalizedName = name == null ? "" : name.trim();
-        String normalizedUrl = withoutTsaUserInfo(url == null ? "" : url.trim());
+        String normalizedUrl = TsaUrlSanitizer.withoutUserInfo(url == null ? "" : url.trim());
         if (normalizedName.isEmpty() || normalizedUrl.isEmpty()) {
             throw new IllegalArgumentException("Profile name and TSA URL are required");
         }
