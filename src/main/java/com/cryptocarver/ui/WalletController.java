@@ -1,19 +1,8 @@
 package com.cryptocarver.ui;
 
-import com.cryptocarver.crypto.AsymmetricKeyOperations;
-import com.cryptocarver.crypto.AdesValidationOperations;
-import com.cryptocarver.crypto.CborInspector;
-import com.cryptocarver.crypto.EidasCertificateInspector;
-import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.MdocOperations;
-import com.cryptocarver.crypto.OpenId4VpInspector;
-import com.cryptocarver.crypto.TrustedListInspector;
-import com.cryptocarver.crypto.TrustedEntityListJsonInspector;
 import com.cryptocarver.crypto.Ts12ScaOperations;
-import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.service.I18nService;
-import com.cryptocarver.util.DataConverter;
-import com.nimbusds.jose.JWSAlgorithm;
 
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -22,21 +11,8 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.ByteArrayInputStream;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.security.PublicKey;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.ResourceBundle;
 
 /**
@@ -53,8 +29,6 @@ import java.util.ResourceBundle;
  * boundary the rest of the application keeps.</p>
  */
 public class WalletController implements Initializable {
-
-    private static final Logger LOG = LoggerFactory.getLogger(WalletController.class);
 
     @FXML private VBox walletContainer;
     @FXML private VBox sdJwtSection;
@@ -159,6 +133,9 @@ public class WalletController implements Initializable {
     private WalletStatusListCoordinator walletStatusListCoordinator;
     private WalletMdocCoordinator walletMdocCoordinator;
     private WalletSdJwtCoordinator walletSdJwtCoordinator;
+    private WalletScaCoordinator walletScaCoordinator;
+    private WalletCborCoordinator walletCborCoordinator;
+    private WalletTrustCoordinator walletTrustCoordinator;
     private ModuleI18n.Binding moduleI18n;
 
     /** Required by FXMLLoader when this controller is used from an fx:include. */
@@ -257,6 +234,59 @@ public class WalletController implements Initializable {
         }
     }
 
+    private WalletTrustCoordinator trustCoordinator() {
+        if (walletTrustCoordinator == null) {
+            walletTrustCoordinator = new WalletTrustCoordinator(new WalletTrustCoordinator.View(
+                    () -> eidasCertArea,
+                    () -> eidasCertOutputArea,
+                    () -> trustedListXmlArea,
+                    () -> trustedListCertArea,
+                    () -> trustedListOutputArea,
+                    () -> trustedEntityListJsonArea,
+                    () -> trustedEntityListSignerCertArea,
+                    () -> trustedEntityListSearchCertArea), () -> statusReporter);
+        }
+        return walletTrustCoordinator;
+    }
+
+    private WalletCborCoordinator cborCoordinator() {
+        if (walletCborCoordinator == null) {
+            walletCborCoordinator = new WalletCborCoordinator(new WalletCborCoordinator.View(
+                    () -> cborInputArea,
+                    () -> cborViewCombo,
+                    () -> cborOutputArea,
+                    () -> cborJsonArea,
+                    () -> cborFromJsonOutputArea), () -> statusReporter);
+        }
+        return walletCborCoordinator;
+    }
+
+    private WalletScaCoordinator scaCoordinator() {
+        if (walletScaCoordinator == null) {
+            walletScaCoordinator = new WalletScaCoordinator(new WalletScaCoordinator.View(
+                    () -> sdJwtAlgoCombo,
+                    () -> scaTypeCombo,
+                    () -> scaCredentialIdsField,
+                    () -> scaPayloadArea,
+                    () -> scaEntryArea,
+                    () -> scaPresentationArea,
+                    () -> scaTransactionDataArea,
+                    () -> scaIssuerKeyArea,
+                    () -> scaHolderKeyArea,
+                    () -> scaAudienceField,
+                    () -> scaNonceField,
+                    () -> scaResponseModeField,
+                    () -> scaOutputArea,
+                    () -> oid4vpRequestArea,
+                    () -> oid4vpKeyArea,
+                    () -> oid4vpOutputArea,
+                    () -> adesFileNameField,
+                    () -> adesDocumentArea,
+                    () -> adesOutputArea), () -> statusReporter);
+        }
+        return walletScaCoordinator;
+    }
+
     private WalletSdJwtCoordinator sdJwtCoordinator() {
         if (walletSdJwtCoordinator == null) {
             walletSdJwtCoordinator = new WalletSdJwtCoordinator(new WalletSdJwtCoordinator.View(
@@ -334,8 +364,6 @@ public class WalletController implements Initializable {
     @FXML
     private void handleSdJwtInspect() { sdJwtCoordinator().handleSdJwtInspect(); }
 
-
-
     // ------------------------------------------------------------------ mdoc
 
     @FXML
@@ -346,8 +374,6 @@ public class WalletController implements Initializable {
 
     @FXML
     private void handleMdocInspect() { mdocCoordinator().handleMdocInspect(); }
-
-
 
     // ----------------------------------------------------------- status list
 
@@ -363,274 +389,51 @@ public class WalletController implements Initializable {
     // ------------------------------------------------------ eIDAS certificate
 
     @FXML
-    private void handleEidasCertInspect() {
-        try {
-            String pem = textOf(eidasCertArea);
-            if (isBlank(pem)) { showValidation(t("module.wallet.certificateRequired"), "eidasCertArea"); return; }
-            String report = EidasCertificateInspector.describe(parseCertificate(pem), I18nService.getInstance().getLocale());
-            eidasCertOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("eIDAS Certificate Inspect", report);
-        } catch (Exception e) {
-            fail(e, "eidasCertArea", "eidas certificate inspect");
-        }
-    }
+    private void handleEidasCertInspect() { trustCoordinator().handleEidasCertInspect(); }
 
     // --------------------------------------------------------- trusted list
 
     @FXML
-    private void handleTrustedListInspect() {
-        try {
-            byte[] xml = trustedListXml();
-            if (xml == null) return;
-            String report = TrustedListInspector.describe(xml, I18nService.getInstance().getLocale());
-            trustedListOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("Trusted List Inspect", report);
-        } catch (Exception e) {
-            fail(e, "trustedListXmlArea", "trusted list inspect");
-        }
-    }
+    private void handleTrustedListInspect() { trustCoordinator().handleTrustedListInspect(); }
 
     @FXML
-    private void handleTrustedEntityListJsonInspect() {
-        try {
-            String json = textOf(trustedEntityListJsonArea);
-            if (isBlank(json)) { showValidation(t("module.wallet.trustedEntityListRequired"), "trustedEntityListJsonArea"); return; }
-            String signer = textOf(trustedEntityListSignerCertArea);
-            String search = textOf(trustedEntityListSearchCertArea);
-            String report = TrustedEntityListJsonInspector.describe(json.getBytes(StandardCharsets.UTF_8),
-                    I18nService.getInstance().getLocale(), signer.isBlank() ? null : parseCertificate(signer),
-                    search.isBlank() ? null : parseCertificate(search));
-            trustedListOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("Trusted Entity List JSON Inspect", report);
-        } catch (Exception e) { fail(e, "trustedEntityListJsonArea", "trusted entity list JSON inspect"); }
-    }
+    private void handleTrustedEntityListJsonInspect() { trustCoordinator().handleTrustedEntityListJsonInspect(); }
 
     @FXML
-    private void handleTrustedListVerify() {
-        try {
-            byte[] xml = trustedListXml();
-            if (xml == null) return;
-            TrustedListInspector.SignatureResult result = TrustedListInspector.verifySignature(xml);
-            StringBuilder report = new StringBuilder();
-            report.append("signature: ").append(result.signatureValid() ? "valid" : "INVALID").append('\n');
-            if (result.signingCertificate() != null) {
-                report.append("signed by: ")
-                        .append(result.signingCertificate().getSubjectX500Principal()).append('\n');
-            }
-            report.append('\n').append(result.trustNote()).append('\n');
-            trustedListOutputArea.setText(report.toString());
-            updateStatus(t("module.wallet.status.verified"));
-            publish("Trusted List Verify", report.toString());
-        } catch (Exception e) {
-            fail(e, "trustedListXmlArea", "trusted list verify");
-        }
-    }
+    private void handleTrustedListVerify() { trustCoordinator().handleTrustedListVerify(); }
 
     @FXML
-    private void handleTrustedListFind() {
-        try {
-            byte[] xml = trustedListXml();
-            if (xml == null) return;
-            String pem = textOf(trustedListCertArea);
-            if (isBlank(pem)) { showValidation(t("module.wallet.certificateRequired"), "trustedListCertArea"); return; }
-
-            List<TrustedListInspector.Match> matches = TrustedListInspector.findCertificate(
-                    TrustedListInspector.parse(xml), parseCertificate(pem));
-
-            StringBuilder report = new StringBuilder();
-            if (matches.isEmpty()) {
-                report.append(t("module.wallet.notInTrustedList")).append('\n');
-            }
-            for (TrustedListInspector.Match match : matches) {
-                report.append(match.service().providerName())
-                        .append(" / ").append(match.service().serviceName())
-                        .append("\n  status   : ").append(match.service().statusLabel())
-                        .append("\n  matched  : ").append(match.matchedBy()).append('\n');
-                for (String qualifier : match.service().qualifiers()) {
-                    report.append("  qualifier: ").append(qualifier).append('\n');
-                }
-            }
-            trustedListOutputArea.setText(report.toString());
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("Trusted List Find Certificate", report.toString(),
-                    "Matches", String.valueOf(matches.size()));
-        } catch (Exception e) {
-            fail(e, "trustedListCertArea", "trusted list find");
-        }
-    }
-
-    private byte[] trustedListXml() {
-        String xml = textOf(trustedListXmlArea);
-        if (isBlank(xml)) {
-            showValidation(t("module.wallet.trustedListRequired"), "trustedListXmlArea");
-            return null;
-        }
-        return xml.getBytes(StandardCharsets.UTF_8);
-    }
+    private void handleTrustedListFind() { trustCoordinator().handleTrustedListFind(); }
 
     // ------------------------------------------------------------------ CBOR
 
     @FXML
-    private void handleCborInspect() {
-        try {
-            String hex = textOf(cborInputArea);
-            if (isBlank(hex)) { showValidation(t("module.wallet.cborRequired"), "cborInputArea"); return; }
-            byte[] cbor = CborInspector.parseHex(hex);
-            String report = switch (valueOf(cborViewCombo, "tree")) {
-                case "diagnostic" -> CborInspector.diagnostic(cbor);
-                case "summary" -> CborInspector.summary(cbor);
-                default -> CborInspector.tree(cbor);
-            };
-            cborOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("CBOR Inspect", report);
-        } catch (Exception e) {
-            fail(e, "cborInputArea", "cbor inspect");
-        }
-    }
+    private void handleCborInspect() { cborCoordinator().handleCborInspect(); }
 
     @FXML
-    private void handleCborToJson() {
-        try {
-            String hex = textOf(cborInputArea);
-            if (isBlank(hex)) { showValidation(t("module.wallet.cborRequired"), "cborInputArea"); return; }
-            String json = CborInspector.toJson(CborInspector.parseHex(hex));
-            cborOutputArea.setText(json);
-            updateStatus(t("module.wallet.status.converted"));
-            publish("CBOR to JSON", json);
-        } catch (Exception e) {
-            fail(e, "cborInputArea", "cbor to json");
-        }
-    }
+    private void handleCborToJson() { cborCoordinator().handleCborToJson(); }
 
     @FXML
-    private void handleCborFromJson() {
-        try {
-            String json = textOf(cborJsonArea);
-            if (isBlank(json)) { showValidation(t("module.wallet.jsonRequired"), "cborJsonArea"); return; }
-            String hex = DataConverter.bytesToHex(CborInspector.fromJson(json)).toUpperCase();
-            cborFromJsonOutputArea.setText(hex);
-            updateStatus(t("module.wallet.status.converted"));
-            publish("JSON to CBOR", hex);
-        } catch (Exception e) {
-            fail(e, "cborJsonArea", "cbor from json");
-        }
-    }
-
+    private void handleCborFromJson() { cborCoordinator().handleCborFromJson(); }
 
     // ------------------------------------------------------ SCA / OpenID4VP
 
     @FXML
-    private void handleScaBuild() {
-        try {
-            String payload = textOf(scaPayloadArea);
-            if (isBlank(payload)) { showValidation(t("module.wallet.claimsRequired"), "scaPayloadArea"); return; }
-            String entry = Ts12ScaOperations.encodeTransactionData(
-                    Ts12ScaOperations.TransactionType.fromUrn(valueOf(scaTypeCombo,
-                            Ts12ScaOperations.TransactionType.PAYMENT.urn())),
-                    lines(textOf(scaCredentialIdsField)),
-                    payload, "sha-256");
-            scaEntryArea.setText(entry);
-            // The entry is also what the verifying pane consumes, so it is put
-            // there too rather than asking the user to copy it across.
-            if (scaTransactionDataArea != null && isBlank(textOf(scaTransactionDataArea))) {
-                scaTransactionDataArea.setText(entry);
-            }
-            updateStatus(t("module.wallet.status.issued"));
-            publish("SCA Transaction Data", entry);
-        } catch (Exception e) {
-            fail(e, "scaPayloadArea", "sca transaction data");
-        }
-    }
+    private void handleScaBuild() { scaCoordinator().handleScaBuild(); }
 
     @FXML
-    private void handleScaVerify() {
-        try {
-            String presentation = textOf(scaPresentationArea);
-            String issuerKey = textOf(scaIssuerKeyArea);
-            if (isBlank(presentation)) { showValidation(t("module.wallet.sdJwtRequired"), "scaPresentationArea"); return; }
-            if (isBlank(issuerKey)) { showValidation(t("module.wallet.keyRequired"), "scaIssuerKeyArea"); return; }
-
-            JWSAlgorithm algorithm = JWSAlgorithm.parse(valueOf(sdJwtAlgoCombo, "ES256"));
-            String holderKey = textOf(scaHolderKeyArea);
-            Ts12ScaOperations.ScaReport report = Ts12ScaOperations.verify(
-                    presentation,
-                    lines(textOf(scaTransactionDataArea)),
-                    JOSEService.createVerifier(algorithm, issuerKey),
-                    isBlank(holderKey) ? null : JOSEService.createVerifier(algorithm, holderKey),
-                    blankToNull(textOf(scaAudienceField)),
-                    blankToNull(textOf(scaNonceField)),
-                    blankToNull(textOf(scaResponseModeField)));
-
-            String text = Ts12ScaOperations.describe(report, I18nService.getInstance().getLocale());
-            scaOutputArea.setText(text);
-            updateStatus(t("module.wallet.status.verified"));
-            publish("SCA Verify", text, "Dynamic link", report.acceptable() ? "holds" : "does not hold");
-        } catch (Exception e) {
-            fail(e, "scaPresentationArea", "sca verify");
-        }
-    }
+    private void handleScaVerify() { scaCoordinator().handleScaVerify(); }
 
     @FXML
-    private void handleOid4vpInspect() {
-        try {
-            String request = textOf(oid4vpRequestArea);
-            if (isBlank(request)) { showValidation(t("module.wallet.requestRequired"), "oid4vpRequestArea"); return; }
-            String key = textOf(oid4vpKeyArea);
-            String report = OpenId4VpInspector.describe(request,
-                    isBlank(key) ? null
-                            : JOSEService.createVerifier(JWSAlgorithm.parse(valueOf(sdJwtAlgoCombo, "ES256")), key),
-                    I18nService.getInstance().getLocale());
-            oid4vpOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("OpenID4VP Request Inspect", report);
-        } catch (Exception e) {
-            fail(e, "oid4vpRequestArea", "openid4vp inspect");
-        }
-    }
+    private void handleOid4vpInspect() { scaCoordinator().handleOid4vpInspect(); }
 
     // ------------------------------------------------------ AdES validation
 
     @FXML
-    private void handleAdesValidate() {
-        runAdes(false);
-    }
+    private void handleAdesValidate() { scaCoordinator().handleAdesValidate(); }
 
     @FXML
-    private void handleAdesEtsiReport() {
-        runAdes(true);
-    }
-
-    private void runAdes(boolean etsiReport) {
-        try {
-            String document = textOf(adesDocumentArea);
-            if (isBlank(document)) { showValidation(t("module.wallet.documentRequired"), "adesDocumentArea"); return; }
-            AdesValidationOperations.Result result = AdesValidationOperations.validate(
-                    decodeDocument(document), textOf(adesFileNameField), null, null);
-            String text = etsiReport
-                    ? result.etsiValidationReportXml()
-                    : AdesValidationOperations.describe(result, I18nService.getInstance().getLocale());
-            adesOutputArea.setText(text);
-            updateStatus(t("module.wallet.status.verified"));
-            publish(etsiReport ? "AdES ETSI Report" : "AdES Validate", text,
-                    "Signatures", String.valueOf(result.signatures().size()));
-        } catch (Exception e) {
-            fail(e, "adesDocumentArea", "ades validate");
-        }
-    }
-
-    /** A signed document is pasted as base64 or as hexadecimal; both are met in
-     *  practice and telling them apart is cheaper than making the user say. */
-    private static byte[] decodeDocument(String value) {
-        String cleaned = value.replaceAll("\\s", "");
-        if (cleaned.matches("(?i)[0-9a-f]+") && cleaned.length() % 2 == 0) {
-            return CborInspector.parseHex(cleaned);
-        }
-        return java.util.Base64.getMimeDecoder().decode(cleaned);
-    }
+    private void handleAdesEtsiReport() { scaCoordinator().handleAdesEtsiReport(); }
 
     // --------------------------------------------------------------- toolbar
 
@@ -694,37 +497,6 @@ public class WalletController implements Initializable {
 
     // --------------------------------------------------------------- helpers
 
-    private static List<String> lines(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return List.of();
-        }
-        return Arrays.stream(raw.split("[\\r\\n,]+"))
-                .map(String::trim)
-                .filter(value -> !value.isEmpty())
-                .toList();
-    }
-
-
-
-
-
-
-
-    private static X509Certificate parseCertificate(String pem) throws Exception {
-        String normalized = pem.replaceAll("-----BEGIN [^-]+-----|-----END [^-]+-----|\\s", "");
-        byte[] der = java.util.Base64.getDecoder().decode(normalized);
-        return (X509Certificate) CertificateFactory.getInstance("X.509")
-                .generateCertificate(new ByteArrayInputStream(der));
-    }
-
-    private static String valueOf(ComboBox<String> combo, String fallback) {
-        return combo == null || combo.getValue() == null ? fallback : combo.getValue();
-    }
-
-    private static String textOf(TextArea area) {
-        return area == null || area.getText() == null ? "" : area.getText().trim();
-    }
-
     private static String textOf(TextField field) {
         return field == null || field.getText() == null ? "" : field.getText().trim();
     }
@@ -741,10 +513,6 @@ public class WalletController implements Initializable {
         return value == null || value.isBlank();
     }
 
-    private static String blankToNull(String value) {
-        return isBlank(value) ? null : value;
-    }
-
     private static void clear(TextArea... areas) {
         for (TextArea area : areas) {
             if (area != null) area.clear();
@@ -757,37 +525,7 @@ public class WalletController implements Initializable {
         }
     }
 
-    private void publish(String operation, String output, String... details) {
-        if (statusReporter == null) {
-            return;
-        }
-        OperationResult.Builder builder = OperationResult.forOperation(operation)
-                .output(output.getBytes(StandardCharsets.UTF_8));
-        for (int i = 0; i + 1 < details.length; i += 2) {
-            builder.detail(details[i], details[i + 1]);
-        }
-        statusReporter.publish(builder.status(t("module.wallet.status.done")).build());
-    }
-
-    private void fail(Exception error, String fieldKey, String operation) {
-        showValidation(t("module.wallet.operation", error.getMessage()), fieldKey);
-        updateStatus(t("module.wallet.status.failed"));
-        logFailure(operation, error);
-    }
-
-    private void showValidation(String message, String fieldKey) {
-        String safeMessage = InlineErrorPresenter.redactSecrets(message);
-        UserFacingError error = new UserFacingError(t("module.wallet.errorTitle"), safeMessage, safeMessage, fieldKey);
-        if (statusReporter != null) {
-            statusReporter.showError(error);
-        }
-    }
-
     private void updateStatus(String message) {
         if (statusReporter != null) statusReporter.updateStatus(message);
-    }
-
-    private void logFailure(String operation, Exception error) {
-        LOG.error("Wallet {} failed: {}", operation, InlineErrorPresenter.redactSecrets(error.toString()), error);
     }
 }
