@@ -55,7 +55,7 @@ class XMLSignaturePrivacyCharacterizationUITest extends EmvExtractionCharacteriz
             assertTrue(endpoint.isVisible());
             List<String> surfaces = List.of(savedEndpoint, customEndpoint, persisted, endpoint.getEditor().getText());
             if (profile == SecretVisibilityProfile.FULL_LAB) {
-                for (String surface : surfaces) assertTrue(surface.contains(password), "FULL_LAB retains original endpoint bytes");
+                for (String surface : surfaces) assertFalse(surface.contains(password), "FULL_LAB must also keep endpoint credentials out of persisted profiles");
             } else {
                 assertAll(profile.name(),
                         () -> assertFalse(savedEndpoint.contains(password), "settings.json tsaProfiles[].url persists TSA password from fx:id=xmlSignTsaUrlText"),
