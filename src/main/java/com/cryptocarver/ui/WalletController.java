@@ -159,6 +159,7 @@ public class WalletController implements Initializable {
     private WalletStatusListCoordinator walletStatusListCoordinator;
     private WalletMdocCoordinator walletMdocCoordinator;
     private WalletSdJwtCoordinator walletSdJwtCoordinator;
+    private WalletCborCoordinator walletCborCoordinator;
     private WalletTrustCoordinator walletTrustCoordinator;
     private ModuleI18n.Binding moduleI18n;
 
@@ -271,6 +272,18 @@ public class WalletController implements Initializable {
                     () -> trustedEntityListSearchCertArea), () -> statusReporter);
         }
         return walletTrustCoordinator;
+    }
+
+    private WalletCborCoordinator cborCoordinator() {
+        if (walletCborCoordinator == null) {
+            walletCborCoordinator = new WalletCborCoordinator(new WalletCborCoordinator.View(
+                    () -> cborInputArea,
+                    () -> cborViewCombo,
+                    () -> cborOutputArea,
+                    () -> cborJsonArea,
+                    () -> cborFromJsonOutputArea), () -> statusReporter);
+        }
+        return walletCborCoordinator;
     }
 
     private WalletSdJwtCoordinator sdJwtCoordinator() {
@@ -399,52 +412,13 @@ public class WalletController implements Initializable {
     // ------------------------------------------------------------------ CBOR
 
     @FXML
-    private void handleCborInspect() {
-        try {
-            String hex = textOf(cborInputArea);
-            if (isBlank(hex)) { showValidation(t("module.wallet.cborRequired"), "cborInputArea"); return; }
-            byte[] cbor = CborInspector.parseHex(hex);
-            String report = WalletPrivateMaterialPolicy.forDisplay(switch (valueOf(cborViewCombo, "tree")) {
-                case "diagnostic" -> CborInspector.diagnostic(cbor);
-                case "summary" -> CborInspector.summary(cbor);
-                default -> CborInspector.tree(cbor);
-            }, WalletPrivateMaterialPolicy.cborAsJson(cbor));
-            cborOutputArea.setText(report);
-            updateStatus(t("module.wallet.status.inspected"));
-            publish("CBOR Inspect", report);
-        } catch (Exception e) {
-            fail(e, "cborInputArea", "cbor inspect");
-        }
-    }
+    private void handleCborInspect() { cborCoordinator().handleCborInspect(); }
 
     @FXML
-    private void handleCborToJson() {
-        try {
-            String hex = textOf(cborInputArea);
-            if (isBlank(hex)) { showValidation(t("module.wallet.cborRequired"), "cborInputArea"); return; }
-            String json = WalletPrivateMaterialPolicy.forDisplay(CborInspector.toJson(CborInspector.parseHex(hex)));
-            cborOutputArea.setText(json);
-            updateStatus(t("module.wallet.status.converted"));
-            publish("CBOR to JSON", json);
-        } catch (Exception e) {
-            fail(e, "cborInputArea", "cbor to json");
-        }
-    }
+    private void handleCborToJson() { cborCoordinator().handleCborToJson(); }
 
     @FXML
-    private void handleCborFromJson() {
-        try {
-            String json = textOf(cborJsonArea);
-            if (isBlank(json)) { showValidation(t("module.wallet.jsonRequired"), "cborJsonArea"); return; }
-            String hex = WalletPrivateMaterialPolicy.forDisplay(
-                    DataConverter.bytesToHex(CborInspector.fromJson(json)).toUpperCase(), json);
-            cborFromJsonOutputArea.setText(hex);
-            updateStatus(t("module.wallet.status.converted"));
-            publish("JSON to CBOR", hex);
-        } catch (Exception e) {
-            fail(e, "cborJsonArea", "cbor from json");
-        }
-    }
+    private void handleCborFromJson() { cborCoordinator().handleCborFromJson(); }
 
 
     // ------------------------------------------------------ SCA / OpenID4VP
