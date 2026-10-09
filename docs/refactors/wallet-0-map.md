@@ -65,3 +65,27 @@ Precisión del mapa inicial: handleTrustedListFind también lee trustedListXmlAr
 Autorizado UiStateSnapshot únicamente en la condición de captura HISTORY_RECIPE: añade sensibilidad por contenido de String con PrivateKeyMaterialDetector cuando hay redacción activa. La restauración y los demás modos quedan intactos. Se añade una envoltura de protección contra errores de análisis en el detector, sin cambiar sus reglas, y tests de entradas arbitrarias/largas. UiStateSnapshotTest se amplía por petición expresa, con notesArea neutro, sin tocar aserciones anteriores.
 
 G1 inmediatamente posterior a B: 459 XML / 2957 pruebas / 8 fallos / 0 errores / 1 omitida / exit 1. La reproducción SD-JWT pasa completa; los ocho fallos son la reproducción ampliada pendiente de A. Se detiene la secuencia por puerta no limpia antes de A; detalles en wallet-0-history-g1-failures.md. No se trasladan métodos ni propietarios de claves Wallet.
+
+## Encargo 80 — manejadores restantes
+
+Base: `e4dc38e`. Los trece manejadores que seguían en `WalletController` y sus superficies. Ninguno recibe una clave privada como entrada prevista: las claves que piden SCA Verify y OpenID4VP son públicas (verificación). El riesgo es el mismo que en el encargo 79: una estructura pegada que lleva material privado dentro.
+
+| Manejador | Entrada | Resultado (`fx:id`) | ¿Devuelve la estructura pegada? |
+|---|---|---|---|
+| `handleEidasCertInspect` | certificado PEM | `eidasCertOutputArea` | no (campos del certificado) |
+| `handleTrustedListInspect`, `handleTrustedListVerify`, `handleTrustedListFind` | XML TS 119 612, certificado | `trustedListOutputArea` | no (campos de la lista) |
+| `handleTrustedEntityListJsonInspect` | JSON TS 119 602 o JAdES compacto | `trustedListOutputArea` | **sí**: los `ServiceInformationExtensions` se copian literales |
+| `handleCborInspect`, `handleCborToJson` | CBOR en hexadecimal | `cborOutputArea` | **sí**: todo el contenido |
+| `handleCborFromJson` | JSON | `cborFromJsonOutputArea` | **sí**, codificado (las cadenas viajan en claro dentro del hexadecimal) |
+| `handleScaBuild` | JSON del pago | `scaEntryArea`, y copia en `scaTransactionDataArea` | sí, en base64url |
+| `handleScaVerify` | presentación SD-JWT, `transaction_data`, claves públicas | `scaOutputArea` | parcial (hallazgos) |
+| `handleOid4vpInspect` | petición JWT, clave pública | `oid4vpOutputArea` | parcial (campos de la petición) |
+| `handleAdesValidate`, `handleAdesEtsiReport` | documento firmado en base64 o hexadecimal | `adesOutputArea` | no (informe de validación) |
+
+Todos publican por `publish(...)`: resultado del shell, historial, Shelf y visor expandido reciben el mismo texto que el área de resultado. Ninguno escribe ficheros. Las entradas llegan a las recetas del historial por `UiStateSnapshot`, que ya redacta por contenido las claves privadas (encargo 79) y sanea las URL con credenciales (encargo 81).
+
+### Regla aplicada
+
+`WalletPrivateMaterialPolicy.forDisplay(report, fuentes...)`: fuera de FULL_LAB, si `PrivateKeyMaterialDetector` encuentra material privado en el informe o en alguna fuente, el área de resultado y lo publicado llevan `module.wallet.privateJwkHidden`. Se aplica en los trece manejadores, no solo en los que la auditoría encontró expuestos. El detector no se amplía: para CBOR se le pasa además la representación JSON del propio CBOR (`CborInspector.toJson`), y para una presentación SD-JWT, su cabecera, payload, disclosures y claims de key binding ya decodificados.
+
+Límite conocido, no cubierto: una clave privada en CBOR con etiquetas enteras (COSE_Key, parámetro `-4`) no tiene la forma `kty` + `d` que reconoce el detector y se sigue mostrando. Corregirlo exige ampliar el detector.
