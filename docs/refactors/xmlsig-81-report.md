@@ -1,6 +1,8 @@
 # Encargo 81 — informe y parada de privacidad
 
-## Resultado
+La sección inicial conserva la parada histórica de la primera entrega. El estado actual de la continuación se recoge en «Corrección autorizada y nueva parada»; la tabla de las doce puertas refleja la nueva parada del paso 5.
+
+## Resultado inicial (histórico)
 
 **Parada en fase 0(c): fuga de credenciales TSA confirmada; no se corrige y no se extrae ningún coordinador.** En MASKED y REDACTED, una URL HTTPS con user-info aceptada por `xmlSignTsaUrlText` guarda la contraseña inventada en `settings.json` (`tsaProfiles[].url` y `customTsaUrl`). Recargar el perfil devuelve la credencial al editor del control FXML. La comprobación usa disco y una segunda instancia de AppSettings: no es solo una observación de estado interno.
 
@@ -46,15 +48,15 @@ Comando focalizado:
 
 FULL_LAB pasa; MASKED y REDACTED fallan cada uno con cuatro aserciones de no exposición. Las comprobaciones previas de guardado, recarga y control unido a la escena pasan. Es una reproducción roja por diseño, **no una puerta fallida**. No se fija digest de esta prueba: no se alcanzaron las caracterizaciones con transcripción de las fases 1–3, y la contraseña es aleatoria e inventada.
 
-## Las doce puertas de fases
+## Las doce puertas de fases (estado actualizado)
 
-`—` significa no ejecutada, no cero pruebas. La parada de fase 0(c) precede a fase 0(d) y a las tres fases de extracción. Ejecutar puertas o continuar la auditoría después de confirmar la fuga contradiría la instrucción de parar. No hubo extracción que retirar.
+`—` significa no ejecutada, no cero pruebas. En la entrega inicial se aplicó la parada de fase 0(c). Tras la corrección autorizada se aplica otra parada del paso 5, por una fuga distinta en el historial de firma. Ambas preceden a las puertas de fase 0 y a las tres fases de extracción. No hubo extracción que retirar. Las referencias sobre main siguen siendo históricas, sin certificar el árbol corregido.
 
 | Fase | Puerta | Informes | Pruebas | Fallos | Errores | Omitidas | Exit | Estado |
 |---|---|---:|---:|---:|---:|---:|---:|---|
-| 0 | G1 | — | — | — | — | — | — | Pendiente: parada 0(c) |
-| 0 | G2 | — | — | — | — | — | — | Pendiente: parada 0(c) |
-| 0 | G3 | — | — | — | — | — | — | Pendiente: parada 0(c) |
+| 0 | G1 | — | — | — | — | — | — | Pendiente: nueva fuga paso 5 |
+| 0 | G2 | — | — | — | — | — | — | Pendiente: nueva fuga paso 5 |
+| 0 | G3 | — | — | — | — | — | — | Pendiente: nueva fuga paso 5 |
 | 1 | G1 | — | — | — | — | — | — | Fase no iniciada |
 | 1 | G2 | — | — | — | — | — | — | Fase no iniciada |
 | 1 | G3 | — | — | — | — | — | — | Fase no iniciada |
@@ -89,3 +91,60 @@ Los logs de referencia y reproducción están en `/tmp/xmlsig-base-g1.log`, `/tm
 4. `docs: deliver assignment 81 privacy stop report` — commit de este informe.
 
 La lista completa con el SHA del propio informe se obtiene con `git log --reverse --format='%H %s' 55c8247c9ec749e3ac293779c5d0087c385e4572..HEAD`. La rama se entrega con todos los cambios commitados y sin cambios pendientes.
+
+
+## Corrección autorizada y nueva parada
+
+Continuación en el mismo worktree y rama, desde la primera entrega `6b7b02258a775c954a1bdaecf5a99949cd73ea37`. Se conservan arriba el SHA base original, los resultados iniciales y la primera parada. Cada uno de los pasos 1–5 de la continuación tiene un commit separado. **Estado actual: ajustes corregidos; nueva fuga de historial reproducida y sin corregir; refactor pendiente.**
+
+### Cambios autorizados completados
+
+1. AppSettings elimina solo el user-info antes de `setCustomTsaUrl` y `saveTsaProfile`, sin depender del perfil de visibilidad. Esquema, host, puerto, ruta, query, fragmento y escapes conservan sus bytes. Una URI que no se puede analizar conserva el texto, sin excepción nueva. Al cargar ajustes antiguos se sanea en memoria; el siguiente guardado reescribe esas URL. CmsCoordinator y PreferencesService permanecen intactos: usan el mismo límite de persistencia.
+2. XMLSignatureController presenta `module.xml.tsaCredentialsNotSaved` mediante showInfo al guardar una URL con user-info. El helper común saveCustomTsa cubre Save TSA, Save profile, Test TSA, firma con TSA y Request timestamp. Se añadieron EN/ES y fallback EN; ninguna clave existente cambió de propietario. La URL local y la URL entregada a crypto/petición siguen siendo completas; solo AppSettings sanea la persistencia. No se agrega ningún emoji.
+3. AppSettingsTsaPrivacyTest cubre usuario/contraseña, solo usuario, URI pública, puerto/ruta/query con escapes, IPv6, user-info escapado, texto no analizable y carga de ajustes antiguos. Los siete casos parametrizados prueban ambos escritores y los tres perfiles, con lectura posterior desde disco. El test de carga confirma que no se reescribe inmediatamente y que sí se reescribe con el siguiente guardado.
+4. La reproducción XMLSignaturePrivacyCharacterizationUITest queda verde. **Único test ya existente modificado en la continuación: el test propio de este encargo**, con una sustitución de la aserción FULL_LAB para prohibir también allí la persistencia de credenciales. Es el cambio autorizado por el paso 4; las cuatro aserciones MASKED/REDACTED no se tocaron. No cambia ningún otro test existente.
+5. XMLSignatureSigningPrivacyUITest avanza la auditoría hasta carga exitosa de PKCS#12 inventado, selección de alias y firma Baseline B exitosa, usando el shell y controles reales. Configura autenticación BASIC separada y una URL con user-info. Comprueba el aviso, settings.json saneado, salida XML, estado, inspector, historial/receta, Shelf y visor expandido. Aquí aparece otra fuga y se aplica la parada expresa. La firma B no contacta una TSA ni resuelve la URL.
+
+### Verificación dirigida de la corrección
+
+Antes de cada ejecución se eliminó target/surefire-reports y se contaron solo los XML de esa ejecución. No hubo Maven simultáneos ni ejecución en el repositorio principal.
+
+| Ejecución dirigida | Informes | Pruebas | Fallos | Errores | Omitidas | Exit |
+|---|---:|---:|---:|---:|---:|---:|
+| AppSettingsTsaPrivacyTest + AppSettingsTest existente | 2 | 11 | 0 | 0 | 0 | 0 |
+| Reproducción inicial tras corrección | 1 | 3 | 0 | 0 | 0 | 0 |
+| Nueva reproducción de firma | 1 | 3 | 3 | 0 | 0 | 1 |
+| Misma reproducción afinando rutas de diagnóstico | 1 | 3 | 3 | 0 | 0 | 1 |
+
+Ajustes: `mvn -o -q test -Plow-cpu -Dtest=AppSettingsTsaPrivacyTest,AppSettingsTest`.
+
+Las tres ejecuciones UI usan `mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false -Dtest=<clase> test`, con XMLSignaturePrivacyCharacterizationUITest o XMLSignatureSigningPrivacyUITest. Estas ejecuciones dirigidas **no se presentan como G1/G2/G3**. No se han certificado esas puertas sobre el árbol corregido, porque el paso 5 ordena parar ante otra fuga.
+
+### Nueva fuga sin corregir y cobertura pendiente
+
+AppSettings ya no guarda el secreto. Sin embargo, handleSignXML publica `details.put("TSA", tsaUrl)` con la URL completa y clasificación PUBLIC. La receta automática captura también el editor de URL. El fichero temporal history.json confirma la contraseña inventada en **[0].details**, **[0].structuredDetails** y **[0].parameters["XMLSignatureController.xmlSignTsaUrlText"]**, en los tres perfiles. MASKED y REDACTED muestran además la contraseña en el contenido de #inspectorPanel, detalle TSA.
+
+No es solo un valor interno: el test lee el fichero persistido por HistoryManager y el contenido del inspector del shell. Los controles de entrada PasswordField no se confunden con una salida visible. La contraseña de keystore y la clave privada inventadas no aparecen en las superficies comprobadas de MASKED/REDACTED; tampoco la contraseña del campo BASIC separado. FULL_LAB conserva esas contraseñas permitidas en la receta, pero falla por user-info de URL persistido, prohibido en todos los perfiles por la nueva instrucción.
+
+No se corrige la clasificación de TSA, la receta ni la publicación del shell. El paso 1 autorizado sanea AppSettings, que no participa en el guardado de HistoryManager. Cambiar este camino sería corregir otra fuga y contradice la parada del paso 5. Se mantiene la reproducción roja.
+
+Pendientes por esa parada: verificación de XML, inspección de XML firmado, inspección/validación de tokens generados en memoria, almacenes de confianza y exportaciones de fichero. La auditoría de campos BASIC separados se limita al escenario de firma y superficies comprobadas; no se afirma cobertura de toda su utilización. No se abren selectores de fichero ni se añade ningún hook de producción. Las doce puertas siguen pendientes como refleja la tabla actualizada. No se inicia ninguna de las tres extracciones ni sus caracterizaciones con SHA-256. La excepción GC no necesita evaluarse en las pruebas dirigidas; no se altera ni excluye ExpandedViewerLifecycleUITest.
+
+### Higiene y líneas tras corrección
+
+XMLSignatureController: **747 → 758 líneas** (aviso y detección de user-info). AppSettings: **371 → 399 líneas** (límite de persistencia y migración en memoria). Sin coordinadores extraídos. Estilos inline FXML = **0**; emojis = **325 de 325**; git diff --check pasa.
+
+crypto/, pom.xml, ModernMainController, UiStateSnapshot, StatusReporter, OperationResult, CmsCoordinator, PreferencesService y todos los FXML permanecen intactos. No se modifica ningún test ajeno al encargo ni umbral. Tests con estado aislado/restaurado, credenciales y claves generadas exclusivamente para la prueba, sin imágenes, .local.md, DMG ni ejecutables. No se usa el historial legado. Los temporales se eliminan incluso cuando la reproducción falla.
+
+Logs de la continuación: /tmp/xmlsig-settings-fix.log, /tmp/xmlsig-privacy-fix.log, /tmp/xmlsig-signing-privacy.log y /tmp/xmlsig-signing-privacy-paths.log. Sus recuentos/XML se archivaron bajo /tmp/xmlsig-evidence/{settings-fix,privacy-settings-green,signing-privacy-first,signing-privacy-paths}. Son evidencia local; las conclusiones y recuentos duraderos quedan aquí y en xmlsig-0-characterization-failures.md.
+
+### Commits de continuación
+
+- `31e2763974f9eeaf5a0851c444bf4ff0a7d45ad4` — paso 1: saneamiento en AppSettings.
+- `c518049724351c13d016088015a3cba549515460` — paso 2: aviso EN/ES en controlador XML.
+- `ce6f7e62de782d6493ab34e846888be6860e41ab` — paso 3: tests dirigidos de ajustes, incluidos ajustes antiguos.
+- `4cfa749c1dd8f4988493522c002d6e6e34d55535` — paso 4: expectativa FULL_LAB de la reproducción propia.
+- `ab736e592bbbeeec0cca3ab268cb677c67738366` — paso 5: nueva reproducción, mapa y fallo de historial.
+- `docs: report authorized XML TSA correction and renewed privacy stop` — actualización de este informe y de la tabla de puertas.
+
+El paso 6 y las fases 1–3 no generan commits porque la nueva parada los precede. Rama entregada con los cambios commitados y sin cambios pendientes; la suite completa contiene la reproducción nueva roja por diseño.
