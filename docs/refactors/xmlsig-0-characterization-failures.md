@@ -31,3 +31,30 @@ La fixture restaura AppSettings, idioma, test.mode, Shelf y shell/historial aisl
 Comando: `mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false -Dtest=XMLSignaturePrivacyCharacterizationUITest test`.
 
 Informes 1; pruebas 3; fallos 2; errores 0; omitidas 0; exit 1. FULL_LAB pasa; MASKED y REDACTED fallan cada uno con las cuatro aserciones exactas descritas arriba. Las aserciones de guardado exitoso, recarga desde disco y unión del control a la escena pasan antes del fallo. No hay fallo de configuración de la fixture ni error de operación usado como falsa reproducción.
+
+## Continuación: corrección autorizada de ajustes
+
+La fuga inicial de endpoints en `settings.json` se corrige en el punto único AppSettings, en todos los perfiles. Las URL antiguas se sanean en memoria y el siguiente guardado las reescribe. Se conservan componentes y escapes fuera del user-info; texto no analizable sigue guardándose sin excepciones nuevas. No se modifican CmsCoordinator ni PreferencesService. El controlador presenta el aviso EN/ES nuevo y sigue usando la URL original durante la operación.
+
+`AppSettingsTsaPrivacyTest` + `AppSettingsTest`: 2 informes, 11 pruebas, 0 fallos/errores/omitidas, exit 0. La reproducción original: 1 informe, 3 pruebas, 0 fallos/errores/omitidas, exit 0. Solo cambia su aserción FULL_LAB, autorizada por la continuación; las cuatro aserciones MASKED/REDACTED permanecen idénticas.
+
+## Nueva fuga en firma y captura por el shell
+
+`XMLSignatureSigningPrivacyUITest` usa shell/FXML reales, genera clave RSA y certificado inventados, escribe un PKCS#12 temporal y carga sus claves mediante `handleLoadXMLKeys`. Selecciona BASIC con contraseña inventada separada y una URL `https://invented:<contraseña-inventada>@tsa.invalid:8443/tsr?q=lab`. Firma un XML temporal con nivel BASELINE-B, que no hace peticiones TSA. No abre diálogos ni resuelve URLs.
+
+Se confirma firma exitosa (`SignatureValue` en el área original), publicación de un registro de historial, aviso de credenciales no guardadas y URL saneada en settings.json. A continuación se inspeccionan las superficies reales del shell y el fichero history.json. La contraseña de la URL sigue persistida en estas rutas exactas:
+
+- `history.json`, `[0].details`, detalle TSA.
+- `history.json`, `[0].structuredDetails`, detalle TSA de clasificación PUBLIC.
+- `history.json`, `[0].parameters["XMLSignatureController.xmlSignTsaUrlText"]`, receta automática del historial.
+- En MASKED y REDACTED, texto visible de `#inspectorPanel`, detalle TSA.
+
+No hay fuga nueva observada de la clave privada inventada, de la contraseña de keystore ni de la contraseña del campo BASIC separado en las superficies comprobadas bajo MASKED/REDACTED. FULL_LAB mantiene esas contraseñas permitidas en su receta, pero falla por user-info persistido, prohibido expresamente en todos los perfiles por la continuación. El helper compartido usa un mensaje genérico “key/cryptogram”; en esta reproducción el marcador encontrado es concretamente la contraseña URI.
+
+El origen es `handleSignXML`: publica la URL completa como detalle público. UiStateSnapshot captura también el editor editable de URL sin sanear el user-info. AppSettings no interviene en esas persistencias de HistoryManager. Ninguna de esas áreas se corrige.
+
+Comando: `mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false -Dtest=XMLSignatureSigningPrivacyUITest test`.
+
+Primera reproducción y segunda ejecución con diagnóstico de rutas: cada una 1 informe, 3 pruebas, 3 fallos, 0 errores, 0 omitidas, exit 1. En la segunda, los tres perfiles muestran las tres rutas JSON exactas arriba; los perfiles restringidos muestran además inspector/historial. No se relaja el contrato ni se modifica producción después de descubrir la fuga. Se afina únicamente el diagnóstico de la reproducción antes de commit.
+
+Se aplica de nuevo la parada del punto 5 de la continuación. No se ejecutan las tres puertas de fase 0 ni se inicia ningún refactor. Verificación, inspección de XML/tokens, almacenes de confianza y exportaciones quedan pendientes. No se presenta la reproducción roja como un fallo de puerta. La fixture restaura estado y Shelf; el historial del shell está aislado y los temporales se eliminan. No se invoca el historial legado.

@@ -49,3 +49,13 @@ Todos los nombres siguientes son fx:id y campos del controlador originales. Ning
 
 Primero reproducir el guardado de perfil TSA con URL de autenticación inventada sobre shell y controles FXML reales, en ajustes aislados. Comprobar el fichero settings.json y recarga desde disco, además de controles de perfil. Sin resolver host ni contactar TSA. FULL_LAB conserva el comportamiento original.
 Si se confirma persistencia de credenciales en MASKED/REDACTED, detener inmediatamente según fase 0(c): las operaciones posteriores (carga/firma/verificación/inspección/token generado en memoria, guardados, superficies completas) quedan pendientes, sin simular cobertura. No abrir diálogos ni añadir hooks de producción para sortear el bloqueo. El test nuevo no sustituye las aserciones existentes ni relaja umbrales.
+
+## Continuación autorizada: corrección y nueva parada
+
+La continuación del encargo autoriza sanear user-info en AppSettings para todos los perfiles, también FULL_LAB. `setCustomTsaUrl` y `saveTsaProfile` usan el mismo helper; `load` sanea los endpoints antiguos en memoria. Los campos XML siguen conservando la URL completa para la operación actual. `saveCustomTsa` muestra `module.xml.tsaCredentialsNotSaved` mediante `StatusReporter.showInfo` antes de guardar; este punto cubre Save TSA, Save profile, Test TSA, firma con TSA y Request timestamp. Clave nueva en messages.properties y variantes EN/ES; propietaria XMLSignatureController, sin reasignar claves existentes.
+
+La nueva auditoría avanza hasta carga de clave real inventada y firma XAdES-BASELINE-B: se cargan PKCS#12/alias, se seleccionan credenciales BASIC separadas y una URL con user-info, y se comprueban salida, estado, inspector, historial/receta, Shelf y expandido. La firma B no pide sello de tiempo ni resuelve la URL TSA.
+
+**Nueva fuga:** `handleSignXML` introduce `details.put("TSA", tsaUrl)` sin clasificación secreta. El historial persiste la URL completa en `[0].details`, `[0].structuredDetails` y `[0].parameters["XMLSignatureController.xmlSignTsaUrlText"]`. En MASKED y REDACTED también llega al texto del inspector (`#inspectorPanel`, detalle TSA). Se confirma leyendo history.json temporal, no solo el OperationResult interno. El aviso y el saneamiento de settings.json sí pasan.
+
+Por la instrucción de parar ante otra fuga, quedan pendientes verificación, inspección de XML y tokens, truststores y exportaciones. No se alteran UiStateSnapshot ni la clasificación/publicación de detalles para corregir esta nueva fuga. El alias xmlSignTsaUrlCombo -> xmlSignTsaUrlText permanece intacto.
