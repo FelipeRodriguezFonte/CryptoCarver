@@ -55,13 +55,17 @@ class SpecializedFeedbackHeadlessTest {
         controllerKeys.put("WssSecurityController", List.of(
                 "module.wss.feedback.keyStoreRequired", "module.wss.feedback.keyAliasRequired",
                 "module.wss.feedback.keyStoreLoad", "module.wss.feedback.statusSaved"));
-        controllerKeys.put("XMLSignatureController", List.of(
-                "module.xml.feedback.keyStoreRequired", "module.xml.feedback.aliasRequired",
+        controllerKeys.put("XmlSignatureTimestampCoordinator", List.of(
                 "module.xml.feedback.tsaProfileRequired", "module.xml.feedback.tsaRequestRequired",
                 "module.xml.feedback.timestampFileRequired", "module.xml.feedback.timestampTokenRequired",
                 "module.xml.feedback.timestampRequesting", "module.xml.feedback.timestampReceived",
-                "module.xml.feedback.timestampValidated", "module.xml.feedback.saveRequired",
-                "module.xml.feedback.statusInspected"));
+                "module.xml.feedback.timestampValidated"));
+        // Assignment 81: keys follow their handlers; keys used in two owners are checked in both.
+        controllerKeys.put("XmlSignatureKeyMaterialCoordinator", List.of(
+                "module.xml.feedback.keyStoreRequired", "module.xml.feedback.aliasRequired"));
+        controllerKeys.put("XmlSignatureSigningCoordinator", List.of(
+                "module.xml.feedback.keyStoreRequired", "module.xml.feedback.aliasRequired",
+                "module.xml.feedback.saveRequired", "module.xml.feedback.statusInspected"));
 
         AppSettings settings = new AppSettings(temporaryDirectory.resolve("settings.json"));
         I18nService service = new I18nService(settings, I18nService.BUNDLE_BASE_NAME,
@@ -115,7 +119,9 @@ class SpecializedFeedbackHeadlessTest {
 
     @Test
     void concreteValidationFlowsDoNotUseTheOldGenericRequiredFeedback() throws Exception {
-        for (String controller : List.of("EMVController", "WssSecurityController", "XMLSignatureController")) {
+        for (String controller : List.of("EMVController", "WssSecurityController", "XMLSignatureController",
+                "XmlSignatureSigningCoordinator", "XmlSignatureKeyMaterialCoordinator",
+                "XmlSignatureTimestampCoordinator")) {
             String source = Files.readString(Path.of("src/main/java/com/cryptocarver/ui/" + controller + ".java"));
             assertFalse(source.contains("module.emv.error.required"), controller);
             assertFalse(source.contains("module.wss.error.required"), controller);

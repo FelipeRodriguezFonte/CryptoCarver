@@ -156,8 +156,17 @@ public final class AppSettings {
     public synchronized String getCustomTsaUrl() { return data.customTsaUrl == null ? "" : data.customTsaUrl; }
 
     public synchronized void setCustomTsaUrl(String value) {
-        data.customTsaUrl = value == null ? "" : value.trim();
+        data.customTsaUrl = TsaUrlSanitizer.withoutUserInfo(value == null ? "" : value.trim());
         save();
+    }
+
+    private void sanitizeLoadedTsaUrls() {
+        data.customTsaUrl = TsaUrlSanitizer.withoutUserInfo(data.customTsaUrl);
+        if (data.tsaProfiles != null) {
+            data.tsaProfiles = data.tsaProfiles.stream()
+                    .map(profile -> new TsaProfile(profile.name, TsaUrlSanitizer.withoutUserInfo(profile.url)))
+                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+        }
     }
 
     /** Non-secret TSA endpoint profiles. Credentials are deliberately never persisted. */
@@ -168,7 +177,7 @@ public final class AppSettings {
 
     public synchronized void saveTsaProfile(String name, String url) {
         String normalizedName = name == null ? "" : name.trim();
-        String normalizedUrl = url == null ? "" : url.trim();
+        String normalizedUrl = TsaUrlSanitizer.withoutUserInfo(url == null ? "" : url.trim());
         if (normalizedName.isEmpty() || normalizedUrl.isEmpty()) {
             throw new IllegalArgumentException("Profile name and TSA URL are required");
         }
@@ -303,7 +312,10 @@ public final class AppSettings {
         try {
             if (Files.exists(file)) {
                 Settings loaded = new Gson().fromJson(Files.readString(file), Settings.class);
-                if (loaded != null) data = loaded;
+                if (loaded != null) {
+                    data = loaded;
+                    sanitizeLoadedTsaUrls();
+                }
             }
         } catch (Exception ignored) {
             // Preferences must never prevent the application from starting.

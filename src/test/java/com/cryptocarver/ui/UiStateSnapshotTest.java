@@ -174,6 +174,34 @@ class UiStateSnapshotTest {
     }
 
     @Test
+    void historyRecipeSanitizesOnlyCompleteHttpUrlsOutsideFullLab() {
+        var settings = com.cryptocarver.model.AppSettings.getInstance();
+        var previous = settings.getSecretVisibilityProfile();
+        for (var profile : com.cryptocarver.model.SecretVisibilityProfile.values()) {
+            settings.setSecretVisibilityProfile(profile);
+            for (String[] example : new String[][] {
+                    {"https://alice:secret@example.test/tsa?x=1", "https://example.test/tsa?x=1"},
+                    {"http://alice@example.test/tsa", "http://example.test/tsa"},
+                    {"https://example.test/tsa", "https://example.test/tsa"},
+                    {"not a URL", "not a URL"},
+                    {"endpoint https://alice:secret@example.test/tsa", "endpoint https://alice:secret@example.test/tsa"}
+            }) {
+                UrlController controller = new UrlController(example[0]);
+                Map<String, Object> state = UiStateSnapshot.captureHistoryRecipe(controller);
+                String expected = profile == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB
+                        ? example[0] : example[1];
+                assertEquals(expected, state.get("UrlController.endpointText"), profile + " / " + example[0]);
+            }
+        }
+        settings.setSecretVisibilityProfile(previous);
+    }
+
+    public static class UrlController {
+        @FXML public TextField endpointText;
+        UrlController(String value) { endpointText = new TextField(value); }
+    }
+
+    @Test
     void historyRestoreClearsSensitiveFieldsButRestoresSafeSelectors() {
         DummyController controller = new DummyController();
         controller.tr31KbpkExportField.setText("old-kbpk");

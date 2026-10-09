@@ -24,6 +24,7 @@ import java.util.Set;
 
 import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.SecretVisibilityProfile;
+import com.cryptocarver.model.TsaUrlSanitizer;
 import com.cryptocarver.service.I18nService;
 
 /** Captures and restores serializable JavaFX state across nested FXML controllers. */
@@ -175,6 +176,9 @@ public final class UiStateSnapshot {
 
             Object captured = readControlValue(value);
             if (captured != null) {
+                if (redactSecrets && captured instanceof String text) {
+                    captured = withoutHttpUserInfo(text);
+                }
                 // Blank secret fields hold nothing to redact; marking them would flag the
                 // recipe as needing secrets and send the reopen focus to empty, hidden fields.
                 if (redactSecrets && (isHistorySensitiveField(field.getName(), value)
@@ -188,6 +192,19 @@ public final class UiStateSnapshot {
             }
         });
         return state;
+    }
+
+    /** History keeps a restorable HTTP endpoint while excluding its embedded credentials. */
+    private static String withoutHttpUserInfo(String value) {
+        try {
+            java.net.URI uri = new java.net.URI(value);
+            String scheme = uri.getScheme();
+            if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))
+                    || uri.getRawUserInfo() == null) return value;
+            return TsaUrlSanitizer.withoutUserInfo(value);
+        } catch (java.net.URISyntaxException ignored) {
+            return value;
+        }
     }
 
     /** Single History policy shared by capture, restore filtering and clearing. */
