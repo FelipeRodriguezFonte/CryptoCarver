@@ -951,6 +951,7 @@ public final class ModuleTextCatalog {
         map.put("Decrypt JWE", "module.jose.decryptJwe");
         map.put("Secret Format:", "module.jose.secretFormat");
         map.put("How an HMAC secret is read. Ignored for RSA/EC keys.", "module.jose.hmacSecretFormatHelp");
+        map.put("How an OCT secret is read. Ignored for RSA/EC/OKP keys.", "module.jose.jwkSecretFormatHelp");
         map.put("How the HMAC signing secret and the dir key are read. Ignored for RSA/EC keys.", "module.jose.nestedSecretFormatHelp");
         map.put("PBES2 Iterations:", "module.jose.pbes2Iterations");
         map.put("How a shared secret (AES-KW, AES-GCMKW, dir) or PBES2 password is read. Ignored for RSA/EC keys.", "module.jose.secretFormatHelp");

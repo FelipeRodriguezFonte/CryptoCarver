@@ -63,6 +63,7 @@ El formato global se aplica al payload. Claves, IV, nonces, firmas y certificado
 | 22 | Token PKCS#11 | [Inicializar SoftHSM, generar claves residentes y operar desde CryptoCarver](22-generar-un-token-pkcs11.md) |
 | 23 | Herramientas | [Inspector de bytes y codificaciones](23-inspector-de-bytes.md) |
 | 24 | Cifrado | [Análisis de un archivo cifrado](24-analizar-un-archivo-cifrado.md) |
+| 25 | JOSE a fondo | [JWE y JWK con todas las opciones, JWS/JWT de referencia](25-jose-jwe-y-jwk-referencia-completa.md) |
 
 ## Tutoriales avanzados
 
@@ -76,6 +77,7 @@ El formato global se aplica al payload. Claves, IV, nonces, firmas y certificado
 | XAdES y WS-Security | [Firmas XML, validación, UsernameToken y SOAP con timestamp protegido](20-xades-y-ws-security-avanzados.md) |
 | Formatos y PKCS#11 | [PEM, DER, PKCS#12, perfiles de token e inventario seguro](21-formatos-de-claves-almacenes-y-pkcs11.md) |
 | Generar token PKCS#11 | [SoftHSM, objetos residentes, inventario, firma y diagnóstico](22-generar-un-token-pkcs11.md) |
+| JOSE | [JWE y JWK: algoritmos, serializaciones, multi-destinatario, JWKS y rotación](25-jose-jwe-y-jwk-referencia-completa.md) |
 
 ## Cómo usar los ejemplos
 

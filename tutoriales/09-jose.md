@@ -4,6 +4,8 @@
 
 JOSE separa firma, cifrado y representación de claves. Un JWT decodificado no está necesariamente validado.
 
+Para la referencia completa de cada opción de JWE y JWK, continúa en [JOSE a fondo](25-jose-jwe-y-jwk-referencia-completa.md).
+
 ## Modelo mental
 
 | Objeto | Función |

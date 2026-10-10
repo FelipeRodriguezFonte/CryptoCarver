@@ -68,6 +68,33 @@ class JoseJwkCharacterizationUITest {
                 assertEquals("invented-oct", parsedOct.getKeyID());
                 p.line("oct_roundtrip", "oct:metadata-preserved;secret-bytes=" + ((OctetSequenceKey)oct).toByteArray().length);
 
+                // The OCT secret is read in the explicitly selected format, never guessed.
+                String secretHex = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
+                String secretThumbprint = "WqjPPRvAP8oYbAqCwMErhzTg-Quaz-vLx_cef07yhOs";
+                assertEquals(List.of("UTF-8", "Hex", "Base64 / Base64URL"), p.combo("jwkSecretFormatCombo").getItems());
+                assertEquals("Base64 / Base64URL", p.combo("jwkSecretFormatCombo").getValue());
+                assertTrue(p.combo("jwkSecretFormatCombo").isDisable());
+                p.combo("jwkKeyTypeCombo").setValue("OCT");
+                assertFalse(p.combo("jwkSecretFormatCombo").isDisable());
+                for (String[] input : new String[][] {
+                        {"Hex", secretHex, "true"},
+                        {"Base64 / Base64URL", "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=", "true"},
+                        {"Base64 / Base64URL", secretHex, "false"},
+                        {"UTF-8", secretHex, "false"}}) {
+                    p.combo("jwkSecretFormatCombo").setValue(input[0]);
+                    p.area("jwkInputArea").setText(input[1]);
+                    p.invoke("handlePemToJwk");
+                    assertEquals(Boolean.parseBoolean(input[2]),
+                            p.area("jwkOutputArea").getText().contains("// Thumbprint (SHA-256): " + secretThumbprint), input[0]);
+                }
+                p.combo("jwkSecretFormatCombo").setValue("Hex");
+                p.area("jwkInputArea").setText("not-hex");
+                p.invoke("handlePemToJwk");
+                assertTrue(p.area("jwkOutputArea").getText().startsWith("Error converting to JWK:"));
+                p.combo("jwkSecretFormatCombo").setValue("Base64 / Base64URL");
+                p.combo("jwkKeyTypeCombo").setValue("RSA");
+                p.area("jwkInputArea").clear();
+
                 JWK rsa = p.controller.generateNewJWK("RS256", "sig");
                 p.area("jwksSecretArea").setText("{\"keys\":[]}");
                 p.combo("jwksRotateAlgoCombo").setValue("RS256");

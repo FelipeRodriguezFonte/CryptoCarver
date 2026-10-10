@@ -7,7 +7,6 @@ import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.SecretVisibilityProfile;
 import java.nio.charset.StandardCharsets;
 import com.cryptocarver.crypto.JoseJwkPolicy;
-import com.cryptocarver.util.DataConverter;
 import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -30,7 +29,8 @@ import java.util.function.Supplier;
 final class JoseJwkCoordinator extends JoseCoordinatorSupport {
     record View(TextArea jwkInputArea, TextArea jwkOutputArea, ComboBox<String> jwkKeyTypeCombo,
             TextField jwkKeyIdField, ComboBox<String> jwkUseCombo, TextField jwkKeyOpsField,
-            TextArea jwksArea, ComboBox<String> jwksRotateAlgoCombo, ComboBox<String> jwkCurveCombo, Label jwkCurveLabel) { }
+            TextArea jwksArea, ComboBox<String> jwksRotateAlgoCombo, ComboBox<String> jwkCurveCombo, Label jwkCurveLabel,
+            ComboBox<String> jwkSecretFormatCombo) { }
 
     private static final Logger LOG = LoggerFactory.getLogger(JoseJwkCoordinator.class);
     private final Supplier<View> controls;
@@ -102,7 +102,18 @@ final class JoseJwkCoordinator extends JoseCoordinatorSupport {
         if (view().jwkCurveLabel() != null) view().jwkCurveLabel().setText(t("module.jose.okpCurve"));
     }
 
+    /** OCT secrets default to Base64, the form a JWK's own {@code k} uses. */
+    private void initializeSecretFormat() {
+        ComboBox<String> format = view().jwkSecretFormatCombo();
+        if (format == null || !format.getItems().isEmpty()) return;
+        for (JoseKeyMaterial.SecretEncoding encoding : JoseKeyMaterial.SecretEncoding.values()) format.getItems().add(encoding.label());
+        format.setValue(JoseKeyMaterial.SecretEncoding.BASE64.label());
+        format.setDisable(!"OCT".equals(view().jwkKeyTypeCombo().getValue()));
+        view().jwkKeyTypeCombo().valueProperty().addListener((obs, oldValue, value) -> format.setDisable(!"OCT".equals(value)));
+    }
+
     void initializeCurveControls() {
+        initializeSecretFormat();
         ComboBox<String> curve = view().jwkCurveCombo();
         if (curve == null) return;
         curve.getItems().setAll("Ed25519", "Ed448", "X25519", "X448");
@@ -134,9 +145,12 @@ final class JoseJwkCoordinator extends JoseCoordinatorSupport {
             showValidation(t("module.jose.feedback.inputPem"), "jwkInputArea");
             return;
         }
+        ComboBox<String> format = view().jwkSecretFormatCombo();
         convertPemToJwk(view().jwkInputArea().getText(), view().jwkKeyTypeCombo().getValue(),
                 view().jwkKeyIdField().getText(), view().jwkUseCombo() == null ? null : view().jwkUseCombo().getValue(),
-                textOf(view().jwkKeyOpsField()), view().jwkOutputArea());
+                textOf(view().jwkKeyOpsField()),
+                format == null || format.getValue() == null ? JoseKeyMaterial.SecretEncoding.BASE64 : secretEncoding(format),
+                view().jwkOutputArea());
     }
 
     void handleJwkToPem() {
@@ -289,11 +303,17 @@ final class JoseJwkCoordinator extends JoseCoordinatorSupport {
     }
 
     public void convertPemToJwk(String pem, String keyType, String keyId, String use, String keyOps, TextArea outputArea) {
+        convertPemToJwk(pem, keyType, keyId, use, keyOps, JoseKeyMaterial.SecretEncoding.BASE64, outputArea);
+    }
+
+    /** {@code secretEncoding} decodes an OCT secret; asymmetric keys ignore it. */
+    public void convertPemToJwk(String pem, String keyType, String keyId, String use, String keyOps,
+            JoseKeyMaterial.SecretEncoding secretEncoding, TextArea outputArea) {
         if (pem == null || pem.trim().isEmpty()) { outputArea.setText("Error: Input PEM is empty."); return; }
         try {
             String kid = keyId == null || keyId.isBlank() ? null : keyId.trim();
             JWK jwk = "OCT".equalsIgnoreCase(keyType)
-                    ? new OctetSequenceKey.Builder(DataConverter.decodeBase64Flexible(pem.replaceAll("\\s+", ""))).keyID(kid).build()
+                    ? new OctetSequenceKey.Builder(JoseKeyMaterial.secret(pem, secretEncoding)).keyID(kid).build()
                     : asymmetricJwk(pem, keyType, kid);
             jwk = JoseJwkPolicy.withMetadata(jwk, use, keyOps);
             String thumbprint = jwk.computeThumbprint().toString();

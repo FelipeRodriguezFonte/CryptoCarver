@@ -196,6 +196,106 @@ class JweComposerTest {
                 SecretEncoding.UTF8, 1000, JweComposer.Serialization.GENERAL, null));
     }
 
+    @ParameterizedTest
+    @MethodSource("keyAlgorithms")
+    void everyKeyAlgorithmRoundTripsInJsonWithAndWithoutAad(String alg) throws Exception {
+        String[] keys = keysFor(JWEAlgorithm.parse(alg), EncryptionMethod.A256GCM);
+        for (JweComposer.Serialization form : new JweComposer.Serialization[] {
+                JweComposer.Serialization.FLATTENED, JweComposer.Serialization.GENERAL }) {
+            for (String aad : new String[] { null, "order-42" }) {
+                String json = JweComposer.encrypt(PAYLOAD, alg, "A256GCM", false, HeaderOptions.none(),
+                        keys[0], SecretEncoding.HEX, 1000, form, aad);
+                JweComposer.JsonDecryption result = JweComposer.decryptJson(json, keys[1], SecretEncoding.HEX);
+                assertEquals(PAYLOAD, result.payload(), alg + " " + form + " aad=" + aad);
+                assertEquals(aad, result.aad());
+                assertEquals(form == JweComposer.Serialization.GENERAL, json.contains("\"recipients\""));
+            }
+        }
+    }
+
+    @Test
+    void jsonWithoutAadIsReadableByAnIndependentParser() throws Exception {
+        String json = JweComposer.encrypt(PAYLOAD, "PBES2-HS256+A128KW", "A256GCM", false, HeaderOptions.none(),
+                "password", SecretEncoding.UTF8, 1000, JweComposer.Serialization.FLATTENED, null);
+        com.nimbusds.jose.JWEObjectJSON parsed = com.nimbusds.jose.JWEObjectJSON.parse(json);
+        parsed.decrypt(new com.nimbusds.jose.crypto.PasswordBasedDecrypter("password"));
+        assertEquals(PAYLOAD, parsed.getPayload().toString());
+
+        String general = JweComposer.encrypt(PAYLOAD, "ECDH-ES", "A256GCM", false, HeaderOptions.none(),
+                pem("PUBLIC KEY", ec.getPublic().getEncoded()), SecretEncoding.UTF8, 1000,
+                JweComposer.Serialization.GENERAL, null);
+        com.nimbusds.jose.JWEObjectJSON parsedGeneral = com.nimbusds.jose.JWEObjectJSON.parse(general);
+        parsedGeneral.decrypt(new com.nimbusds.jose.crypto.ECDHDecrypter((java.security.interfaces.ECPrivateKey) ec.getPrivate()));
+        assertEquals(PAYLOAD, parsedGeneral.getPayload().toString());
+    }
+
+    @Test
+    void generalJsonEncryptsForXdhRecipientsAlongsideOtherKeyTypes() throws Exception {
+        com.nimbusds.jose.jwk.RSAKey rsaJwk = new com.nimbusds.jose.jwk.RSAKey.Builder(
+                (java.security.interfaces.RSAPublicKey) rsa.getPublic()).keyID("r").algorithm(JWEAlgorithm.RSA_OAEP_256).build();
+        com.nimbusds.jose.jwk.ECKey ecJwk = new com.nimbusds.jose.jwk.ECKey.Builder(com.nimbusds.jose.jwk.Curve.P_256,
+                (java.security.interfaces.ECPublicKey) ec.getPublic()).keyID("e").algorithm(JWEAlgorithm.ECDH_ES_A128KW).build();
+        byte[] secret = new byte[32];
+        Arrays.fill(secret, (byte) 0x5A);
+        com.nimbusds.jose.jwk.OctetSequenceKey octJwk = new com.nimbusds.jose.jwk.OctetSequenceKey.Builder(secret)
+                .keyID("o").algorithm(JWEAlgorithm.A256GCMKW).build();
+        java.util.List<com.nimbusds.jose.jwk.JWK> keys = new java.util.ArrayList<>(java.util.List.of(rsaJwk, ecJwk, octJwk));
+        java.util.Map<String, String> xdhPrivate = new java.util.LinkedHashMap<>();
+        for (String curve : new String[] { "X25519", "X448" }) {
+            KeyPair pair = KeyPairGenerator.getInstance(curve).generateKeyPair();
+            keys.add(new com.nimbusds.jose.jwk.OctetKeyPair.Builder(
+                    "X25519".equals(curve) ? com.nimbusds.jose.jwk.Curve.X25519 : com.nimbusds.jose.jwk.Curve.X448,
+                    Base64URL.encode(JoseKeyMaterial.rawXPublicKey(pair.getPublic())))
+                    .keyID(curve).algorithm(JWEAlgorithm.ECDH_ES_A256KW).build());
+            xdhPrivate.put(curve, pem("PRIVATE KEY", pair.getPrivate().getEncoded()));
+        }
+        String jwks = new com.google.gson.Gson().toJson(new com.nimbusds.jose.jwk.JWKSet(keys).toJSONObject(false));
+
+        for (String aad : new String[] { null, "shared" }) {
+            String json = JweComposer.encrypt(PAYLOAD, "RSA-OAEP-256", "A256GCM", true,
+                    new HeaderOptions(null, "JWT", null, null, null, null), jwks, SecretEncoding.UTF8, 1000,
+                    JweComposer.Serialization.GENERAL, aad);
+            java.util.Map<String, String> privateKeys = new java.util.LinkedHashMap<>();
+            privateKeys.put("r", pem("PRIVATE KEY", rsa.getPrivate().getEncoded()));
+            privateKeys.put("e", pem("PRIVATE KEY", ec.getPrivate().getEncoded()));
+            privateKeys.put("o", HexFormat.of().formatHex(secret));
+            privateKeys.putAll(xdhPrivate);
+            int index = 0;
+            for (java.util.Map.Entry<String, String> entry : privateKeys.entrySet()) {
+                JweComposer.JsonDecryption result = JweComposer.decryptJson(json, entry.getValue(), SecretEncoding.HEX);
+                assertEquals(PAYLOAD, result.payload(), entry.getKey());
+                assertEquals(index++, result.recipientIndex(), entry.getKey());
+                assertEquals(5, result.recipientCount());
+                assertEquals(entry.getKey(), result.effectiveHeader().get("kid"));
+                assertEquals("JWT", result.effectiveHeader().get("typ"));
+                assertEquals(aad, result.aad());
+            }
+            // Interop: an independent Nimbus parse decrypts the RSA recipient.
+            com.nimbusds.jose.JWEObjectJSON parsed = com.nimbusds.jose.JWEObjectJSON.parse(json);
+            parsed.decrypt(new com.nimbusds.jose.crypto.MultiDecrypter(new com.nimbusds.jose.jwk.RSAKey.Builder(rsaJwk)
+                    .privateKey(rsa.getPrivate()).build()));
+            assertEquals(PAYLOAD, parsed.getPayload().toString());
+        }
+
+        // A dir recipient supplies the content key the XDH recipient wraps.
+        com.nimbusds.jose.jwk.JWK dirJwk = new com.nimbusds.jose.jwk.OctetSequenceKey.Builder(secret)
+                .keyID("d").algorithm(JWEAlgorithm.DIR).build();
+        String withDir = JweComposer.encrypt(PAYLOAD, "RSA-OAEP-256", "A256GCM", false, HeaderOptions.none(),
+                new com.google.gson.Gson().toJson(new com.nimbusds.jose.jwk.JWKSet(
+                        java.util.List.of(dirJwk, keys.get(3))).toJSONObject(false)),
+                SecretEncoding.UTF8, 1000, JweComposer.Serialization.GENERAL, null);
+        assertEquals(0, JweComposer.decryptJson(withDir, HexFormat.of().formatHex(secret), SecretEncoding.HEX).recipientIndex());
+        assertEquals(PAYLOAD, JweComposer.decryptJson(withDir, HexFormat.of().formatHex(secret), SecretEncoding.HEX).payload());
+        assertEquals(PAYLOAD, JweComposer.decryptJson(withDir, xdhPrivate.get("X25519"), SecretEncoding.HEX).payload());
+
+        com.nimbusds.jose.jwk.JWK direct = new com.nimbusds.jose.jwk.OctetKeyPair.Builder(
+                (com.nimbusds.jose.jwk.OctetKeyPair) keys.get(3)).algorithm(JWEAlgorithm.ECDH_ES).build();
+        assertThrows(IllegalArgumentException.class, () -> JweComposer.encrypt(PAYLOAD, "RSA-OAEP-256", "A256GCM",
+                false, HeaderOptions.none(),
+                new com.nimbusds.jose.jwk.JWKSet(java.util.List.of(rsaJwk, direct)).toString(),
+                SecretEncoding.UTF8, 1000, JweComposer.Serialization.GENERAL, null));
+    }
+
     @Test
     void compactRefusesAad() {
         assertThrows(IllegalArgumentException.class, () -> JweComposer.encrypt(PAYLOAD, "dir", "A128GCM", false,

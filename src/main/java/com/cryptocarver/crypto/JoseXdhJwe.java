@@ -30,19 +30,24 @@ public final class JoseXdhJwe extends ECDHCryptoProvider implements JWEEncrypter
     private final PublicKey recipientPublicKey;
     private final PrivateKey recipientPrivateKey;
 
-    private JoseXdhJwe(Curve curve, PublicKey publicKey, PrivateKey privateKey) throws JOSEException {
-        super(curve, null);
+    private JoseXdhJwe(Curve curve, PublicKey publicKey, PrivateKey privateKey, SecretKey cek) throws JOSEException {
+        super(curve, cek);
         this.curve = curve;
         this.recipientPublicKey = publicKey;
         this.recipientPrivateKey = privateKey;
     }
 
     public static JoseXdhJwe encrypter(PublicKey key) throws JOSEException {
-        return new JoseXdhJwe(curve(key), key, null);
+        return encrypter(key, null);
+    }
+
+    /** {@code cek} fixes the content key so several recipients can share it; null generates one. */
+    public static JoseXdhJwe encrypter(PublicKey key, SecretKey cek) throws JOSEException {
+        return new JoseXdhJwe(curve(key), key, null, cek);
     }
 
     public static JoseXdhJwe decrypter(PrivateKey key) throws JOSEException {
-        return new JoseXdhJwe(curve(key), null, key);
+        return new JoseXdhJwe(curve(key), null, key, null);
     }
 
     @Override

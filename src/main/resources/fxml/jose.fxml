@@ -296,8 +296,13 @@
                                 <TextField fx:id="jwkKeyOpsField" promptText="sign, verify" styleClass="form-field"/>
                             </HBox>
 
-                            <Label fx:id="jwkInputLabel" text="Input:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
-                            <TextArea fx:id="jwkInputArea" promptText="Paste PEM Key or JWK JSON..." prefRowCount="4" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field"/>
+                            <Label text="Secret Format:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <ComboBox fx:id="jwkSecretFormatCombo" prefWidth="170" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field">
+                                <tooltip><Tooltip text="How an OCT secret is read. Ignored for RSA/EC/OKP keys."/></tooltip>
+                            </ComboBox>
+
+                            <Label fx:id="jwkInputLabel" text="Input:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <TextArea fx:id="jwkInputArea" promptText="Paste PEM Key or JWK JSON..." prefRowCount="4" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field"/>
                         </GridPane>
 
                         <FlowPane hgap="10" vgap="10" alignment="CENTER_LEFT" styleClass="responsive-action-bar">
