@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Tag("ui")
 @EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 class WalletTrustCharacterizationUITest extends WalletRemainingCharacterizationSupport {
-    private static final String GOLD = "a8e749cfa04a0372d6b8af2762cddac2c56bc7b805a30fb7da787937e049fc07";
+    private static final String GOLD = "86d3912fb8813bde21d3a1d212ac7a8f5fd156c67e363457fc792294a0d145a2";
 
     @Test void inspectsCertificatesAndLocalTrustedLists() throws Exception {
         X509Certificate service = certificate("Invented Service CA 80");

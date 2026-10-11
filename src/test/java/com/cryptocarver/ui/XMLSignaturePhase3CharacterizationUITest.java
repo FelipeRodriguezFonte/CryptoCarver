@@ -169,7 +169,7 @@ class XMLSignaturePhase3CharacterizationUITest extends EmvExtractionCharacteriza
             transcript.add("token-invalid " + reporter.drain() + " report-empty=" + report.getText().isEmpty());
         });
         pinTranscript("xmlsig-phase3",
-                "ab9156a4c477a23f0e26ea50c398739f569269c95b0bb040af09c9400211de0c", transcript);
+                "363799cf25bc45c0222d4bfa9929b2924b650aac672d18210f73773c1166c74f", transcript);
     }
 
     private byte[] localTimestampToken(byte[] data) throws Exception {

@@ -268,7 +268,10 @@ final class XmlSignatureTimestampCoordinator {
             byte[] token = Files.readAllBytes(new File(tokenPath).toPath());
             String report = TsaDiagnostics.validateToken(token, data, trustStorePath.isEmpty() ? null : trustStorePath, trustStorePassword);
             view.xmlTimestampReportArea().get().setText(report);
-            reporter.get().updateStatus(t("module.xml.feedback.timestampValidated"));
+            boolean invalid = report.lines().anyMatch(line -> line.matches("\\d+\\. .*")
+                    && (line.stripTrailing().endsWith("FAILED") || line.contains(": FAILED")));
+            reporter.get().updateStatus(t(invalid
+                    ? "module.xml.feedback.timestampInvalid" : "module.xml.feedback.timestampValidated"));
         } catch (Exception e) {
             reporter.get().showError("Timestamp Token", t("module.xml.operationFailed", "Timestamp validation", e.getMessage()));
         }
