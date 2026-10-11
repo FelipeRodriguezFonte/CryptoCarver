@@ -27,6 +27,9 @@ public final class FormatPreservingEncryption {
 
     private FormatPreservingEncryption() {}
 
+    /** Maximum tweak length accepted by this implementation, in bytes. */
+    public static int maximumTweakLength() { return MAX_TWEAK_LENGTH; }
+
     public static String encrypt(String plaintext, byte[] key, String alphabet, byte[] tweak) {
         return encrypt(Algorithm.FF1, plaintext, key, alphabet, tweak);
     }
@@ -98,20 +101,32 @@ public final class FormatPreservingEncryption {
         if (domain.compareTo(MIN_DOMAIN) < 0) {
             throw new IllegalArgumentException("FPE domain must contain at least 1,000,000 values");
         }
-        if (algorithm == Algorithm.FF3_1) {
-            // NIST SP 800-38G limits FF3-1 to n <= 2*floor(96/log2(radix)).
-            // This equivalent integer test avoids floating-point rounding.
-            int half = (input.length() + 1) / 2;
-            if (BigInteger.valueOf(alphabet.length()).pow(half)
-                    .compareTo(BigInteger.ONE.shiftLeft(96)) > 0) {
-                throw new IllegalArgumentException("Input is too long for FF3-1 at this radix");
-            }
-        }
+        if (algorithm == Algorithm.FF3_1 && input.length() > maximumFf3_1InputLength(alphabet.length()))
+            throw new IllegalArgumentException("Input is too long for FF3-1 at this radix");
         for (int i = 0; i < input.length(); i++) {
             if (!symbols.containsKey(input.charAt(i))) {
                 throw new IllegalArgumentException("Input contains a symbol outside the alphabet at index " + i);
             }
         }
+    }
+
+    /** Maximum FF3-1 digit count for a public alphabet radix, using the same bound as validation. */
+    public static int maximumFf3_1InputLength(int radix) {
+        if (radix < 2 || radix > 256) throw new IllegalArgumentException("Alphabet radix must be between 2 and 256");
+        int maximum = 0;
+        BigInteger base = BigInteger.valueOf(radix);
+        BigInteger maximumHalfDomain = BigInteger.ONE.shiftLeft(96);
+        for (int length = 2; length <= MAX_INPUT_LENGTH; length++) {
+            int half = (length + 1) / 2;
+            if (base.pow(half).compareTo(maximumHalfDomain) > 0) break;
+            maximum = length;
+        }
+        return maximum;
+    }
+
+    /** Maximum input length enforced by the current implementation. */
+    public static int maximumInputLength() {
+        return MAX_INPUT_LENGTH;
     }
 
     private static String crypt(boolean encrypt, Algorithm algorithm, String input, byte[] key,

@@ -92,6 +92,10 @@ public final class UiTestLifecycleExtension implements BeforeAllCallback, Before
     }
 
     static void onFx(Runnable action) throws Exception {
+        onFx(action, 30);
+    }
+
+    static void onFx(Runnable action, long timeoutSeconds) throws Exception {
         if (Platform.isFxApplicationThread()) { action.run(); return; }
         CountDownLatch done = new CountDownLatch(1);
         AtomicReference<Throwable> failure = new AtomicReference<>();
@@ -101,7 +105,7 @@ public final class UiTestLifecycleExtension implements BeforeAllCallback, Before
                 finally { done.countDown(); }
             });
         } catch (IllegalStateException toolkitNotStarted) { return; }
-        if (!done.await(30, TimeUnit.SECONDS)) throw new AssertionError("JavaFX fixture teardown timed out");
+        if (!done.await(timeoutSeconds, TimeUnit.SECONDS)) throw new AssertionError("JavaFX fixture operation timed out after " + timeoutSeconds + "s");
         if (failure.get() != null) throw new AssertionError("JavaFX fixture teardown failed", failure.get());
     }
 }

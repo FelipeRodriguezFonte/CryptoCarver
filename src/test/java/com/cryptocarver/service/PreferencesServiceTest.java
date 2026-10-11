@@ -17,6 +17,8 @@ class PreferencesServiceTest {
             service.update(new PreferencesService.Preferences(null, ThemePreference.DARK, "cipher", true,
                     3, true, SecretVisibilityProfile.REDACTED, 99999, false, 99999, true, " https://tsa ", 999, " http://proxy "));
             var value = service.read();
+            settings.setContextualHelpEnabled(true);
+            assertTrue(new AppSettings(file).isContextualHelpEnabled());
             assertEquals(ThemePreference.DARK, value.theme());
             assertEquals(1.5, value.textScale());
             assertEquals(3650, value.historyRetentionDays());

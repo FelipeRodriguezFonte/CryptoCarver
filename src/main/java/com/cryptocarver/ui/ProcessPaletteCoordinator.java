@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -22,13 +23,15 @@ final class ProcessPaletteCoordinator {
                 Function<String, String> text,
                 Supplier<Integer> nodeCount,
                 NodeAdder addNode,
-                Consumer<ProcessDefinition.Node> selectNode) {
+                Consumer<ProcessDefinition.Node> selectNode,
+                BiConsumer<NodeDescriptor, VBox> paletteNodeCreated) {
         View {
             Objects.requireNonNull(paletteItemsContainer);
             Objects.requireNonNull(text);
             Objects.requireNonNull(nodeCount);
             Objects.requireNonNull(addNode);
             Objects.requireNonNull(selectNode);
+            Objects.requireNonNull(paletteNodeCreated);
         }
     }
 
@@ -65,6 +68,7 @@ final class ProcessPaletteCoordinator {
                 case "Key Material" -> "keyMaterial";
                 case "WS-Security" -> "wsSecurity";
                 case "Outputs" -> "outputs";
+                case "Wallet / eIDAS" -> "walletEidas";
                 default -> category.toLowerCase(Locale.ROOT);
             };
             Label categoryHeader = new Label(text.apply(categoryKey).toUpperCase(Locale.ROOT));
@@ -91,6 +95,7 @@ final class ProcessPaletteCoordinator {
                 descLabel.setWrapText(true);
                 textBox.getChildren().addAll(titleLabel, descLabel);
                 item.getChildren().addAll(iconLabel, textBox);
+                view.paletteNodeCreated().accept(descriptor, textBox);
 
                 item.setOnMouseEntered(event -> item.setStyle("-fx-background-color: #334455; -fx-background-radius: 4; -fx-cursor: hand;"));
                 item.setOnMouseExited(event -> item.setStyle("-fx-background-color: #242d38; -fx-background-radius: 4; -fx-cursor: hand;"));

@@ -334,7 +334,7 @@ class ModernMainControllerFxmlStaticTest {
         assertNotNull(resultSummaryBar, "resultSummaryBar element missing in main-view-modern.fxml");
 
         List<Element> buttons = findElementsByTagName(resultSummaryBar, "Button");
-        assertEquals(4, buttons.size(), "resultSummaryBar must contain 4 action buttons");
+        assertEquals(4, buttons.size(), "resultSummaryBar must contain exactly the 4 result actions (help follows focus, no ? buttons)");
 
         List<String> actionHandlers = extractAttributes(resultSummaryBar, "onAction");
         assertTrue(actionHandlers.contains("#handleSaveCurrentResultAsSessionStep"),
@@ -342,6 +342,8 @@ class ModernMainControllerFxmlStaticTest {
         assertTrue(actionHandlers.contains("#handleOpenExpandedResultViewer"), "Missing #handleOpenExpandedResultViewer");
         assertTrue(actionHandlers.contains("#handleAddCurrentOutputToShelf"), "Missing #handleAddCurrentOutputToShelf");
         assertTrue(actionHandlers.contains("#handleCopyOutput"), "Missing #handleCopyOutput");
+        assertFalse(actionHandlers.contains("#handleJweCopyResultHelp") || actionHandlers.contains("#handleJweExpandResultHelp"),
+                "Result help buttons were replaced by focus-following help");
     }
 
     @Test

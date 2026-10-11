@@ -303,6 +303,27 @@ class JweComposerTest {
                 JweComposer.Serialization.COMPACT, "aad"));
     }
 
+    @Test
+    void directRequiresContentKeyLengthAndAuthenticationTagMustMatch() throws Exception {
+        String shortKey = "00112233445566778899aabbccddeeff";
+        Exception wrongSize = assertThrows(Exception.class,
+                () -> JweComposer.encrypt(PAYLOAD, "dir", "A256GCM", false, HeaderOptions.none(),
+                        shortKey, SecretEncoding.HEX, 1000));
+        assertTrue(wrongSize.getMessage().toLowerCase(java.util.Locale.ROOT).contains("key size")
+                || wrongSize.getMessage().contains("not supported"), wrongSize.getMessage());
+
+        String key = "00112233445566778899aabbccddeeff";
+        String token = JweComposer.encrypt(PAYLOAD, "dir", "A128GCM", false, HeaderOptions.none(),
+                key, SecretEncoding.HEX, 1000);
+        String[] parts = token.split("\\.", -1);
+        assertEquals(5, parts.length);
+        parts[4] = (parts[4].startsWith("A") ? "B" : "A") + parts[4].substring(1);
+        com.nimbusds.jose.JWEObject tampered = com.nimbusds.jose.JWEObject.parse(String.join(".", parts));
+        assertThrows(com.nimbusds.jose.JOSEException.class,
+                () -> tampered.decrypt(new com.nimbusds.jose.crypto.DirectDecrypter(
+                        java.util.HexFormat.of().parseHex(key))));
+    }
+
     private static String[] keysFor(JWEAlgorithm alg, EncryptionMethod enc) {
         if (JWEAlgorithm.Family.RSA.contains(alg)) {
             return new String[] { pem("PUBLIC KEY", rsa.getPublic().getEncoded()), pem("PRIVATE KEY", rsa.getPrivate().getEncoded()) };

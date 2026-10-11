@@ -5,6 +5,7 @@ import com.cryptocarver.model.PreflightCheck;
 import com.cryptocarver.model.PreflightPolicy;
 import com.cryptocarver.model.PreflightReport;
 import com.cryptocarver.model.PreflightStatus;
+import com.cryptocarver.model.help.HelpContext;
 import com.cryptocarver.service.I18nService;
 import java.util.List;
 import java.util.Locale;
@@ -42,9 +43,11 @@ public final class ReadinessPanelCoordinator {
   private final Consumer<Boolean> storeEncryptDirection;
   private final Consumer<String> focusControl;
   private final Consumer<UserFacingError> showError;
+  private final Consumer<HelpContext> showHelpContext;
   private final Consumer<String> navigateToOperation;
   private boolean showDetails;
   private boolean panelActivated;
+  private boolean explicitReadinessHelp;
   private boolean encryptDirection = true;
   private ModernMainController.GuidedOperation guidedOperation;
   private int guidedStep = 1;
@@ -70,6 +73,7 @@ public final class ReadinessPanelCoordinator {
       Consumer<Boolean> storeEncryptDirection,
       Consumer<String> focusControl,
       Consumer<UserFacingError> showError,
+      Consumer<HelpContext> showHelpContext,
       Consumer<String> navigateToOperation) {
     this.activeOperation = Objects.requireNonNull(activeOperation);
     this.cipherController = Objects.requireNonNull(cipherController);
@@ -91,11 +95,13 @@ public final class ReadinessPanelCoordinator {
     this.storeEncryptDirection = Objects.requireNonNull(storeEncryptDirection);
     this.focusControl = Objects.requireNonNull(focusControl);
     this.showError = Objects.requireNonNull(showError);
+    this.showHelpContext = Objects.requireNonNull(showHelpContext);
     this.navigateToOperation = Objects.requireNonNull(navigateToOperation);
   }
 
   public void onOperationSelected() {
     panelActivated = false;
+    explicitReadinessHelp = false;
     showDetails = false;
     refreshReadinessPanelForOperation(activeOperation.get(), encryptDirection);
   }
@@ -104,6 +110,14 @@ public final class ReadinessPanelCoordinator {
     updateReadinessPanelForOperation(operation, isEncrypt);
     PreflightReport report = currentReport.get();
     if (report == null || report.isExecutable()) {
+      if (report != null && !explicitReadinessHelp) {
+        panelActivated = false;
+        HBox panel = readinessPanel.get();
+        if (panel != null) {
+          panel.setManaged(false);
+          panel.setVisible(false);
+        }
+      }
       return true;
     }
     PreflightCheck firstIssue = report.getFirstNonReadyCheck();
@@ -121,10 +135,30 @@ public final class ReadinessPanelCoordinator {
             ? i18n.text("preflight.remedy.generic")
             : localizedPreflightMessage(firstIssue);
     String fieldKey = firstIssue == null ? null : firstIssue.getTargetControlKey();
-    showError.accept(
-        new UserFacingError(
-            i18n.text("preflight.title"), message, localizedPreflightRemedy(firstIssue), fieldKey));
+    HelpContext context = helpContextFor(firstIssue, firstIssue == null ? report.getOverallStatus() : firstIssue.getStatus());
+    showError.accept(new UserFacingError(
+        i18n.text("preflight.title"), message, localizedPreflightRemedy(firstIssue),
+        fieldKey, null, context));
+    showHelpContext.accept(context);
     return false;
+  }
+
+  /** Shows the existing readiness snapshot and opens its most relevant check without executing it. */
+  public void showReadinessHelp() {
+    updateReadinessPanelForOperation(activeOperation.get(), encryptDirection);
+    PreflightReport report = currentReport.get();
+    if (report == null) return;
+    explicitReadinessHelp = true;
+    panelActivated = true;
+    HBox panel = readinessPanel.get();
+    if (panel != null) {
+      panel.setManaged(true);
+      panel.setVisible(true);
+    }
+    updateReadinessPanelUI();
+    PreflightCheck check = report.getFirstNonReadyCheck();
+    if (check == null && !report.getChecks().isEmpty()) check = report.getChecks().get(0);
+    showHelpContext.accept(helpContextFor(check, check == null ? report.getOverallStatus() : check.getStatus()));
   }
 
   public void updateReadinessPanel() {
@@ -159,10 +193,8 @@ public final class ReadinessPanelCoordinator {
       panel.setVisible(false);
       return;
     }
-    if (report.isExecutable()) {
-      panelActivated = false;
-    }
-    boolean visible = panelActivated && !report.isExecutable();
+    if (report.isExecutable() && !explicitReadinessHelp) panelActivated = false;
+    boolean visible = panelActivated;
     panel.setManaged(visible);
     panel.setVisible(visible);
     if (visible) {
@@ -192,14 +224,35 @@ public final class ReadinessPanelCoordinator {
                   + ": "
                   + localizedPreflightMessage(check));
       checkButton.getStyleClass().add("readiness-check-button");
+      checkButton.setAccessibleHelp(I18nService.getInstance().text("readiness.check.focus.help"));
       checkButton.setOnAction(
           event -> {
             if (check.getTargetControlKey() != null) {
               focusControl.accept(check.getTargetControlKey());
             }
           });
-      checksContainer.getChildren().add(checkButton);
+      Button helpButton = new Button(I18nService.getInstance().text("help.readiness.check"));
+      helpButton.getStyleClass().add("readiness-check-help-button");
+      helpButton.setAccessibleText(I18nService.getInstance().text("help.readiness.check"));
+      helpButton.setAccessibleHelp(I18nService.getInstance().text("help.readiness.check.help"));
+      helpButton.setOnAction(event -> showHelpContext.accept(helpContextFor(check, check.getStatus())));
+      HBox checkRow = new HBox(4, checkButton, helpButton);
+      checkRow.setFillHeight(true);
+      checksContainer.getChildren().add(checkRow);
     }
+  }
+
+  private HelpContext helpContextFor(PreflightCheck check, PreflightStatus status) {
+    java.util.EnumMap<HelpContext.Selection, HelpContext.PublicSelection> selections =
+        new java.util.EnumMap<>(HelpContext.Selection.class);
+    if (status != null) selections.put(HelpContext.Selection.PREFLIGHT_STATUS,
+        HelpContext.PublicSelection.of(status.name()));
+    String field = check == null ? "" : check.getTargetControlKey();
+    if (field != null && !field.matches("[A-Za-z][A-Za-z0-9_.-]{0,127}")) field = "";
+    if (check != null) selections.put(HelpContext.Selection.RULE_ID,
+        HelpContext.PublicSelection.of(check.getRuleId()));
+    return new HelpContext("aux_preflight_error", check == null ? "details" : "rule",
+        "", I18nService.getInstance().getLocale(), field == null ? "" : field, selections);
   }
 
   private PreflightReport evaluatePreflightForOperation(String operation, boolean isEncrypt) {

@@ -1,0 +1,5 @@
+# Análisis de archivo cifrado
+
+La pantalla actual expone la acción explícita **Analyze Encrypted File** desde el panel de cifrado de archivos. Pasa al analizador el origen, perfil, clave, nonce/IV, AAD y referencia al archivo de etiqueta separada de ese formulario; al ejecutarse, lee el origen y, si se usa, el archivo de etiqueta. La acción se ejecuta directamente con los valores predeterminados y no abre un diálogo de configuración. El análisis puede escribir informes junto al archivo de origen. La ayuda solo indica flags seguros de presencia: no copia ajustes al otro formulario de cifrado, no inicia el análisis ni lee ninguna de las rutas.
+
+Cada candidato es una hipótesis. Una salida legible, una sugerencia de formato o una recuperación CTR/CBC sin autenticación no demuestra el algoritmo ni el contenido originales. En un perfil AEAD, la recuperación autenticada requiere verificar correctamente la clave, nonce, etiqueta y AAD correspondientes. El panel actual no expone acciones separadas para promover un candidato o exportar el informe; consulta los resultados e informes generados por la acción explícita del analizador.

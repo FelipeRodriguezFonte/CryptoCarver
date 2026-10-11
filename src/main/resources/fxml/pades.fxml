@@ -4,8 +4,8 @@
 
 <VBox fx:id="padesRoot" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.PadesController" spacing="10" styleClass="content-container-vbox">
     <HBox alignment="CENTER_RIGHT">
-        <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
-        <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+        <Button id="help_handleClear" text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+        <Button id="help_handleReset" text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
     </HBox>
     <Accordion fx:id="padesAccordion" styleClass="module-accordion">
         <panes>
@@ -23,13 +23,13 @@
                         <Label text="Input PDF:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="padesInputPathField" promptText="PDF input path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="Choose PDF…" onAction="#handleChooseInput" styleClass="secondary-button"/>
+                            <Button id="help_handleChooseInput" text="Choose PDF…" onAction="#handleChooseInput" styleClass="secondary-button"/>
                         </HBox>
 
                         <Label text="Output PDF:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                         <HBox spacing="10" GridPane.rowIndex="1" GridPane.columnIndex="1">
                             <TextField fx:id="padesOutputPathField" promptText="New signed PDF output path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="Choose output…" onAction="#handleChooseOutput" styleClass="secondary-button"/>
+                            <Button id="help_handleChooseOutput" text="Choose output…" onAction="#handleChooseOutput" styleClass="secondary-button"/>
                         </HBox>
                     </GridPane>
 
@@ -43,13 +43,13 @@
 
                     <HBox fx:id="padesLocalKeyBox" spacing="10">
                         <TextField fx:id="padesPkcs12PathField" promptText="PKCS#12 (.p12 / .pfx) path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button text="Choose key…" onAction="#handleChoosePkcs12" styleClass="secondary-button"/>
+                        <Button id="help_handleChoosePkcs12" text="Choose key…" onAction="#handleChoosePkcs12" styleClass="secondary-button"/>
                         <PasswordField fx:id="padesPasswordField" promptText="PKCS#12 password" prefWidth="180" styleClass="form-field"/>
                     </HBox>
 
                     <HBox fx:id="padesPkcs11Box" spacing="10" visible="false" managed="false">
                         <ComboBox fx:id="padesPkcs11AliasCombo" promptText="Token signing alias" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button text="Load Token Keys" onAction="#handleLoadTokenKeys" styleClass="secondary-button"/>
+                        <Button id="help_handleLoadTokenKeys" text="Load Token Keys" onAction="#handleLoadTokenKeys" styleClass="secondary-button"/>
                     </HBox>
 
                     <Separator/>
@@ -86,22 +86,22 @@
                         <Label text="Truststore:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="padesTrustStorePathField" promptText="Truststore (.p12 / .pfx / .jks), optional" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="Choose..." onAction="#handleChooseTrustStore" styleClass="secondary-button"/>
+                            <Button id="help_handleChooseTrustStore" text="Choose..." onAction="#handleChooseTrustStore" styleClass="secondary-button"/>
                             <PasswordField fx:id="padesTrustStorePasswordField" promptText="Password" prefWidth="160" styleClass="form-field"/>
                         </HBox>
 
                         <Label text="CRL Evidence:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                         <HBox spacing="10" GridPane.rowIndex="1" GridPane.columnIndex="1">
                             <TextField fx:id="padesCrlEvidenceField" editable="false" promptText="No local CRL evidence selected" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="Choose..." onAction="#handleChooseCrlEvidence" styleClass="secondary-button"/>
+                            <Button id="help_handleChooseCrlEvidence" text="Choose..." onAction="#handleChooseCrlEvidence" styleClass="secondary-button"/>
                         </HBox>
                     </GridPane>
 
                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                        <Button text="Sign PDF" onAction="#handleSign" styleClass="action-button,primary-action"/>
-                        <Button text="Inspect Signatures" onAction="#handleInspect" styleClass="secondary-button"/>
-                        <Button text="Validate PDF" onAction="#handleValidate" styleClass="secondary-button"/>
-                        <Button text="Save DSS Reports…" onAction="#handleSaveValidationReports" styleClass="secondary-button"/>
+                        <Button id="help_handleSign" text="Sign PDF" onAction="#handleSign" styleClass="action-button,primary-action"/>
+                        <Button id="help_handleInspect" text="Inspect Signatures" onAction="#handleInspect" styleClass="secondary-button"/>
+                        <Button id="help_handleValidate" text="Validate PDF" onAction="#handleValidate" styleClass="secondary-button"/>
+                        <Button id="help_handleSaveValidationReports" text="Save DSS Reports…" onAction="#handleSaveValidationReports" styleClass="secondary-button"/>
                     </FlowPane>
 
                     <TextArea fx:id="padesResultArea" editable="false" prefRowCount="6" wrapText="true" styleClass="result-area,monospace-field" promptText="PAdES result will appear here..."/>

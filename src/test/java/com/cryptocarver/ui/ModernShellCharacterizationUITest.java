@@ -202,6 +202,8 @@ class ModernShellCharacterizationUITest {
         return List.of(
                 expectedShortcut("Shortcut+K", "Command Palette", "Open operation search and quick palette"),
                 expectedShortcut("F1", "Keyboard Shortcuts", "Show application keyboard shortcuts reference"),
+                expectedShortcut("Shift+F1", "Help for this operation",
+                        "Open help for the focused control, or for the operation when the control has none"),
                 expectedShortcut("Shortcut+S", "Save Session", "Save current workspace state to session file"),
                 expectedShortcut("Shortcut+O", "Import Key", "Import cryptographic key or certificate file"),
                 expectedShortcut("Shortcut+Q", "Exit Application", "Close CryptoCarver workbench"),

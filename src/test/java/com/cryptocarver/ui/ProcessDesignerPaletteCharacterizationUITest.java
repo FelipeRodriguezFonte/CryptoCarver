@@ -133,7 +133,7 @@ class ProcessDesignerPaletteCharacterizationUITest {
         String joined = String.join("\n", transcript);
         String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(joined.getBytes(StandardCharsets.UTF_8)));
-        assertEquals("e5919c4b74289c4943dec6ca56218164ddff40ffee4baeac5c957bfdaf4a6a76", digest, joined);
+        assertEquals("171a60bbc0fe56192fcf1876eb1d47fb68e93f9b3232fb63ace11be057e12b84", digest, joined);
     }
 
     private static List<String> cards(VBox palette) {

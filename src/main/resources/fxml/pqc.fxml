@@ -12,9 +12,9 @@
                     <ComboBox fx:id="pqcAlgorithmCombo" prefWidth="300" styleClass="form-field"/>
                     <Button fx:id="pqcGenerateKeyBtn" text="Generate Key Pair" onAction="#handleGeneratePQCKeyPair" styleClass="action-button,primary-action" maxWidth="180"/>
                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                        <Button text="Import PEM Keys..." onAction="#handleImportPQCKeys" styleClass="secondary-button"/>
-                        <Button text="Export Public..." onAction="#handleExportPQCPublicKey" styleClass="secondary-button"/>
-                        <Button text="Export Private..." onAction="#handleExportPQCPrivateKey" styleClass="secondary-button"/>
+                        <Button id="help_handleImportPQCKeys" text="Import PEM Keys..." onAction="#handleImportPQCKeys" styleClass="secondary-button"/>
+                        <Button id="help_handleExportPQCPublicKey" text="Export Public..." onAction="#handleExportPQCPublicKey" styleClass="secondary-button"/>
+                        <Button id="help_handleExportPQCPrivateKey" text="Export Private..." onAction="#handleExportPQCPrivateKey" styleClass="secondary-button"/>
                         <MenuButton fx:id="pqcKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulatePqcKeyShelf"/>
                     </FlowPane>
                     <Label fx:id="pqcKeyStatusLabel" text="Ready" styleClass="form-label"/>
@@ -40,7 +40,7 @@
                     <Label text="Data to Sign (UTF-8):" styleClass="form-label"/>
                     <TextArea fx:id="pqcSignInputArea" prefHeight="80" styleClass="monospace-field"/>
 
-                    <Button text="Sign Data" onAction="#handlePQCSign" styleClass="action-button,primary-action" maxWidth="180"/>
+                    <Button id="help_handlePQCSign" text="Sign Data" onAction="#handlePQCSign" styleClass="action-button,primary-action" maxWidth="180"/>
 
                     <Label text="Signature (Hex):" styleClass="form-label"/>
                     <TextArea fx:id="pqcSignOutputArea" prefHeight="80" editable="false" styleClass="result-area,monospace-field"/>
@@ -50,10 +50,10 @@
                     <Label text="Verify Signature (Paste Hex):" styleClass="form-label"/>
                     <TextField fx:id="pqcVerifySignatureField" styleClass="monospace-field,form-field"/>
                     <FlowPane styleClass="responsive-action-bar">
-                        <Button text="Paste Signature" onAction="#handlePastePqcVerifySignature" styleClass="secondary-button"/>
+                        <Button id="help_handlePastePqcVerifySignature" text="Paste Signature" onAction="#handlePastePqcVerifySignature" styleClass="secondary-button"/>
                         <MenuButton fx:id="pqcVerifyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulatePqcVerifyShelf"/>
                     </FlowPane>
-                    <Button text="Verify Signature" onAction="#handlePQCVerify" styleClass="action-button,primary-action" maxWidth="180"/>
+                    <Button id="help_handlePQCVerify" text="Verify Signature" onAction="#handlePQCVerify" styleClass="action-button,primary-action" maxWidth="180"/>
                 </VBox>
             </TitledPane>
 
@@ -68,7 +68,7 @@
                     </HBox>
 
                     <Label text="2. Bob uses Alice's public key to encapsulate a shared secret." styleClass="form-label,ux-inline-689e8d50bc"/>
-                    <Button text="Bob: Encapsulate Shared Secret" onAction="#handlePQCEncapsulate" styleClass="action-button,primary-action" maxWidth="240"/>
+                    <Button id="help_handlePQCEncapsulate" text="Bob: Encapsulate Shared Secret" onAction="#handlePQCEncapsulate" styleClass="action-button,primary-action" maxWidth="240"/>
                     <Label text="Encapsulation Ciphertext sent to Alice (Hex):" styleClass="form-label"/>
                     <TextArea fx:id="pqcKemCiphertextArea" prefHeight="50" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
                     <Label text="Bob's Shared Secret (Hex):" styleClass="form-label"/>
@@ -77,7 +77,7 @@
                     <Separator/>
 
                     <Label text="3. Alice decapsulates the ciphertext using her private key." styleClass="form-label,ux-inline-689e8d50bc"/>
-                    <Button text="Alice: Decapsulate Ciphertext" onAction="#handlePQCDecapsulate" styleClass="secondary-button" maxWidth="240"/>
+                    <Button id="help_handlePQCDecapsulate" text="Alice: Decapsulate Ciphertext" onAction="#handlePQCDecapsulate" styleClass="secondary-button" maxWidth="240"/>
                     <Label text="Alice's Shared Secret (Hex):" styleClass="form-label"/>
                     <TextField fx:id="pqcAliceSecretField" editable="false" styleClass="result-area,monospace-field,form-field"/>
 

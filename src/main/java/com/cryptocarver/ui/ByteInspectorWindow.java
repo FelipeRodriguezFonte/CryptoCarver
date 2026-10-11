@@ -15,12 +15,18 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import java.util.function.Consumer;
 
 /** Dedicated byte-analysis tool, intentionally separate from transformations. */
 public final class ByteInspectorWindow {
     private ByteInspectorWindow() { }
 
     public static void show(Stage owner) {
+        show(owner, null, null);
+    }
+
+    public static void show(Stage owner, com.cryptocarver.model.help.HelpContextState helpState,
+            Consumer<com.cryptocarver.model.help.HelpContext> helpOpener) {
         TextArea input = new TextArea();
         input.setPromptText("Bytes to inspect");
         input.setPrefRowCount(5);
@@ -100,6 +106,27 @@ public final class ByteInspectorWindow {
         stage.initOwner(owner);
         stage.setTitle("CryptoCarver — Byte Inspector");
         stage.setScene(new Scene(root, 780, 650));
+        if (helpState != null) {
+            ContextualHelpButtonBinder help = new ContextualHelpButtonBinder(helpState, context -> {
+                helpState.replace(context);
+                if (helpOpener != null) helpOpener.accept(context);
+            });
+            help.bind("aux_byte_inspector", "aux_byte_inspector", "hex_view", "representation", hex);
+            help.bind("aux_byte_inspector", "aux_byte_inspector", "charsets", "charset", charsets);
+            help.bind("aux_byte_inspector", "aux_byte_inspector", "statistics", "source", stats);
+            help.bind("aux_byte_inspector", "aux_byte_inspector", "controls", "source", controls);
+            help.bind("aux_byte_inspector", "aux_byte_inspector", "xor", "selection", xor);
+            help.bind("aux_byte_inspector", "aux_byte_inspector", "compare", "selection", compare);
+            help.bind("aux_byte_inspector", "aux_byte_inspector", "copy", "selection", copy);
+            help.bind("aux_byte_inspector", "aux_byte_inspector", "select_representation", "representation", format);
+            help.bind("aux_byte_inspector", "aux_byte_inspector", "open", "source", input);
+            help.bind("aux_byte_inspector", "aux_byte_inspector", "compare", "selection", secondInput);
+            help.bind("aux_byte_inspector", "aux_byte_inspector", "hex_view", "offset", viewOffset);
+            help.bind("aux_byte_inspector", "aux_byte_inspector", "hex_view", "length", viewLength);
+            help.setActiveRoute("aux_byte_inspector");
+            help.setEnabled(com.cryptocarver.model.AppSettings.getInstance().isContextualHelpEnabled());
+            stage.setOnHidden(event -> help.close());
+        }
         stage.show();
     }
 

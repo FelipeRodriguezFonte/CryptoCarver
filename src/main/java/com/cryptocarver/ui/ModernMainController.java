@@ -11,6 +11,8 @@ import javafx.scene.layout.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.nio.file.Files;
 import javafx.scene.text.TextFlow;
 import com.cryptocarver.model.DiagnosticsReportBuilder;
@@ -20,6 +22,8 @@ import org.slf4j.LoggerFactory;
 // Attempt to use DataConverter if available, otherwise will rely on local helpers or standard libs
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.model.LanguagePreference;
+import com.cryptocarver.model.help.HelpContext;
+import com.cryptocarver.model.help.HelpContextState;
 import com.cryptocarver.service.I18nService;
 
 /**
@@ -55,6 +59,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private ShellDialogCoordinator shellDialogCoordinator;
     private final ExpandedTableViewer expandedTableViewer = new ExpandedTableViewer();
     private OperationInspectorPresenter inspectorPresenter;
+    private ContextualHelpCoordinator contextualHelpCoordinator;
+    private ContextualHelpWindowCoordinator contextualHelpWindowCoordinator;
+    private final HelpContextState contextualHelpState = new HelpContextState();
+    private HelpContextAdapter cipherHelpContextAdapter;
+    private JoseJweHelpContextAdapter jweHelpContextAdapter;
+    private HelpContext savedJweHelpContext;
+    private final Map<String, HelpContext> savedCipherHelpContexts = new HashMap<>();
+    private PinBlockHelpContextAdapter pinBlockHelpContextAdapter;
+    private final Map<String, HelpContext> savedPinBlockHelpContexts = new HashMap<>();
     private final ResultAreaTracker resultAreaTracker = new ResultAreaTracker();
     private ResultViewerCoordinator resultViewerCoordinator;
     private ResultPublicationCoordinator resultPublicationCoordinator;
@@ -145,8 +158,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label errorBannerRemedy;
     @FXML private Button errorBannerGoToFieldBtn;
     @FXML private Button errorBannerCopyDetailsBtn;
+    @FXML private Button errorBannerHelpBtn;
     @FXML private Button errorBannerCloseBtn;
+    @FXML private MenuItem readinessHelpMenuItem;
     private InlineErrorPresenter inlineErrorPresenter;
+    private HelpContext bannerHelpContext;
     private StatusBarPresenter statusBarPresenter;
     @FXML
     private Label sessionTrailCountLabel;
@@ -181,6 +197,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Button resultExpandButton;
     @FXML private Button resultShelfButton;
     @FXML private Button resultCopyButton;
+    private ContextualHelpButtonBinder resultActionHelp;
+    private ModuleHelpInstaller moduleHelp;
     @FXML private Button resultSaveStepButton;
     @FXML private Button inspectorToggleButton;
 
@@ -215,6 +233,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private ComboBox<String> inputFormatCombo;
+    private boolean formatHelpShortcutsInstalled;
 
     @FXML
     private Label contractOperationLabel;
@@ -236,6 +255,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private boolean inspectorVisibleBeforeProcessDesigner;
     @FXML
     private ComboBox<String> outputFormatCombo;
+    private javafx.beans.value.ChangeListener<String> inputFormatHelpListener;
+    private javafx.beans.value.ChangeListener<String> outputFormatHelpListener;
+    private boolean formatHelpListenersInstalled;
 
     // Symmetric and asymmetric key controls are owned by keysContainerController.
     // Certificate, CRL and CMS controls are owned by certificatesContainerController.
@@ -362,6 +384,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label asyncProgressLabel;
     @FXML private Button asyncCancelBtn;
     @FXML private Label inspectorTitleLabel;
+    @FXML private TabPane inspectorTabs;
+    @FXML private Tab inspectorResultTab;
+    @FXML private Tab inspectorHelpTab;
+    @FXML private VBox contextualHelpContent;
+    @FXML private MenuItem operationHelpMenuItem;
+    @FXML private CheckMenuItem contextualHelpModeMenuItem;
+    @FXML private Button toolbarOperationHelpButton;
     @FXML private Label inspectorInputBytesTitle;
     @FXML private Label inspectorOutputBytesTitle;
     @FXML private Label inspectorAlgorithmTitle;
@@ -419,7 +448,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private Object resolveNavigationController(UiNavigationRegistry.Module module) {
         return switch(module) {
-            case JOSE -> joseController = ensureModule(jose, JOSEController.class);
+            case JOSE -> {
+                joseController = ensureModule(jose, JOSEController.class);
+                if (joseController != null && jweHelpContextAdapter == null) {
+                    jweHelpContextAdapter = joseController.createJweHelpContextAdapter(contextualHelpState);
+                    joseController.configureJweHelp(contextualHelpState, this::showJweHelpContext, this::rememberJweHelpContext);
+                    installResultActionHelp();
+                    joseController.setJweHelpActionTracker(this::trackJweHelpAction);
+                }
+                yield joseController;
+            }
             case COSE -> coseController = ensureModule(cose, COSEController.class);
             case WALLET -> walletController = ensureModule(wallet, WalletController.class);
             case EPOCH_CONVERTER, JSON_FORMATTER, SAVED_SESSIONS -> null;
@@ -427,8 +465,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             case CERTIFICATES -> certificatesContainerController = ensureModule(certificatesContainer, CertificatesController.class);
             case GENERIC -> {
                 genericContainerController = ensureModule(genericContainer, GenericController.class);
-                if (genericContainerController != null) genericContainerController.setActiveFormatContractOperation(
-                        com.cryptocarver.model.FormatProfilePolicy.operation(currentActiveOperation));
+                if (genericContainerController != null) {
+                    genericContainerController.setActiveFormatContractOperation(
+                            com.cryptocarver.model.FormatProfilePolicy.operation(currentActiveOperation));
+                    genericContainerController.configureContextualHelp(contextualHelpState, this::showGenericHelpContext);
+                    genericContainerController.setActiveContextualHelpOperation(genericHelpOperationId(currentActiveOperation));
+                }
                 yield genericContainerController;
             }
             case POST_QUANTUM -> postQuantumContainerController = ensureModule(postQuantumContainer, PostQuantumController.class);
@@ -436,11 +478,85 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             case WSS_SECURITY -> wssSecurityContainerController = ensureModule(wssSecurityContainer, WssSecurityController.class);
             case EMV -> emvController = emvContainerController = ensureModule(emvContainer, EMVController.class);
             case HISTORY -> historyViewController = ensureModule(historyView, HistoryController.class);
-            case CLIPBOARD_SHELF -> clipboardShelfController = ensureModule(clipboardShelf, ClipboardShelfController.class);
-            case CIPHER -> cipherController = cipherContainerController = ensureModule(cipherContainer, CipherController.class);
+            case CLIPBOARD_SHELF -> {
+                clipboardShelfController = ensureModule(clipboardShelf, ClipboardShelfController.class);
+                if (clipboardShelfController != null) {
+                    clipboardShelfController.configureContextualHelp(contextualHelpState, this::showGenericHelpContext);
+                    clipboardShelfController.setActiveContextualHelpOperation("op_gen_clipboard",
+                            AppSettings.getInstance().isContextualHelpEnabled());
+                }
+                yield clipboardShelfController;
+            }
+            case CIPHER -> {
+                cipherController = cipherContainerController = ensureModule(cipherContainer, CipherController.class);
+                if (cipherContainerController != null && cipherHelpContextAdapter == null) {
+                    cipherHelpContextAdapter = new HelpContextAdapter(contextualHelpState);
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.ALGORITHM,
+                            cipherContainerController.getSymmetricAlgorithmCombo());
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.MODE,
+                            cipherContainerController.getCipherModeCombo());
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.PADDING,
+                            cipherContainerController.getPaddingCombo());
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.KEY_SOURCE,
+                            cipherContainerController.getSymKeySourceCombo());
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.FPE_OPERATION, cipherContainerController.getFpeOperationCombo());
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.FPE_ALGORITHM, cipherContainerController.getFpeAlgorithmCombo());
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.FPE_PRESET,
+                            cipherContainerController.getFpeAlphabetPresetCombo(), value ->
+                                    "Custom".equals(value) ? "custom" : com.cryptocarver.model.help.OperationHelpRegistry.slug(value));
+                    cipherHelpContextAdapter.bindDerivedSize(HelpContext.Selection.FPE_RADIX,
+                            cipherContainerController.getFpeAlphabetField(), raw -> {
+                                String preset = cipherContainerController.getFpeAlphabetPresetCombo().getValue();
+                                if ("Decimal (0-9)".equals(preset)) return 10;
+                                if ("Alphanumeric".equals(preset)) return 62;
+                                if ("ASCII printable".equals(preset)) return 95;
+                                if (!"Custom".equals(preset)) return -1;
+                                int[] symbols = raw.codePoints().toArray();
+                                if (symbols.length > 256 || java.util.Arrays.stream(symbols).anyMatch(c -> c > 0xff)
+                                        || java.util.Arrays.stream(symbols).distinct().count() != symbols.length) return -1;
+                                return symbols.length;
+                            });
+                    cipherHelpContextAdapter.bindDerivedSize(HelpContext.Selection.FPE_KEY_BYTES,
+                            cipherContainerController.getFpeKeyField(), ModernMainController::hexByteLength);
+                    cipherHelpContextAdapter.bindDerivedSize(HelpContext.Selection.FPE_TWEAK_BYTES,
+                            cipherContainerController.getFpeTweakField(), ModernMainController::hexByteLength);
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.FILE_PROFILE, cipherContainerController.getFileCipherAlgorithmCombo());
+                    cipherHelpContextAdapter.bindFlag(HelpContext.Selection.FILE_LINES, cipherContainerController.getFileCipherLinesCheck());
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.FILE_LINE_ENCODING, cipherContainerController.getFileCipherLineEncodingCombo());
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.FILE_CHARSET, cipherContainerController.getFileCipherLineCharsetCombo());
+                    cipherHelpContextAdapter.bindFlag(HelpContext.Selection.FILE_COMPACT_CBC, cipherContainerController.getFileCipherCompactCbcCheck());
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.RSA_PADDING, cipherContainerController.getRsaPaddingCombo());
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.RSA_INPUT_FORMAT, cipherContainerController.getAsymmetricInputFormatCombo());
+                    cipherHelpContextAdapter.bindSelection(HelpContext.Selection.RSA_OUTPUT_FORMAT, cipherContainerController.getAsymmetricOutputFormatCombo());
+                    cipherHelpContextAdapter.bindPresence(HelpContext.Selection.RSA_PUBLIC_KEY_PRESENT, cipherContainerController.getPublicKeyArea());
+                    cipherHelpContextAdapter.bindPresence(HelpContext.Selection.RSA_PRIVATE_KEY_PRESENT, cipherContainerController.getPrivateKeyArea());
+                    cipherHelpContextAdapter.bindPresence(HelpContext.Selection.ANALYSIS_HAS_KEY, cipherContainerController.getFileCipherKeyField());
+                    cipherHelpContextAdapter.bindPresence(HelpContext.Selection.ANALYSIS_HAS_IV, cipherContainerController.getFileCipherNonceField());
+                    cipherHelpContextAdapter.bindPresence(HelpContext.Selection.ANALYSIS_HAS_TAG, cipherContainerController.getFileCipherTagField());
+                    cipherHelpContextAdapter.bindPresence(HelpContext.Selection.ANALYSIS_HAS_AAD, cipherContainerController.getFileCipherAadField());
+                }
+                if (cipherContainerController != null) {
+                    cipherContainerController.configureContextualHelp(contextualHelpState,
+                            this::showCipherModuleHelpContext, this::updateCipherModuleHelpContext);
+                    cipherContainerController.setContextualHelpRouteActive(
+                            isSymmetricCipherRouteActive());
+                    cipherContainerController.setContextualHelpOperationActive(cipherOperationId(currentActiveOperation));
+                    cipherContainerController.setContextualHelpEnabled(AppSettings.getInstance().isContextualHelpEnabled()
+                            && !cipherOperationId(currentActiveOperation).isBlank());
+                }
+                yield cipherContainerController;
+            }
             case AUTHENTICATION -> authenticationContainerController = ensureModule(authenticationContainer, AuthenticationController.class);
             case PAYMENTS -> paymentsController = paymentsContainerController = ensureModule(paymentsContainer, PaymentsController.class);
-            case PROCESS_DESIGNER -> processDesignerContainerController = ensureModule(processDesignerContainer, ProcessDesignerController.class);
+            case PROCESS_DESIGNER -> {
+                processDesignerContainerController = ensureModule(processDesignerContainer, ProcessDesignerController.class);
+                if (processDesignerContainerController != null) {
+                    processDesignerContainerController.configureContextualHelp(contextualHelpState, this::showGenericHelpContext);
+                    processDesignerContainerController.setActiveContextualHelpOperation("op_gen_process_designer",
+                            AppSettings.getInstance().isContextualHelpEnabled());
+                }
+                yield processDesignerContainerController;
+            }
         };
     }
 
@@ -540,8 +656,20 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public void shutdown() {
         if (isShutdown.compareAndSet(false, true)) {
+            bannerHelpContext = null;
+            removeGlobalFormatHelpListeners();
             detachStartupListeners();
             detachWindowLifecycleListeners();
+            if (contextualHelpWindowCoordinator != null) contextualHelpWindowCoordinator.close();
+            if (contextualHelpCoordinator != null) contextualHelpCoordinator.close();
+            if (cipherHelpContextAdapter != null) cipherHelpContextAdapter.close();
+            if (jweHelpContextAdapter != null) jweHelpContextAdapter.close();
+            if (pinBlockHelpContextAdapter != null) pinBlockHelpContextAdapter.close();
+            if (paymentsController != null) paymentsController.closePinBlockHelpBindings();
+            if (joseController != null) joseController.closeJweHelpBindings();
+            if (resultActionHelp != null) { resultActionHelp.close(); resultActionHelp = null; }
+            if (moduleHelp != null) { moduleHelp.close(); moduleHelp = null; }
+            if (cipherContainerController != null) cipherContainerController.closeContextualHelpBindings();
             expandedTextViewer.dispose();
             sessionStepViewer.dispose();
             expandedTableViewer.dispose();
@@ -610,7 +738,26 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     void startupPhaseCompleted(String phase) {}
 
     @FXML
-    public void initialize() { startupCoordinator.initialize(startupView()); }
+    public void initialize() {
+        startupCoordinator.initialize(startupView());
+        installGlobalFormatHelpListeners();
+    }
+
+    private void installGlobalFormatHelpListeners() {
+        if (formatHelpListenersInstalled) return;
+        formatHelpListenersInstalled = true;
+        inputFormatHelpListener = (observable, before, after) -> refreshOpenFormatHelp("input");
+        outputFormatHelpListener = (observable, before, after) -> refreshOpenFormatHelp("output");
+        if (inputFormatCombo != null) inputFormatCombo.valueProperty().addListener(inputFormatHelpListener);
+        if (outputFormatCombo != null) outputFormatCombo.valueProperty().addListener(outputFormatHelpListener);
+    }
+
+    private void removeGlobalFormatHelpListeners() {
+        if (!formatHelpListenersInstalled) return;
+        if (inputFormatCombo != null) inputFormatCombo.valueProperty().removeListener(inputFormatHelpListener);
+        if (outputFormatCombo != null) outputFormatCombo.valueProperty().removeListener(outputFormatHelpListener);
+        formatHelpListenersInstalled = false;
+    }
 
     private ShellStartupCoordinator.View startupView() {
         var chrome = new ShellStartupCoordinator.ChromeView(inputFormatCombo, outputFormatCombo, inputFormatLabel,
@@ -638,7 +785,73 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     /** Applies shell strings without changing operation names, routes or technical values. */
     public void applyLocalization() {
         shellLocalizationCoordinator.applyLocalization(localizationView(), localizationState);
+        if (operationHelpMenuItem != null) operationHelpMenuItem.setText(i18n.text("help.operation.open"));
+        if (contextualHelpModeMenuItem != null) {
+            contextualHelpModeMenuItem.setText(i18n.text("help.mode"));
+            contextualHelpModeMenuItem.setSelected(AppSettings.getInstance().isContextualHelpEnabled());
+        }
+        if (toolbarOperationHelpButton != null) {
+            // Compact glyph in the content header: the caption lives in the tooltip and the toolbar stays as narrow as before.
+            toolbarOperationHelpButton.setAccessibleText(i18n.text("help.operation.open"));
+            toolbarOperationHelpButton.setAccessibleHelp(i18n.text("help.control.shortcut"));
+            toolbarOperationHelpButton.setTooltip(new Tooltip(i18n.text("help.operation.open") + "\n" + i18n.text("help.control.shortcut")));
+        }
+        if (inspectorResultTab != null) inspectorResultTab.setText(i18n.text("help.tab.result"));
+        if (inspectorHelpTab != null) inspectorHelpTab.setText(i18n.text("help.tab.help"));
+        if (errorBannerHelpBtn != null) {
+            errorBannerHelpBtn.setText(i18n.text("help.aux.preflight.open"));
+            errorBannerHelpBtn.setAccessibleText(i18n.text("help.aux.preflight.open"));
+            errorBannerHelpBtn.setAccessibleHelp(i18n.text("help.aux.preflight.open.help"));
+        }
+        if (readinessHelpMenuItem != null) readinessHelpMenuItem.setText(i18n.text("help.readiness.open"));
+        if (joseController != null) joseController.refreshJweContextHelpLocalization();
+        if (paymentsController != null) paymentsController.refreshPinBlockContextHelpLocalization();
+        if (resultActionHelp != null) resultActionHelp.refreshLocalization();
+        if (moduleHelp != null) moduleHelp.refreshLocalization();
+        localizeFormatHelpButtons();
+        if (cipherContainerController != null) cipherContainerController.refreshHelpButtonLocalization();
+        if (readinessHelpBtn != null) {
+            readinessHelpBtn.setText(i18n.text("help.readiness.checks"));
+            readinessHelpBtn.setAccessibleText(i18n.text("help.readiness.checks"));
+            readinessHelpBtn.setAccessibleHelp(i18n.text("help.readiness.checks.help"));
+        }
+        if (bannerHelpContext != null) bannerHelpContext = bannerHelpContext.withLocale(i18n.getLocale());
+        contextualHelpState.setLocale(i18n.getLocale());
+        if (contextualHelpCoordinator != null) contextualHelpCoordinator.refresh();
+        if (contextualHelpWindowCoordinator != null) contextualHelpWindowCoordinator.refreshLocalization();
     }
+
+    private void localizeFormatHelpButtons() {
+        installFormatHelpShortcuts();
+        if (contractOperationLabel != null) {
+            String title = i18n.text("help.aux.global_formats.action.contract.title");
+            contractOperationLabel.setAccessibleHelp(title + ". " + i18n.text("help.control.shortcut"));
+            contractOperationLabel.setTooltip(new Tooltip(title));
+        }
+    }
+
+    /** The format bar has no help buttons: the selectors and the contract label answer Shift+F1 themselves. */
+    private void installFormatHelpShortcuts() {
+        if (formatHelpShortcutsInstalled || inputFormatCombo == null || outputFormatCombo == null) return;
+        formatHelpShortcutsInstalled = true;
+        onShiftF1(inputFormatCombo, this::handleInputFormatHelp);
+        onShiftF1(outputFormatCombo, this::handleOutputFormatHelp);
+        if (contractOperationLabel != null) {
+            contractOperationLabel.setFocusTraversable(true);
+            onShiftF1(contractOperationLabel, this::handleFormatContractHelp);
+            contractOperationLabel.setOnMouseClicked(event -> { contractOperationLabel.requestFocus(); handleFormatContractHelp(); });
+        }
+    }
+
+    private static void onShiftF1(javafx.scene.Node control, Runnable help) {
+        control.addEventHandler(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() != javafx.scene.input.KeyCode.F1 || !event.isShiftDown() || event.isControlDown()
+                    || event.isAltDown() || event.isMetaDown()) return;
+            event.consume();
+            help.run();
+        });
+    }
+
 
     private ShellLocalizationCoordinator.View localizationView() { return ShellLocalizationCoordinator.createView(localizationControls(), COMMAND_PALETTE_SHORTCUT, FAVORITE_SHORTCUT); }
 
@@ -781,6 +994,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (paymentsContainerController != null) {
             paymentsController = paymentsContainerController;
             paymentsController.init(this);
+            if (pinBlockHelpContextAdapter == null) {
+                pinBlockHelpContextAdapter = new PinBlockHelpContextAdapter(contextualHelpState,
+                        paymentsController.getPinBlockFormatCombo(), paymentsController.getPinBlockFormatDecodeCombo(),
+                        paymentsController.getPinBlockPaddingCombo(), paymentsController.getEncryptedPinBlockFormatCombo(),
+                        paymentsController.getEncryptPinKeyField(), paymentsController.getDecryptPinKeyField());
+                paymentsController.configurePinBlockHelp(contextualHelpState, this::showPinBlockHelpContext,
+                        this::savePinBlockHelpContext);
+                paymentsController.setPinBlockHelpActionTracker(this::trackPinBlockHelpAction);
+            }
         }
     }
 
@@ -921,6 +1143,42 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (itemName.startsWith("Hashing: ")) {
             itemName = "Hashing";
         }
+        HelpContext currentHelp = contextualHelpState.current();
+        boolean keepFormatHelp = "aux_global_formats".equals(currentHelp.operationId())
+                && java.util.Set.of("input", "output", "contract").contains(currentHelp.actionId());
+        if (keepFormatHelp) {
+            showGlobalFormatHelp(currentHelp.actionId(), currentHelp.fieldId());
+        } else {
+            contextualHelpCoordinator().showOperation(itemName);
+            if (contextualHelpWindowCoordinator != null) contextualHelpWindowCoordinator.updateOperation(itemName);
+            if (isJweRoute(itemName) && savedJweHelpContext != null) {
+                contextualHelpState.setAction(savedJweHelpContext.actionId());
+                contextualHelpState.setField(savedJweHelpContext.fieldId());
+            }
+            String cipherId = cipherOperationId(itemName);
+            HelpContext savedCipher = savedCipherHelpContexts.get(cipherId);
+            if (!cipherId.isBlank() && savedCipher != null) {
+                if ("op_sym_file".equals(cipherId)) {
+                    savedCipher = reconcileFileCipherHelpContext(savedCipher, false);
+                    savedCipherHelpContexts.put(cipherId, savedCipher);
+                    contextualHelpState.setSelection(HelpContext.Selection.FILE_LINES,
+                            HelpContext.PublicSelection.flag(cipherContainerController != null
+                                    && cipherContainerController.getFileCipherLinesCheck().isSelected()));
+                }
+                contextualHelpState.setAction(savedCipher.actionId());
+                contextualHelpState.setField(savedCipher.fieldId());
+            }
+            String pinOperationId = pinHelpOperationId(itemName);
+            if (!pinOperationId.isBlank()) restorePinBlockHelpContext(pinOperationId, currentHelp);
+        }
+        if (AppSettings.getInstance().isContextualHelpEnabled() && inspectorTabs != null) {
+            inspectorTabs.getSelectionModel().select(inspectorHelpTab);
+            if (mainPane != null && mainPane.getWidth() >= COMPACT_LAYOUT_WIDTH && inspectorPanel != null) {
+                inspectorPanel.setVisible(true);
+                inspectorPanel.setManaged(true);
+                inspectorHiddenForCompactLayout = false;
+            }
+        }
 
         // Update header
         updateContentHeader(itemName);
@@ -931,6 +1189,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (!activateNavigationRoute(itemName)) {
             showPlaceholderContent(itemName);
         }
+        updateHelpContextAdapters(itemName);
+        installModuleHelp(itemName);
 
         updateStatus("Loaded: " + itemName);
         // An untouched form is naturally incomplete. Do not make that the
@@ -1069,6 +1329,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             boolean isInvalidResult = visibleDetails.stream().anyMatch(d ->
                     "Result".equalsIgnoreCase(d.name()) && d.value() != null && d.value().toUpperCase().contains("INVALID"));
             if (!isInvalidResult) {
+                bannerHelpContext = null;
                 inlineErrorPresenter.hideBanner();
             }
         }
@@ -1081,6 +1342,460 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
         return inspectorPresenter;
     }
+
+    private ContextualHelpCoordinator contextualHelpCoordinator() {
+        if (contextualHelpCoordinator == null) {
+            contextualHelpCoordinator = new ContextualHelpCoordinator(contextualHelpContent, i18n, contextualHelpState);
+            contextualHelpCoordinator.setActionSelectionListener(this::handleContextualHelpAction);
+        }
+        return contextualHelpCoordinator;
+    }
+
+    private void updateHelpContextAdapters(String route) {
+        if (genericContainerController != null) {
+            genericContainerController.setActiveContextualHelpOperation(genericHelpOperationId(route));
+        }
+        if (clipboardShelfController != null) clipboardShelfController.setActiveContextualHelpOperation(
+                "Clipboard Shelf".equals(route) ? "op_gen_clipboard" : "",
+                "Clipboard Shelf".equals(route) && AppSettings.getInstance().isContextualHelpEnabled());
+        if (processDesignerContainerController != null) processDesignerContainerController.setActiveContextualHelpOperation(
+                "Process Designer".equals(route) ? "op_gen_process_designer" : "",
+                "Process Designer".equals(route) && AppSettings.getInstance().isContextualHelpEnabled());
+        String cipherOperation = cipherOperationId(route);
+        boolean cipherRoute = !cipherOperation.isBlank();
+        boolean symmetricCipher = "op_sym_ciphers".equals(cipherOperation);
+        if (cipherHelpContextAdapter != null) {
+            if (cipherRoute) {
+                cipherHelpContextAdapter.activate();
+                cipherHelpContextAdapter.refreshCurrentSelections();
+            }
+            else cipherHelpContextAdapter.deactivate();
+        }
+        if (cipherContainerController != null) {
+            cipherContainerController.setContextualHelpOperationActive(cipherOperation);
+            cipherContainerController.setContextualHelpEnabled(cipherRoute && AppSettings.getInstance().isContextualHelpEnabled());
+            if ("op_asym_ciphers".equals(cipherOperation))
+                cipherContainerController.refreshRsaHelpContextForCurrentRoute();
+        }
+        if (cipherContainerController != null) cipherContainerController.setContextualHelpRouteActive(symmetricCipher);
+        boolean jwe = isJweRoute(route);
+        if (jweHelpContextAdapter != null) {
+            if (jwe) jweHelpContextAdapter.activate();
+            else jweHelpContextAdapter.deactivate();
+        }
+        boolean jweHelpEnabled = jwe && AppSettings.getInstance().isContextualHelpEnabled();
+        if (joseController != null) joseController.setJweContextHelp(jwe, jweHelpEnabled);
+        if (resultActionHelp != null) {
+            resultActionHelp.setActiveRoute(jwe ? "op_jose_jwe" : "");
+            resultActionHelp.setEnabled(jweHelpEnabled);
+        }
+        boolean pinRoute = isPinBlockRoute(route);
+        if (pinBlockHelpContextAdapter != null) {
+            if (pinRoute) pinBlockHelpContextAdapter.activate(isClearPinRoute(route) ? "op_pay_clear_pin" : "op_pay_enc_pin");
+            else pinBlockHelpContextAdapter.deactivate();
+        }
+        if (paymentsController != null) paymentsController.setPinBlockContextHelpActive(
+                pinRoute ? (isClearPinRoute(route) ? "op_pay_clear_pin" : "op_pay_enc_pin") : "",
+                pinRoute && AppSettings.getInstance().isContextualHelpEnabled());
+    }
+
+    private String genericHelpOperationId(String route) {
+        if ("UUID Generator".equals(route)) return "aux_uuid";
+        return com.cryptocarver.model.OperationRegistry.getInstance().getByNavigationPath(route)
+                .map(operation -> com.cryptocarver.model.help.B05HelpCatalog.supports(operation.getId())
+                        ? operation.getId() : "")
+                .orElse("");
+    }
+
+    private void showGenericHelpContext(HelpContext context) {
+        String activeGenericRoute = genericContainerController == null
+                ? genericHelpOperationId(currentActiveOperation)
+                : genericContainerController.activeContextualHelpRoute();
+        if (context == null || !context.operationId().equals(activeGenericRoute)) return;
+        showCurrentHelpContext();
+    }
+
+    private String cipherOperationId(String route) {
+        return com.cryptocarver.model.OperationRegistry.getInstance().getByNavigationPath(route)
+                .map(operation -> switch (operation.getId()) {
+                    case "op_sym_ciphers", "op_fpe", "op_sym_file", "op_openpgp", "op_asym_ciphers" -> operation.getId();
+                    default -> "";
+                }).orElse("");
+    }
+
+    private static int hexByteLength(String raw) {
+        String value = raw == null ? "" : raw.replaceAll("\\s+", "");
+        return value.isEmpty() || (value.length() & 1) != 0 || !value.matches("[0-9A-Fa-f]+")
+                ? -1 : value.length() / 2;
+    }
+
+    private boolean isJweRoute(String route) {
+        return com.cryptocarver.model.OperationRegistry.getInstance().getByNavigationPath(route)
+                .map(operation -> "op_jose_jwe".equals(operation.getId())).orElse(false);
+    }
+
+    private boolean isPinBlockRoute(String route) {
+        return com.cryptocarver.model.OperationRegistry.getInstance().getByNavigationPath(route)
+                .map(operation -> "op_pay_clear_pin".equals(operation.getId()) || "op_pay_enc_pin".equals(operation.getId()))
+                .orElse(false);
+    }
+
+    private void showPinBlockHelpContext(HelpContext context) {
+        if (context == null || !isPinBlockRoute(currentActiveOperation)
+                || !pinHelpOperationId(currentActiveOperation).equals(context.operationId())) return;
+        savePinBlockHelpContext(contextualHelpState.current());
+        showCurrentHelpContext();
+    }
+
+    private void trackPinBlockHelpAction(String actionId) {
+        if (!AppSettings.getInstance().isContextualHelpEnabled() || !isPinBlockRoute(currentActiveOperation)) return;
+        String operation = isClearPinRoute(currentActiveOperation) ? "op_pay_clear_pin" : "op_pay_enc_pin";
+        contextualHelpState.setOperation(operation);
+        contextualHelpState.setAction(actionId == null ? "" : actionId);
+        contextualHelpState.setField("");
+        savePinBlockHelpContext(contextualHelpState.current());
+    }
+
+    private boolean isClearPinRoute(String route) {
+        return com.cryptocarver.model.OperationRegistry.getInstance().getByNavigationPath(route)
+                .map(operation -> "op_pay_clear_pin".equals(operation.getId())).orElse(false);
+    }
+
+    private String pinHelpOperationId(String route) {
+        if (isClearPinRoute(route)) return "op_pay_clear_pin";
+        if (com.cryptocarver.model.OperationRegistry.getInstance().getByNavigationPath(route)
+                .map(operation -> "op_pay_enc_pin".equals(operation.getId())).orElse(false)) return "op_pay_enc_pin";
+        return "";
+    }
+
+    private boolean isValidPinBlockHelpContext(HelpContext candidate, String operationId) {
+        if (candidate == null || !operationId.equals(candidate.operationId())) return false;
+        if (candidate.actionId().isBlank()) return candidate.fieldId().isBlank();
+        var action = com.cryptocarver.model.help.OperationHelpRegistry.getInstance().find(operationId)
+                .flatMap(definition -> definition.actions().stream()
+                        .filter(item -> item.id().equals(candidate.actionId())).findFirst()).orElse(null);
+        if (action == null) return false;
+        if (candidate.fieldId().isBlank()) return true;
+        return action.fields().stream().anyMatch(field -> field.id().equals(candidate.fieldId()))
+                || action.options().stream().anyMatch(option -> option.fieldId().equals(candidate.fieldId()));
+    }
+
+    private void savePinBlockHelpContext(HelpContext candidate) {
+        if (candidate == null || !isPinBlockRoute(currentActiveOperation)) return;
+        String operationId = pinHelpOperationId(currentActiveOperation);
+        if (isValidPinBlockHelpContext(candidate, operationId)) savedPinBlockHelpContexts.put(operationId, candidate);
+    }
+
+    /** Restores only action/field memory for this route; live selector state comes from its active adapter. */
+    private void restorePinBlockHelpContext(String operationId, HelpContext preferred) {
+        HelpContext selected = isValidPinBlockHelpContext(preferred, operationId) ? preferred
+                : savedPinBlockHelpContexts.get(operationId);
+        if (!isValidPinBlockHelpContext(selected, operationId)) selected = null;
+        contextualHelpState.setOperation(operationId);
+        contextualHelpState.setAction(selected == null ? "" : selected.actionId());
+        contextualHelpState.setField(selected == null ? "" : selected.fieldId());
+        if (selected != null) savedPinBlockHelpContexts.put(operationId, selected);
+    }
+
+    private void showJweHelpContext(HelpContext context) {
+        if (context == null || !isJweRoute(currentActiveOperation)) return;
+        savedJweHelpContext = contextualHelpState.current();
+        showCurrentHelpContext();
+    }
+
+    private void rememberJweHelpContext(HelpContext context) {
+        if (context != null && isJweRoute(currentActiveOperation)) savedJweHelpContext = context;
+    }
+
+    private void trackJweHelpAction(String actionId) {
+        if (!AppSettings.getInstance().isContextualHelpEnabled() || !isJweRoute(currentActiveOperation)) return;
+        contextualHelpState.setOperation("op_jose_jwe");
+        contextualHelpState.setAction(actionId == null ? "" : actionId);
+        contextualHelpState.setField("");
+        savedJweHelpContext = contextualHelpState.current();
+    }
+
+    private void showCurrentHelpContext() {
+        if (mainPane != null && mainPane.getWidth() > 0 && mainPane.getWidth() < COMPACT_LAYOUT_WIDTH) {
+            if (contextualHelpWindowCoordinator == null) {
+                contextualHelpWindowCoordinator = new ContextualHelpWindowCoordinator(i18n, contextualHelpState);
+                contextualHelpWindowCoordinator.setActionSelectionListener(this::handleContextualHelpAction);
+            }
+            contextualHelpWindowCoordinator.showCurrent(mainPane.getScene() == null ? null : mainPane.getScene().getWindow());
+        } else if (inspectorTabs != null) {
+            inspectorPanel.setVisible(true); inspectorPanel.setManaged(true); inspectorHiddenForCompactLayout = false;
+            inspectorTabs.getSelectionModel().select(inspectorHelpTab);
+            contextualHelpCoordinator().refresh();
+        }
+    }
+
+    private boolean isSymmetricCipherRouteActive() {
+        return com.cryptocarver.model.OperationRegistry.getInstance()
+                .getByNavigationPath(currentActiveOperation)
+                .map(operation -> "op_sym_ciphers".equals(operation.getId())).orElse(false);
+    }
+
+    private void showSymmetricHelpContext(HelpContext help) {
+        if (mainPane != null && mainPane.getWidth() > 0 && mainPane.getWidth() < COMPACT_LAYOUT_WIDTH) {
+            if (contextualHelpWindowCoordinator == null) {
+                contextualHelpWindowCoordinator = new ContextualHelpWindowCoordinator(i18n, contextualHelpState);
+                contextualHelpWindowCoordinator.setActionSelectionListener(this::handleContextualHelpAction);
+            }
+            contextualHelpWindowCoordinator.showCurrent(mainPane.getScene() == null ? null : mainPane.getScene().getWindow());
+        } else if (inspectorTabs != null) {
+            inspectorPanel.setVisible(true); inspectorPanel.setManaged(true); inspectorHiddenForCompactLayout = false;
+            inspectorTabs.getSelectionModel().select(inspectorHelpTab);
+            contextualHelpCoordinator().refresh();
+        }
+    }
+
+    private void showCipherModuleHelpContext(HelpContext help) {
+        if (help == null) return;
+        String routeOperation = cipherOperationId(currentActiveOperation);
+        boolean direct = help.operationId().equals(routeOperation);
+        boolean analyzer = "aux_encrypted_file_analysis".equals(help.operationId())
+                && "op_sym_file".equals(routeOperation);
+        if (!direct && !analyzer) return;
+        if ("op_sym_file".equals(help.operationId()))
+            help = reconcileFileCipherHelpContext(help, true);
+        if ("op_asym_ciphers".equals(help.operationId()) && cipherContainerController != null) {
+            int bits = cipherContainerController.getRsaPublicModulusBitsForHelp();
+            help = help.withSelection(HelpContext.Selection.RSA_MODULUS_BITS,
+                    bits > 0 ? HelpContext.PublicSelection.byteSize(bits) : null);
+        }
+        contextualHelpState.replace(help);
+        if (!analyzer) savedCipherHelpContexts.put(help.operationId(), help);
+        showCurrentHelpContext();
+    }
+
+    private HelpContext reconcileFileCipherHelpContext(HelpContext help, boolean preserveSavedDirectionFromAuxiliary) {
+        if (help == null || !"op_sym_file".equals(help.operationId()) || cipherContainerController == null) return help;
+        String action = help.actionId();
+        boolean encrypt = action.startsWith("encrypt_");
+        boolean decrypt = action.startsWith("decrypt_");
+        if (!encrypt && !decrypt) return help;
+        String direction = decrypt ? "decrypt" : "encrypt";
+        boolean fieldQuery = java.util.Set.of("key", "iv_nonce", "aad", "result").contains(help.fieldId());
+        if (fieldQuery && preserveSavedDirectionFromAuxiliary && encrypt) {
+            HelpContext saved = savedCipherHelpContexts.get("op_sym_file");
+            if (saved != null && saved.actionId().startsWith("decrypt_")) direction = "decrypt";
+            else if (saved != null && saved.actionId().startsWith("encrypt_")) direction = "encrypt";
+        }
+        boolean lines = cipherContainerController.getFileCipherLinesCheck().isSelected();
+        return help.withAction(direction + (lines ? "_lines" : "_file"))
+                .withSelection(HelpContext.Selection.FILE_LINES, HelpContext.PublicSelection.flag(lines));
+    }
+
+    /** Updates an already-selected module context without opening a hidden help surface. */
+    private void updateCipherModuleHelpContext(HelpContext help) {
+        if (help == null || !AppSettings.getInstance().isContextualHelpEnabled()) return;
+        if ("op_sym_file".equals(help.operationId())) help = reconcileFileCipherHelpContext(help, true);
+        contextualHelpState.replace(help);
+        if (help.operationId().startsWith("op_")) savedCipherHelpContexts.put(help.operationId(), help);
+    }
+
+    @FXML private void handleInputFormatHelp() { showGlobalFormatHelp("input", "inputFormatCombo"); }
+    @FXML private void handleOutputFormatHelp() { showGlobalFormatHelp("output", "outputFormatCombo"); }
+    @FXML private void handleFormatContractHelp() { showGlobalFormatHelp("contract", "contractOperationLabel"); }
+
+    private void showGlobalFormatHelp(String action, String fieldId) {
+        String profileOperation = com.cryptocarver.model.FormatProfilePolicy.operation(currentActiveOperation);
+        String operationId = com.cryptocarver.model.OperationRegistry.getInstance()
+                .getByNavigationPath(profileOperation)
+                .map(com.cryptocarver.model.OperationDescriptor::getId).orElse("format_fallback");
+        java.util.EnumMap<HelpContext.Selection, HelpContext.PublicSelection> selections =
+                new java.util.EnumMap<>(HelpContext.Selection.class);
+        selections.put(HelpContext.Selection.PROFILE, HelpContext.PublicSelection.of(operationId));
+        String selected = "input".equals(action)
+                ? inputFormatCombo == null ? null : inputFormatCombo.getValue()
+                : "output".equals(action) ? outputFormatCombo == null ? null : outputFormatCombo.getValue() : null;
+        if (isAllowedFormat(operationId, action, selected)) {
+            selections.put(HelpContext.Selection.FORMAT,
+                    HelpContext.PublicSelection.of(com.cryptocarver.model.help.OperationHelpRegistry.slug(selected)));
+        }
+        HelpContext help = new HelpContext("aux_global_formats", action, "", i18n.getLocale(), fieldId, selections);
+        showGlobalFormatHelpContext(help);
+    }
+
+    private boolean isAllowedFormat(String operationId, String action, String format) {
+        if (format == null) return false;
+        var descriptor = com.cryptocarver.model.OperationRegistry.getInstance().getById(operationId).orElse(null);
+        String route = descriptor == null ? "Fallback" : descriptor.getNavigationPath();
+        var profile = com.cryptocarver.model.OperationFormatRegistry.getInstance().getProfile(route);
+        return "input".equals(action) ? profile.allowedInputFormats().contains(format)
+                : profile.allowedOutputFormats().contains(format);
+    }
+
+    private void refreshOpenFormatHelp(String direction) {
+        HelpContext current = contextualHelpState.current();
+        if (!"aux_global_formats".equals(current.operationId()) || !direction.equals(current.actionId())) return;
+        showGlobalFormatHelp(direction, "input".equals(direction) ? "inputFormatCombo" : "outputFormatCombo");
+    }
+
+    private void showGlobalFormatHelpContext(HelpContext help) {
+        if (mainPane != null && mainPane.getWidth() > 0 && mainPane.getWidth() < COMPACT_LAYOUT_WIDTH) {
+            contextualHelpState.replace(help);
+            if (contextualHelpWindowCoordinator == null) {
+                contextualHelpWindowCoordinator = new ContextualHelpWindowCoordinator(i18n, contextualHelpState);
+                contextualHelpWindowCoordinator.setActionSelectionListener(this::handleContextualHelpAction);
+            }
+            contextualHelpWindowCoordinator.showCurrent(mainPane.getScene() == null ? null : mainPane.getScene().getWindow());
+        } else if (inspectorTabs != null) {
+            inspectorPanel.setVisible(true); inspectorPanel.setManaged(true); inspectorHiddenForCompactLayout = false;
+            inspectorTabs.getSelectionModel().select(inspectorHelpTab);
+            contextualHelpState.replace(help);
+            contextualHelpCoordinator().refresh();
+        }
+    }
+
+    @FXML
+    public void handleShowOperationHelp() {
+        if (mainPane == null || inspectorTabs == null) return;
+        HelpContext requestedHelpContext = contextualHelpState.current();
+        if (mainPane.getWidth() > 0 && mainPane.getWidth() < COMPACT_LAYOUT_WIDTH) {
+            if (contextualHelpWindowCoordinator == null) {
+                contextualHelpWindowCoordinator = new ContextualHelpWindowCoordinator(i18n, contextualHelpState);
+                contextualHelpWindowCoordinator.setActionSelectionListener(this::handleContextualHelpAction);
+            }
+            contextualHelpWindowCoordinator.show(mainPane.getScene() == null ? null : mainPane.getScene().getWindow(), currentActiveOperation);
+        } else {
+            inspectorPanel.setVisible(true);
+            inspectorPanel.setManaged(true);
+            inspectorHiddenForCompactLayout = false;
+            inspectorTabs.getSelectionModel().select(inspectorHelpTab);
+            contextualHelpCoordinator().showOperation(currentActiveOperation);
+        }
+        if (isSymmetricCipherRouteActive() && cipherContainerController != null) {
+            cipherContainerController.publishCurrentHelpSelections();
+        }
+        if (isJweRoute(currentActiveOperation) && jweHelpContextAdapter != null) {
+            jweHelpContextAdapter.publishCurrentSelections();
+            if (savedJweHelpContext != null) {
+                contextualHelpState.setAction(savedJweHelpContext.actionId());
+                contextualHelpState.setField(savedJweHelpContext.fieldId());
+            }
+        }
+        if (isPinBlockRoute(currentActiveOperation) && pinBlockHelpContextAdapter != null) {
+            restorePinBlockHelpContext(pinHelpOperationId(currentActiveOperation), requestedHelpContext);
+            pinBlockHelpContextAdapter.publishCurrentSelections();
+        }
+    }
+
+    @FXML
+    public void handleToggleContextualHelpMode() {
+        boolean enabled = contextualHelpModeMenuItem != null && contextualHelpModeMenuItem.isSelected();
+        AppSettings.getInstance().setContextualHelpEnabled(enabled);
+        if (contextualHelpModeMenuItem != null) contextualHelpModeMenuItem.setSelected(enabled);
+        if (cipherContainerController != null) cipherContainerController.setContextualHelpEnabled(
+                enabled && !cipherOperationId(currentActiveOperation).isBlank());
+        if (cipherContainerController != null) cipherContainerController.setContextualHelpOperationActive(
+                cipherOperationId(currentActiveOperation));
+        if (joseController != null) joseController.setJweContextHelp(isJweRoute(currentActiveOperation),
+                enabled && isJweRoute(currentActiveOperation));
+        if (resultActionHelp != null) resultActionHelp.setEnabled(enabled && isJweRoute(currentActiveOperation));
+        if (paymentsController != null) paymentsController.setPinBlockContextHelpActive(
+                isPinBlockRoute(currentActiveOperation)
+                        ? (isClearPinRoute(currentActiveOperation) ? "op_pay_clear_pin" : "op_pay_enc_pin") : "",
+                enabled && isPinBlockRoute(currentActiveOperation));
+        if (genericContainerController != null) genericContainerController.setActiveContextualHelpOperation(genericHelpOperationId(currentActiveOperation));
+        if (clipboardShelfController != null) clipboardShelfController.setActiveContextualHelpOperation(
+                "Clipboard Shelf".equals(currentActiveOperation) ? "op_gen_clipboard" : "",
+                enabled && "Clipboard Shelf".equals(currentActiveOperation));
+        if (processDesignerContainerController != null) processDesignerContainerController.setActiveContextualHelpOperation(
+                "Process Designer".equals(currentActiveOperation) ? "op_gen_process_designer" : "",
+                enabled && "Process Designer".equals(currentActiveOperation));
+        if (utilityToolsCoordinator != null) utilityToolsCoordinator.setContextualHelpEnabled(enabled);
+        if (moduleHelp != null) moduleHelp.setEnabled(enabled);
+        updateStatus(i18n.text(enabled ? "help.mode.enabled" : "help.mode.disabled"));
+        if (enabled) handleShowOperationHelp();
+    }
+
+    private void handleContextualHelpAction(String actionId) {
+        HelpContext activeHelp = contextualHelpState.current();
+        if (com.cryptocarver.model.help.OperationHelpRegistry.getInstance().definitions().stream()
+                .anyMatch(definition -> definition.operationId().equals(activeHelp.operationId()))) {
+            String operationId = activeHelp.operationId();
+            if (operationId.startsWith("op_") && !operationId.equals("op_sym_ciphers"))
+                savedCipherHelpContexts.put(operationId, activeHelp);
+        }
+        if (isPinBlockRoute(currentActiveOperation)) savePinBlockHelpContext(contextualHelpState.current());
+        if (isJweRoute(currentActiveOperation) && "op_jose_jwe".equals(contextualHelpState.current().operationId())) {
+            savedJweHelpContext = contextualHelpState.current();
+        }
+        if (!"aux_preflight_error".equals(contextualHelpState.current().operationId())) return;
+        switch (actionId) {
+            case "go_to_field" -> focusControl(contextualHelpState.current().fieldId());
+            case "copy_diagnostic" -> {
+                if (inlineErrorPresenter != null && inlineErrorPresenter.isVisible()
+                        && inlineErrorPresenter.getCurrentError() != null) {
+                    inlineErrorPresenter.copyTechnicalDetails(this);
+                }
+            }
+            default -> { }
+        }
+    }
+
+    /** Shell copy/expand result actions share the JWE help route: help follows their focus too. */
+    private void installResultActionHelp() {
+        if (resultActionHelp != null) return;
+        resultActionHelp = new ContextualHelpButtonBinder(contextualHelpState, this::showJweHelpContext,
+                this::rememberJweHelpContext);
+        if (resultCopyButton != null) resultActionHelp.bind("op_jose_jwe", "op_jose_jwe", "copy_result", "output", resultCopyButton);
+        if (resultExpandButton != null) resultActionHelp.bind("op_jose_jwe", "op_jose_jwe", "expand_result", "output", resultExpandButton);
+        boolean jwe = isJweRoute(currentActiveOperation);
+        resultActionHelp.setActiveRoute(jwe ? "op_jose_jwe" : "");
+        resultActionHelp.setEnabled(jwe && AppSettings.getInstance().isContextualHelpEnabled());
+    }
+
+    /** Modules declared in modules.spec get focus-following help from the shell, without controller wiring. */
+    private void installModuleHelp(String route) {
+        String operationId = com.cryptocarver.model.OperationRegistry.getInstance().getByNavigationPath(route)
+                .map(com.cryptocarver.model.OperationDescriptor::getId).orElse("");
+        if (moduleHelp == null) moduleHelp = new ModuleHelpInstaller(contextualHelpState, ignored -> showCurrentHelpContext());
+        moduleHelp.activate(operationId, rootStackPane != null ? rootStackPane : mainPane,
+                AppSettings.getInstance().isContextualHelpEnabled());
+    }
+
+    private void showPreflightHelpContext(HelpContext context) {
+        if (mainPane != null && mainPane.getWidth() > 0 && mainPane.getWidth() < COMPACT_LAYOUT_WIDTH) {
+            contextualHelpState.replace(context);
+            if (contextualHelpWindowCoordinator == null) {
+                contextualHelpWindowCoordinator = new ContextualHelpWindowCoordinator(i18n, contextualHelpState);
+                contextualHelpWindowCoordinator.setActionSelectionListener(this::handleContextualHelpAction);
+            }
+            contextualHelpWindowCoordinator.showCurrent(mainPane.getScene() == null ? null : mainPane.getScene().getWindow());
+        } else if (inspectorTabs != null) {
+            inspectorPanel.setVisible(true); inspectorPanel.setManaged(true); inspectorHiddenForCompactLayout = false;
+            inspectorTabs.getSelectionModel().select(inspectorHelpTab);
+            // Selecting the Help tab can invoke the ordinary route-help listener; restore
+            // the auxiliary preflight context after that navigation callback runs.
+            contextualHelpState.replace(context);
+            contextualHelpCoordinator().refresh();
+        }
+        if (!context.fieldId().isBlank()) focusControl(context.fieldId());
+    }
+
+    private void showGenericErrorHelp() {
+        HelpContext context = new HelpContext("aux_preflight_error", "details", "", i18n.getLocale(), "", java.util.Map.of());
+        if (inlineErrorPresenter != null && inlineErrorPresenter.getCurrentError() != null) {
+            String field = inlineErrorPresenter.getCurrentError().fieldKey();
+            if (field != null && field.matches("[A-Za-z][A-Za-z0-9_.-]{0,127}")) context = context.withField(field);
+        }
+        showPreflightHelpContext(context);
+    }
+
+    @FXML
+    private void handleErrorBannerHelp() {
+        if (inlineErrorPresenter != null && inlineErrorPresenter.isVisible()
+                && inlineErrorPresenter.getCurrentError() != null && bannerHelpContext != null) {
+            showPreflightHelpContext(bannerHelpContext);
+            return;
+        }
+        showGenericErrorHelp();
+    }
+
+    @FXML
+    private void handleShowReadinessHelp() { readinessPanelCoordinator().showReadinessHelp(); }
 
     // State management for history Rerun
     private java.util.Map<String, Object> captureUIState() {
@@ -1691,6 +2406,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @Override
     public void showError(UserFacingError error) {
         if (error == null) return;
+        bannerHelpContext = error.helpContext();
         if ("true".equals(System.getProperty("test.mode"))) {
             System.err.println("SHOW_ERROR: " + error.title() + " - " + error.remedy());
         }
@@ -1726,6 +2442,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private void handleErrorBannerClose() {
+        bannerHelpContext = null;
         if (inlineErrorPresenter != null) {
             inlineErrorPresenter.hideBanner();
         }
@@ -1876,7 +2593,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private UtilityToolsCoordinator utilityToolsCoordinator() {
         if (utilityToolsCoordinator == null) {
             utilityToolsCoordinator = new UtilityToolsCoordinator(() -> mainPane == null ? null : mainPane.getScene(),
-                    this::addToHistory, this::showError);
+                    this::addToHistory, this::showError, contextualHelpState, this::showStandaloneAuxiliaryHelpContext);
         }
         return utilityToolsCoordinator;
     }
@@ -2009,7 +2726,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private void handleByteInspector() {
-        ByteInspectorWindow.show((Stage) mainPane.getScene().getWindow());
+        ByteInspectorWindow.show((Stage) mainPane.getScene().getWindow(), contextualHelpState,
+                this::showStandaloneAuxiliaryHelpContext);
+    }
+
+    private void showStandaloneAuxiliaryHelpContext(HelpContext context) {
+        if (context == null || !com.cryptocarver.model.help.B05HelpCatalog.supports(context.operationId())) return;
+        contextualHelpState.replace(context);
+        showCurrentHelpContext();
     }
 
     // ============================================================
@@ -2133,6 +2857,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label readinessStatusBadge;
     @FXML private Label readinessSummaryLabel;
     @FXML private FlowPane readinessChecksContainer;
+    @FXML private Button readinessHelpBtn;
     @FXML private Button readinessToggleDetailsBtn;
     private com.cryptocarver.model.PreflightReport currentPreflightReport;
     private boolean currentPreflightEncrypt = true;
@@ -2182,6 +2907,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     encrypt -> currentPreflightEncrypt = encrypt,
                     this::focusControl,
                     this::showError,
+                    this::showPreflightHelpContext,
                     this::handleItemSelected);
         }
         return readinessPanelCoordinator;
@@ -2200,7 +2926,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 field.setAccessible(true);
                 Object val = field.get(ctrl);
                 if (val instanceof javafx.scene.Node node) {
-                    node.requestFocus();
+                    ContextualHelpButtonBinder.withoutFollowing(node::requestFocus);
                     return;
                 }
             } catch (Exception ignored) {}

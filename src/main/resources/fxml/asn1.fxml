@@ -46,14 +46,14 @@
 
                                         <FlowPane hgap="10.0" vgap="8.0" alignment="CENTER_LEFT" styleClass="responsive-action-bar">
                                             <children>
-                                                <Button mnemonicParsing="false" onAction="#handleParseASN1" styleClass="action-button" text="Parse ASN.1" />
-                                                <Button mnemonicParsing="false" onAction="#handleClearASN1" text="Clear" />
-                                                <Button mnemonicParsing="false" onAction="#resetModule" text="Reset Defaults" styleClass="secondary-button"/>
-                                                <Button mnemonicParsing="false" onAction="#handleExportASN1Tree" text="Export Tree" />
-                                                <Button mnemonicParsing="false" onAction="#handleExportASN1Json" text="Export JSON" />
-                                                <Button mnemonicParsing="false" onAction="#handleExportASN1Markdown" text="Export Markdown" />
-                                                <Button mnemonicParsing="false" onAction="#handleLoadASN1OidRegistry" text="Load OID Registry" />
-                                                <Button mnemonicParsing="false" onAction="#handleCanonicalizeASN1Der" text="Canonicalize DER" />
+                                                <Button id="help_handleParseASN1" mnemonicParsing="false" onAction="#handleParseASN1" styleClass="action-button" text="Parse ASN.1" />
+                                                <Button id="help_handleClearASN1" mnemonicParsing="false" onAction="#handleClearASN1" text="Clear" />
+                                                <Button id="help_resetModule" mnemonicParsing="false" onAction="#resetModule" text="Reset Defaults" styleClass="secondary-button"/>
+                                                <Button id="help_handleExportASN1Tree" mnemonicParsing="false" onAction="#handleExportASN1Tree" text="Export Tree" />
+                                                <Button id="help_handleExportASN1Json" mnemonicParsing="false" onAction="#handleExportASN1Json" text="Export JSON" />
+                                                <Button id="help_handleExportASN1Markdown" mnemonicParsing="false" onAction="#handleExportASN1Markdown" text="Export Markdown" />
+                                                <Button id="help_handleLoadASN1OidRegistry" mnemonicParsing="false" onAction="#handleLoadASN1OidRegistry" text="Load OID Registry" />
+                                                <Button id="help_handleCanonicalizeASN1Der" mnemonicParsing="false" onAction="#handleCanonicalizeASN1Der" text="Canonicalize DER" />
                                                 <CheckBox fx:id="asn1StrictDerCheck" text="Strict DER Mode" />
                                                 <Label fx:id="asn1StatusLabel" text="Ready" />
                                             </children>
@@ -109,8 +109,8 @@
 
                                         <HBox spacing="10.0" alignment="CENTER_LEFT">
                                             <children>
-                                                <Button mnemonicParsing="false" onAction="#handleEncodeASN1" styleClass="action-button" text="Encode" />
-                                                <Button mnemonicParsing="false" onAction="#handleCopyASN1Output" text="Copy Output" />
+                                                <Button id="help_handleEncodeASN1" mnemonicParsing="false" onAction="#handleEncodeASN1" styleClass="action-button" text="Encode" />
+                                                <Button id="help_handleCopyASN1Output" mnemonicParsing="false" onAction="#handleCopyASN1Output" text="Copy Output" />
                                             </children>
                                         </HBox>
 

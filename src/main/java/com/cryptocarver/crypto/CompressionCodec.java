@@ -12,7 +12,10 @@ import java.util.zip.InflaterInputStream;
 /** Compression helpers for diagnostic workflows; output is capped on decompression. */
 public final class CompressionCodec {
     private static final int MAX_DECOMPRESSED_BYTES = 64 * 1024 * 1024;
+    private static final java.util.List<String> SUPPORTED_FORMATS = java.util.List.of("gzip", "zlib", "deflate");
     private CompressionCodec() { }
+
+    public static java.util.List<String> supportedFormats() { return SUPPORTED_FORMATS; }
 
     public static byte[] compress(byte[] input, String format) throws IOException {
         if (input == null) throw new IllegalArgumentException("Input cannot be null");

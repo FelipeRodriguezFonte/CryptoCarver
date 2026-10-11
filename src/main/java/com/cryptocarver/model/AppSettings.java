@@ -117,6 +117,8 @@ public final class AppSettings {
     public synchronized void setTextScale(double value) { data.textScale = Double.isFinite(value) ? Math.max(0.8, Math.min(1.5, value)) : 1.0; save(); }
     public synchronized boolean isCompactDensity() { return data.compactDensity; }
     public synchronized void setCompactDensity(boolean value) { data.compactDensity = value; save(); }
+    public synchronized boolean isContextualHelpEnabled() { return data.contextualHelpEnabled; }
+    public synchronized void setContextualHelpEnabled(boolean value) { data.contextualHelpEnabled = value; save(); }
     public synchronized int getHistoryRetentionDays() { return Math.max(0, Math.min(3650, data.historyRetentionDays)); }
     public synchronized void setHistoryRetentionDays(int value) { data.historyRetentionDays = Math.max(0, Math.min(3650, value)); save(); }
     public synchronized boolean isPersistHistorySecrets() { return data.persistHistorySecrets; }
@@ -368,6 +370,7 @@ public final class AppSettings {
         private boolean confirmDestructiveActions = true;
         private double textScale = 1.0;
         private boolean compactDensity = false;
+        private boolean contextualHelpEnabled = false;
         private int historyRetentionDays = 90;
         private boolean persistHistorySecrets = false;
         private int clipboardClearSeconds = 30;

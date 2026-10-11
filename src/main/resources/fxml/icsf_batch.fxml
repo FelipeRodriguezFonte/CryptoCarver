@@ -38,13 +38,13 @@
                   styleClass="monospace-field"/>
 
         <FlowPane prefWrapLength="900" hgap="8" vgap="4" styleClass="responsive-action-bar">
-            <Button text="Analyze batch" onAction="#handleAnalyze" styleClass="action-button-primary"/>
-            <Button text="Load File…" onAction="#handleLoadFile" styleClass="secondary-button"/>
-            <Button text="Load Example Batch" onAction="#handleLoadSample" styleClass="secondary-button"/>
-            <Button text="Save Report (.txt)…" onAction="#handleSaveText" styleClass="secondary-button"/>
-            <Button text="Save Inventory (.csv)…" onAction="#handleSaveCsv" styleClass="secondary-button"/>
-            <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
-            <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+            <Button id="help_handleAnalyze" text="Analyze batch" onAction="#handleAnalyze" styleClass="action-button-primary"/>
+            <Button id="help_handleLoadFile" text="Load File…" onAction="#handleLoadFile" styleClass="secondary-button"/>
+            <Button id="help_handleLoadSample" text="Load Example Batch" onAction="#handleLoadSample" styleClass="secondary-button"/>
+            <Button id="help_handleSaveText" text="Save Report (.txt)…" onAction="#handleSaveText" styleClass="secondary-button"/>
+            <Button id="help_handleSaveCsv" text="Save Inventory (.csv)…" onAction="#handleSaveCsv" styleClass="secondary-button"/>
+            <Button id="help_handleClear" text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+            <Button id="help_handleReset" text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
         </FlowPane>
         <CheckBox fx:id="icsfBatchDetailCheck" selected="true"
                   text="Include the full per-token detail in the saved .txt (turn off for large batches: a whole CKDS runs to tens of megabytes)" wrapText="true" minHeight="-Infinity"/>
@@ -91,7 +91,7 @@
                             <Label text="Filter:"/>
                             <TextField fx:id="icsfBatchFilterField" promptText="label, key type, finding…"
                                        HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>
-                            <Button text="Clear filter" onAction="#handleClearFilter" styleClass="secondary-button"/>
+                            <Button id="help_handleClearFilter" text="Clear filter" onAction="#handleClearFilter" styleClass="secondary-button"/>
                         </HBox>
                         <TableView fx:id="icsfBatchInventoryTable" prefWidth="400" VBox.vgrow="ALWAYS"/>
                     </VBox>

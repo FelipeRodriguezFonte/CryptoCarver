@@ -5,8 +5,8 @@
 
 <VBox fx:id="joseContainer" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.JOSEController" managed="false" visible="false" spacing="10" styleClass="content-container-vbox,jose-module">
     <HBox alignment="CENTER_RIGHT">
-        <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
-        <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+        <Button id="help_handleClear" text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+        <Button id="help_handleReset" text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
     </HBox>
 
     <!-- JWT SECTION -->
@@ -45,7 +45,7 @@
                             </HBox>
                             <VBox spacing="5" GridPane.rowIndex="2" GridPane.columnIndex="1">
                                 <FlowPane styleClass="responsive-action-bar">
-                                    <Button text="Import from File..." onAction="#handleLoadJWTKey" styleClass="secondary-button"/>
+                                    <Button id="help_handleLoadJWTKey" text="Import from File..." onAction="#handleLoadJWTKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwtKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwtKeyShelf"/>
                                     <Label text="Secret Format:" styleClass="form-label"/>
                                     <ComboBox fx:id="jwtSecretFormatCombo" prefWidth="170" styleClass="form-field">
@@ -91,7 +91,7 @@
                                     <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="3" GridPane.columnIndex="1">
                                         <TextField fx:id="jwtExpField" promptText="1" prefWidth="60" styleClass="form-field"/>
                                         <Label text="hours"/>
-                                        <Button text="Apply to Payload" onAction="#handleApplyJWTClaims" styleClass="secondary-button"/>
+                                        <Button id="help_handleApplyJWTClaims" text="Apply to Payload" onAction="#handleApplyJWTClaims" styleClass="secondary-button"/>
                                     </HBox>
                                 </GridPane>
                                 <GridPane hgap="10" vgap="9" styleClass="form-grid">
@@ -131,7 +131,7 @@
                         <Label fx:id="jwtProtectedHeaderLabel" text="Additional protected header (JSON, optional):" styleClass="form-label"/>
                         <TextArea fx:id="jwtProtectedHeaderArea" promptText='{"kid":"key-1", "jku":"https://example.invalid/jwks.json"}' prefRowCount="2" styleClass="monospace-field"/>
 
-                        <Button text="Generate Signed JWT" onAction="#handleGenerateSignedJWT" styleClass="action-button,primary-action"/>
+                        <Button id="help_handleGenerateSignedJWT" text="Generate Signed JWT" onAction="#handleGenerateSignedJWT" styleClass="action-button,primary-action"/>
 
                         <Label text="Output:" styleClass="form-label"/>
                         <TextArea fx:id="jwtOutputArea" promptText="Generated JWT will appear here..." prefRowCount="3" styleClass="result-area,monospace-field" editable="false" wrapText="true"/>
@@ -155,7 +155,7 @@
                             </VBox>
                             <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <FlowPane styleClass="responsive-action-bar">
-                                    <Button text="Import from File..." onAction="#handleLoadJWTValidateKey" styleClass="secondary-button"/>
+                                    <Button id="help_handleLoadJWTValidateKey" text="Import from File..." onAction="#handleLoadJWTValidateKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwtValidateKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwtValidateKeyShelf"/>
                                     <Label text="Secret Format:" styleClass="form-label"/>
                                     <ComboBox fx:id="jwtValidateSecretFormatCombo" prefWidth="170" styleClass="form-field">
@@ -199,7 +199,7 @@
                             <TextField fx:id="jwtCertificateDateField" styleClass="form-field"/>
                         </HBox>
                         <HBox spacing="10" alignment="CENTER_LEFT">
-                            <Button text="Verify &amp; Decode" onAction="#handleValidateJWT" styleClass="action-button,primary-action"/>
+                            <Button id="help_handleValidateJWT" text="Verify &amp; Decode" onAction="#handleValidateJWT" styleClass="action-button,primary-action"/>
                             <Label fx:id="jwtStatusLabel" text="" styleClass="helper-text"/>
                         </HBox>
 
@@ -256,8 +256,8 @@
                         <Label fx:id="detachedProtectedHeaderLabel" text="Additional protected header (JSON):" styleClass="form-label"/>
                         <TextArea fx:id="detachedProtectedHeaderSecretArea" prefRowCount="3" wrapText="true" promptText="kid, typ, cty, x5c, x5t, x5t#S256, public jwk" styleClass="form-field,monospace-field"/>
                         <HBox spacing="10" alignment="CENTER_LEFT">
-                            <Button text="Generate Detached JWS" onAction="#handleGenerateDetachedJWS" styleClass="action-button,primary-action"/>
-                            <Button text="Verify Detached JWS" onAction="#handleVerifyDetachedJWS" styleClass="secondary-button"/>
+                            <Button id="help_handleGenerateDetachedJWS" text="Generate Detached JWS" onAction="#handleGenerateDetachedJWS" styleClass="action-button,primary-action"/>
+                            <Button id="help_handleVerifyDetachedJWS" text="Verify Detached JWS" onAction="#handleVerifyDetachedJWS" styleClass="secondary-button"/>
                         </HBox>
 
                         <Label text="Output / Result:" styleClass="form-label"/>
@@ -286,20 +286,22 @@
                             <Label text="Key Type:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                             <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <ComboBox fx:id="jwkKeyTypeCombo" prefWidth="120" styleClass="form-field"/>
-                                <Label fx:id="jwkCurveLabel" text="OKP curve:" styleClass="form-label"/>
+                                <Label fx:id="jwkCurveLabel" text="OKP curve:" minWidth="-Infinity" styleClass="form-label"/>
                                 <ComboBox fx:id="jwkCurveCombo" prefWidth="120" styleClass="form-field"/>
-                                <Label text="Key ID (kid):" styleClass="form-label"/>
-                                <TextField fx:id="jwkKeyIdField" promptText="Optional / Auto" styleClass="form-field"/>
-                                <Label fx:id="jwkUseLabel" text="use:" styleClass="form-label"/>
-                                <ComboBox fx:id="jwkUseCombo" prefWidth="100" styleClass="form-field"/>
-                                <Label fx:id="jwkKeyOpsLabel" text="key_ops:" styleClass="form-label"/>
-                                <TextField fx:id="jwkKeyOpsField" promptText="sign, verify" styleClass="form-field"/>
+                                <Label text="Key ID (kid):" minWidth="-Infinity" styleClass="form-label"/>
+                                <TextField fx:id="jwkKeyIdField" promptText="Optional / Auto" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             </HBox>
 
-                            <Label text="Secret Format:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
-                            <ComboBox fx:id="jwkSecretFormatCombo" prefWidth="170" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field">
-                                <tooltip><Tooltip text="How an OCT secret is read. Ignored for RSA/EC/OKP keys."/></tooltip>
-                            </ComboBox>
+                            <Label fx:id="jwkUseLabel" text="use:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="1" GridPane.columnIndex="1">
+                                <ComboBox fx:id="jwkUseCombo" prefWidth="100" styleClass="form-field"/>
+                                <Label fx:id="jwkKeyOpsLabel" text="key_ops:" minWidth="-Infinity" styleClass="form-label"/>
+                                <TextField fx:id="jwkKeyOpsField" promptText="sign, verify" HBox.hgrow="ALWAYS" styleClass="form-field"/>
+                                <Label text="Secret Format:" minWidth="-Infinity" styleClass="form-label"/>
+                                <ComboBox fx:id="jwkSecretFormatCombo" prefWidth="170" minWidth="-Infinity" styleClass="form-field">
+                                    <tooltip><Tooltip text="How an OCT secret is read. Ignored for RSA/EC/OKP keys."/></tooltip>
+                                </ComboBox>
+                            </HBox>
 
                             <Label fx:id="jwkInputLabel" text="Input:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
                             <TextArea fx:id="jwkInputArea" promptText="Paste PEM Key or JWK JSON..." prefRowCount="4" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field"/>
@@ -308,7 +310,7 @@
                         <FlowPane hgap="10" vgap="10" alignment="CENTER_LEFT" styleClass="responsive-action-bar">
                             <Button fx:id="pemToJwkBtn" text="PEM -> JWK" onAction="#handlePemToJwk" styleClass="action-button,primary-action"/>
                             <Button fx:id="jwkToPemBtn" text="JWK -> PEM" onAction="#handleJwkToPem" styleClass="secondary-button"/>
-                            <Button text="Calc Thumbprint" onAction="#handleCalculateThumbprint" styleClass="secondary-button"/>
+                            <Button id="help_handleCalculateThumbprint" text="Calc Thumbprint" onAction="#handleCalculateThumbprint" styleClass="secondary-button"/>
                             <Button fx:id="jwkInspectMetadataBtn" text="Inspect Metadata" onAction="#handleInspectJwkMetadata" styleClass="secondary-button"/>
                         </FlowPane>
 
@@ -320,8 +322,8 @@
                 <TitledPane text="JWK Set (JWKS)">
                     <VBox spacing="12" styleClass="module-pane-content">
                         <HBox spacing="10" alignment="CENTER_LEFT">
-                            <Button text="New JWKS" onAction="#handleNewJWKS" styleClass="secondary-button"/>
-                            <Button text="Load JWKS..." onAction="#handleLoadJWKS" styleClass="link-button"/>
+                            <Button id="help_handleNewJWKS" text="New JWKS" onAction="#handleNewJWKS" styleClass="secondary-button"/>
+                            <Button id="help_handleLoadJWKS" text="Load JWKS..." onAction="#handleLoadJWKS" styleClass="link-button"/>
                         </HBox>
 
                         <TextArea fx:id="jwksSecretArea" promptText="{ &quot;keys&quot;: [] }" prefRowCount="10" styleClass="monospace-field"/>
@@ -331,11 +333,11 @@
                                 <Label text="Simulate Key Rotation:" styleClass="form-label"/>
                                 <HBox spacing="10" alignment="CENTER_LEFT">
                                     <ComboBox fx:id="jwksRotateAlgoCombo" prefWidth="120" styleClass="form-field"/>
-                                    <Button text="Add New Key to Set" onAction="#handleRotateKey" styleClass="action-button,primary-action"/>
+                                    <Button id="help_handleRotateKey" text="Add New Key to Set" onAction="#handleRotateKey" styleClass="action-button,primary-action"/>
                                 </HBox>
                                 <Separator/>
                                 <Label text="Public Export:" styleClass="form-label"/>
-                                <Button text="Show Public JWKS Only" onAction="#handleExportPublicJWKS" styleClass="secondary-button"/>
+                                <Button id="help_handleExportPublicJWKS" text="Show Public JWKS Only" onAction="#handleExportPublicJWKS" styleClass="secondary-button"/>
                             </VBox>
                         </TitledPane>
                     </VBox>
@@ -348,9 +350,9 @@
     <VBox fx:id="jweSection" spacing="14" managed="false" visible="false">
         <Label text="JSON Web Encryption (JWE)" styleClass="section-header"/>
 
-        <Accordion styleClass="module-accordion">
+        <Accordion fx:id="jweAccordion" styleClass="module-accordion">
             <panes>
-                <TitledPane text="Encrypt" expanded="true">
+                <TitledPane fx:id="jweEncryptPane" text="Encrypt" expanded="true">
                     <VBox spacing="12" styleClass="module-pane-content">
                         <GridPane hgap="10" vgap="9" styleClass="form-grid">
                             <columnConstraints>
@@ -381,7 +383,7 @@
                             </VBox>
                             <VBox spacing="5" GridPane.rowIndex="2" GridPane.columnIndex="1">
                                 <FlowPane styleClass="responsive-action-bar">
-                                    <Button text="Import from File..." onAction="#handleLoadJWEPublicKey" styleClass="secondary-button"/>
+                                    <Button fx:id="jwePublicKeyImportBtn" text="Import from File..." onAction="#handleLoadJWEPublicKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwePubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwePubKeyShelf"/>
                                 </FlowPane>
                                 <TextArea fx:id="jwePublicKeyArea" promptText="RSA/EC public key (PEM, certificate or JWK) · JWKS with alg per key for several recipients (General JSON) · shared secret (AES-KW, dir) · password (PBES2)" prefRowCount="3" styleClass="monospace-field"/>
@@ -421,14 +423,14 @@
                             </VBox>
                         </TitledPane>
 
-                        <Button text="Encrypt &amp; Generate JWE" onAction="#handleGenerateJWE" styleClass="action-button,primary-action"/>
+                        <Button fx:id="jweEncryptActionBtn" text="Encrypt &amp; Generate JWE" onAction="#handleGenerateJWE" styleClass="action-button,primary-action"/>
 
                         <Label text="Output (JWE):" styleClass="form-label"/>
                         <TextArea fx:id="jweOutputArea" promptText="Generated JWE..." prefRowCount="3" styleClass="result-area,monospace-field" editable="false" wrapText="true"/>
                     </VBox>
                 </TitledPane>
 
-                <TitledPane text="Decrypt">
+                <TitledPane fx:id="jweDecryptPane" text="Decrypt">
                     <VBox spacing="12" styleClass="module-pane-content">
                         <Label text="JWE Token:" styleClass="form-label"/>
                         <TextArea fx:id="jweInputArea" promptText="Paste compact or JSON-serialized JWE here..." prefRowCount="3" styleClass="monospace-field" wrapText="true"/>
@@ -443,7 +445,7 @@
                             </VBox>
                             <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <FlowPane styleClass="responsive-action-bar">
-                                    <Button text="Import from File..." onAction="#handleLoadJWEPrivateKey" styleClass="secondary-button"/>
+                                    <Button fx:id="jwePrivateKeyImportBtn" text="Import from File..." onAction="#handleLoadJWEPrivateKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwePrivKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwePrivKeyShelf"/>
                                 </FlowPane>
                                 <TextArea fx:id="jwePrivateKeyArea" promptText="RSA/EC private key (PEM or JWK) · shared secret (AES-KW, dir) · password (PBES2)" prefRowCount="3" styleClass="monospace-field"/>
@@ -453,7 +455,7 @@
                         </GridPane>
 
                         <HBox spacing="10" alignment="CENTER_LEFT">
-                            <Button text="Decrypt JWE" onAction="#handleDecryptJWE" styleClass="action-button,primary-action"/>
+                            <Button fx:id="jweDecryptActionBtn" text="Decrypt JWE" onAction="#handleDecryptJWE" styleClass="action-button,primary-action"/>
                             <Label fx:id="jweStatusLabel" text="" styleClass="helper-text"/>
                         </HBox>
 
@@ -483,7 +485,7 @@
                                     <Label text="Encrypted Key:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                                     <TextArea fx:id="jweEncryptedKeyArea" prefRowCount="2" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field" editable="false"/>
 
-                                    <Label text="Decrypted CEK (Hex):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label text="CEK status:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
                                     <TextArea fx:id="jweDecryptedKeyArea" prefRowCount="2" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field" editable="false"/>
 
                                     <Label text="Initialization Vector (IV):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
@@ -513,7 +515,7 @@
                                 <ComboBox fx:id="nestedSignAlgoCombo" prefWidth="120" styleClass="form-field"/>
                                 <Label fx:id="nestedSecurityWarningLabel" wrapText="true" styleClass="helper-text"/>
                                 <Label text="Signing Key:" styleClass="form-label"/>
-                                <Button text="Import..." onAction="#handleLoadNestedSigningKey" styleClass="link-button"/>
+                                <Button id="help_handleLoadNestedSigningKey" text="Import..." onAction="#handleLoadNestedSigningKey" styleClass="link-button"/>
                             </HBox>
 
                             <Label text="Signing Key Value:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
@@ -547,14 +549,14 @@
                                 <Label text="Recipient Public Key:" styleClass="form-label"/>
                             </VBox>
                             <VBox spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="1">
-                                <Button text="Import..." onAction="#handleLoadNestedEncryptionKey" styleClass="link-button"/>
+                                <Button id="help_handleLoadNestedEncryptionKey" text="Import..." onAction="#handleLoadNestedEncryptionKey" styleClass="link-button"/>
                                 <TextArea fx:id="nestedEncryptionKeyArea" promptText="RSA Public Key (Encryption) / RSA Private Key (Decryption)..." prefRowCount="2" styleClass="monospace-field"/>
                             </VBox>
                         </GridPane>
 
                         <HBox spacing="10" alignment="CENTER_LEFT">
-                            <Button text="Generate Nested JWT" onAction="#handleGenerateNestedJWT" styleClass="action-button,primary-action"/>
-                            <Button text="Decrypt &amp; Verify Nested JWT" onAction="#handleVerifyNestedJWT" styleClass="secondary-button"/>
+                            <Button id="help_handleGenerateNestedJWT" text="Generate Nested JWT" onAction="#handleGenerateNestedJWT" styleClass="action-button,primary-action"/>
+                            <Button id="help_handleVerifyNestedJWT" text="Decrypt &amp; Verify Nested JWT" onAction="#handleVerifyNestedJWT" styleClass="secondary-button"/>
                             <Label fx:id="nestedStatusLabel" styleClass="helper-text"/>
                         </HBox>
 
@@ -598,10 +600,10 @@
         <Label text="Paste any JOSE token (JWS or JWE) to see a visual breakdown of its components." styleClass="helper-text"/>
 
         <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-            <Button text="Analyze Token" onAction="#handleInspectToken" styleClass="action-button,primary-action"/>
-            <Button text="Expand Report" onAction="#handleOpenExpandedInspectorReport" styleClass="secondary-button"/>
-            <Button text="Copy Report" onAction="#handleCopyInspectorOutput" styleClass="secondary-button"/>
-            <Button text="Clear" onAction="#handleClearInspector" styleClass="secondary-button"/>
+            <Button id="help_handleInspectToken" text="Analyze Token" onAction="#handleInspectToken" styleClass="action-button,primary-action"/>
+            <Button id="help_handleOpenExpandedInspectorReport" text="Expand Report" onAction="#handleOpenExpandedInspectorReport" styleClass="secondary-button"/>
+            <Button id="help_handleCopyInspectorOutput" text="Copy Report" onAction="#handleCopyInspectorOutput" styleClass="secondary-button"/>
+            <Button id="help_handleClearInspector" text="Clear" onAction="#handleClearInspector" styleClass="secondary-button"/>
         </FlowPane>
 
         <TextArea fx:id="inspectorInputArea" promptText="Paste JWS (eyJ...) or JWE (ey...) here..." prefRowCount="4" styleClass="monospace-field" wrapText="true"/>

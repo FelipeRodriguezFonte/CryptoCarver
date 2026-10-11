@@ -64,8 +64,8 @@
                     </GridPane>
 
                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                        <Button text="Generate Certificate" onAction="#handleGenerateCertificate" styleClass="action-button,primary-action"/>
-                        <Button text="Generate CSR" onAction="#handleGenerateCSR" styleClass="secondary-button"/>
+                        <Button id="help_handleGenerateCertificate" text="Generate Certificate" onAction="#handleGenerateCertificate" styleClass="action-button,primary-action"/>
+                        <Button id="help_handleGenerateCSR" text="Generate CSR" onAction="#handleGenerateCSR" styleClass="secondary-button"/>
                     </FlowPane>
                     <CheckBox fx:id="certRootCaCheck" text="Generate as laboratory Root CA (CA:TRUE, keyCertSign)" styleClass="helper-text"/>
 
@@ -96,7 +96,7 @@
                         <Label text="Path length (CA):" styleClass="form-label"/>
                         <TextField fx:id="certIssuePathLengthField" text="0" prefWidth="45" styleClass="form-field"/>
                     </HBox>
-                    <Button text="Issue Laboratory Certificate" onAction="#handleIssueCertificateFromCsr" styleClass="action-button,primary-action" maxWidth="250"/>
+                    <Button id="help_handleIssueCertificateFromCsr" text="Issue Laboratory Certificate" onAction="#handleIssueCertificateFromCsr" styleClass="action-button,primary-action" maxWidth="250"/>
                     <TextArea fx:id="certIssueResultArea" prefHeight="180" editable="false" wrapText="true"
                               styleClass="result-area,monospace-field"/>
                 </VBox>
@@ -108,7 +108,7 @@
                     <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                         <Label text="Apply Template:" styleClass="form-label"/>
                         <ComboBox fx:id="certTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
-                        <Button text="Apply" onAction="#handleApplyCertTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
+                        <Button id="help_handleApplyCertTemplate" text="Apply" onAction="#handleApplyCertTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
                         <MenuButton text="Manage Template" styleClass="secondary-button,ux-inline-401c00305b">
                             <items>
                                 <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveCertTemplate"/>
@@ -117,7 +117,7 @@
                                 <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteCertTemplate"/>
                             </items>
                         </MenuButton>
-                        <Button text="Reset Defaults" onAction="#handleResetCertDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
+                        <Button id="help_handleResetCertDefaults" text="Reset Defaults" onAction="#handleResetCertDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
                     </FlowPane>
 
                     <Label text="Paste PEM Certificate:" styleClass="form-label"/>
@@ -132,7 +132,7 @@
                         <Label fx:id="certBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                     </VBox>
 
-                    <Button text="Parse Certificate" onAction="#handleParseCertificate"
+                    <Button id="help_handleParseCertificate" text="Parse Certificate" onAction="#handleParseCertificate"
                             styleClass="action-button,primary-action" maxWidth="180"/>
 
                     <TextArea fx:id="certParseResultArea" prefHeight="200" editable="false" wrapText="true"
@@ -149,7 +149,7 @@
                               styleClass="monospace-field"/>
                     <TextArea fx:id="certCompareRightArea" prefHeight="85" wrapText="true" promptText="Right X.509 certificate PEM"
                               styleClass="monospace-field"/>
-                    <Button text="Compare Certificates" onAction="#handleCompareCertificates" styleClass="action-button,primary-action" maxWidth="200"/>
+                    <Button id="help_handleCompareCertificates" text="Compare Certificates" onAction="#handleCompareCertificates" styleClass="action-button,primary-action" maxWidth="200"/>
                     <TextArea fx:id="certCompareResultArea" prefHeight="180" editable="false" wrapText="true"
                               styleClass="result-area,monospace-field"/>
                 </VBox>
@@ -165,7 +165,7 @@
                         <Label text="Issuer Certificate (Optional)" styleClass="form-label"/>
                         <TextArea fx:id="valIssuerInput" promptText="Paste Issuer Certificate (for signature verification)..." prefRowCount="5" wrapText="true" styleClass="monospace-field"/>
 
-                        <Button text="Validate Certificate" onAction="#handleValidateCertificate" styleClass="action-button,primary-action" maxWidth="200"/>
+                        <Button id="help_handleValidateCertificate" text="Validate Certificate" onAction="#handleValidateCertificate" styleClass="action-button,primary-action" maxWidth="200"/>
 
                         <Label text="Validation Report" styleClass="form-label"/>
                         <TextArea fx:id="valResultArea" editable="false" prefRowCount="5" wrapText="true" styleClass="result-area,monospace-field"/>
@@ -185,9 +185,9 @@
                               styleClass="monospace-field"
                               promptText="-----BEGIN X509 CRL-----..."/>
 
-                    <Button text="Validate Chain" onAction="#handleValidateCertificateChain"
+                    <Button id="help_handleValidateCertificateChain" text="Validate Chain" onAction="#handleValidateCertificateChain"
                             styleClass="action-button,primary-action" maxWidth="180"/>
-                    <Button text="Exportar informe (Markdown)" onAction="#handleExportChainReport"
+                    <Button id="help_handleExportChainReport" text="Exportar informe (Markdown)" onAction="#handleExportChainReport"
                             styleClass="secondary-button" maxWidth="260"/>
 
                     <TextArea fx:id="chainResultArea" prefHeight="150" editable="false" wrapText="true"
@@ -209,8 +209,8 @@
                         <ComboBox fx:id="crlRevokeReasonCombo" promptText="Reason" styleClass="form-field"/>
                     </HBox>
                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                        <Button text="Generate Empty CRL" onAction="#handleGenerateCrl" styleClass="secondary-button"/>
-                        <Button text="Revoke &amp; Update CRL" onAction="#handleRevokeCrl" styleClass="action-button,primary-action"/>
+                        <Button id="help_handleGenerateCrl" text="Generate Empty CRL" onAction="#handleGenerateCrl" styleClass="secondary-button"/>
+                        <Button id="help_handleRevokeCrl" text="Revoke &amp; Update CRL" onAction="#handleRevokeCrl" styleClass="action-button,primary-action"/>
                     </FlowPane>
                     <TextArea fx:id="crlResultArea" prefHeight="150" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
                 </VBox>
@@ -267,7 +267,7 @@
                                         <HBox fx:id="cmsSignPkcs11Box" spacing="10" alignment="CENTER_LEFT" managed="false" visible="false">
                                             <Label text="Key Alias:" styleClass="form-label"/>
                                             <ComboBox fx:id="cmsSignKeyAliasCombo" prefWidth="250" styleClass="form-field"/>
-                                            <Button text="Load Token Keys" onAction="#handleLoadCMSKeys" styleClass="secondary-button"/>
+                                            <Button id="help_handleLoadCMSKeys" text="Load Token Keys" onAction="#handleLoadCMSKeys" styleClass="secondary-button"/>
                                         </HBox>
 
                                         <Label text="Detached Data (for verification only):" styleClass="form-label"/>
@@ -281,11 +281,11 @@
                                              <CheckBox fx:id="cmsCadesTCheck" text="CAdES-T (RFC 3161)" onAction="#handleCadesTimestampOptionChanged">
                                                  <tooltip><Tooltip text="Requests a RFC 3161 timestamp over the CAdES signature. Requires a reachable TSA URL."/></tooltip>
                                              </CheckBox>
-                                             <Button text="Sign" onAction="#handleCMSSign" styleClass="action-button,primary-action"/>
-                                             <Button text="Add LT Evidence..." onAction="#handleUpgradeCadesLt" styleClass="secondary-button">
+                                             <Button id="help_handleCMSSign" text="Sign" onAction="#handleCMSSign" styleClass="action-button,primary-action"/>
+                                             <Button id="help_handleUpgradeCadesLt" text="Add LT Evidence..." onAction="#handleUpgradeCadesLt" styleClass="secondary-button">
                                                  <tooltip><Tooltip text="Embed locally selected CRL files into an existing CAdES-T signature. No CRL is downloaded automatically."/></tooltip>
                                              </Button>
-                                             <Button text="Verify" onAction="#handleCMSVerify" styleClass="secondary-button"/>
+                                             <Button id="help_handleCMSVerify" text="Verify" onAction="#handleCMSVerify" styleClass="secondary-button"/>
                                          </FlowPane>
                                         <HBox fx:id="cmsCadesTsaBox" spacing="8" alignment="CENTER_LEFT" visible="false" managed="false">
                                             <Label text="CAdES-T TSA URL:" styleClass="form-label"/>
@@ -321,12 +321,12 @@
                                         <HBox fx:id="cmsEncryptPkcs11Box" spacing="10" alignment="CENTER_LEFT" visible="false" managed="false">
                                             <Label text="Token Key Alias:" styleClass="form-label"/>
                                             <ComboBox fx:id="cmsEncryptKeyAliasCombo" prefWidth="250" styleClass="form-field"/>
-                                            <Button text="Load Token Keys" onAction="#handleLoadCMSEncryptKeys" styleClass="secondary-button"/>
+                                            <Button id="help_handleLoadCMSEncryptKeys" text="Load Token Keys" onAction="#handleLoadCMSEncryptKeys" styleClass="secondary-button"/>
                                         </HBox>
 
                                         <HBox spacing="10" alignment="CENTER_RIGHT">
-                                             <Button text="Encrypt" onAction="#handleCMSEncrypt" styleClass="action-button,primary-action"/>
-                                             <Button text="Decrypt" onAction="#handleCMSDecrypt" styleClass="secondary-button"/>
+                                             <Button id="help_handleCMSEncrypt" text="Encrypt" onAction="#handleCMSEncrypt" styleClass="action-button,primary-action"/>
+                                             <Button id="help_handleCMSDecrypt" text="Decrypt" onAction="#handleCMSDecrypt" styleClass="secondary-button"/>
                                         </HBox>
                                     </VBox>
                                 </content>

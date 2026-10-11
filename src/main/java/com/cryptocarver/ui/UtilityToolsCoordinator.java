@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
+import java.util.function.Consumer;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -21,13 +22,26 @@ public final class UtilityToolsCoordinator {
     private final Supplier<Scene> ownerSceneSupplier;
     private final BiConsumer<String, Map<String, String>> historyRecorder;
     private final BiConsumer<String, String> errorPresenter;
+    private final com.cryptocarver.model.help.HelpContextState helpState;
+    private final Consumer<com.cryptocarver.model.help.HelpContext> helpOpener;
+    private final java.util.List<ContextualHelpButtonBinder> helpBinders = new java.util.ArrayList<>();
 
     public UtilityToolsCoordinator(Supplier<Scene> ownerSceneSupplier,
             BiConsumer<String, Map<String, String>> historyRecorder,
             BiConsumer<String, String> errorPresenter) {
+        this(ownerSceneSupplier, historyRecorder, errorPresenter, null, null);
+    }
+
+    public UtilityToolsCoordinator(Supplier<Scene> ownerSceneSupplier,
+            BiConsumer<String, Map<String, String>> historyRecorder,
+            BiConsumer<String, String> errorPresenter,
+            com.cryptocarver.model.help.HelpContextState helpState,
+            Consumer<com.cryptocarver.model.help.HelpContext> helpOpener) {
         this.ownerSceneSupplier = ownerSceneSupplier;
         this.historyRecorder = historyRecorder;
         this.errorPresenter = errorPresenter;
+        this.helpState = helpState;
+        this.helpOpener = helpOpener == null ? ignored -> { } : helpOpener;
     }
 
     public void handleEpochConverter() {
@@ -54,8 +68,10 @@ public final class UtilityToolsCoordinator {
                     dateField.setText("Invalid input");
                 }
             });
-            convertButton.fire();
             root.getChildren().addAll(timestampLabel, timestampField, convertButton, dateLabel, dateField);
+            convertButton.fire();
+            bindDialogHelp(stage, root, "aux_epoch", "convert", "epoch_value", timestampField);
+            bindDialogHelp(stage, root, "aux_epoch", "convert", "result", dateField);
             Scene scene = new Scene(root, 300, 250);
             copyStylesheets(scene);
             stage.setScene(scene);
@@ -86,6 +102,8 @@ public final class UtilityToolsCoordinator {
                 }
             });
             root.getChildren().addAll(new Label("Input:"), input, formatButton, new Label("Output:"), output);
+            bindDialogHelp(stage, root, "aux_json", "format", "input", input);
+            bindDialogHelp(stage, root, "aux_json", "format", "output", output);
             Scene scene = new Scene(root, 600, 400);
             copyStylesheets(scene);
             stage.setScene(scene);
@@ -93,6 +111,31 @@ public final class UtilityToolsCoordinator {
         } catch (Exception exception) {
             errorPresenter.accept("Tool Error", exception.getMessage());
         }
+    }
+
+    public void setContextualHelpEnabled(boolean enabled) {
+        for (ContextualHelpButtonBinder binder : helpBinders) binder.setEnabled(enabled);
+    }
+
+    private void bindDialogHelp(Stage stage, VBox root, String operation, String action, String field,
+            javafx.scene.Node target) {
+        if (helpState == null || target == null) return;
+        ContextualHelpButtonBinder binder = (ContextualHelpButtonBinder) stage.getProperties().get("contextualHelpBinder");
+        if (binder == null) {
+            binder = new ContextualHelpButtonBinder(helpState, context -> {
+                helpState.setOperation(context.operationId());
+                helpState.setAction(context.actionId());
+                helpState.setField(context.fieldId());
+                helpOpener.accept(context);
+            });
+            stage.getProperties().put("contextualHelpBinder", binder);
+            helpBinders.add(binder);
+            ContextualHelpButtonBinder closingBinder = binder;
+            stage.setOnHidden(event -> { closingBinder.close(); helpBinders.remove(closingBinder); });
+        }
+        binder.bind(operation, operation, action, field, target);
+        binder.setActiveRoute(operation);
+        binder.setEnabled(com.cryptocarver.model.AppSettings.getInstance().isContextualHelpEnabled());
     }
 
     private void copyStylesheets(Scene scene) {

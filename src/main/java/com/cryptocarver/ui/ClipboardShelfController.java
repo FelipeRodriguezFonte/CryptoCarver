@@ -32,6 +32,27 @@ public class ClipboardShelfController {
 
     @FXML private javafx.scene.layout.VBox clipboardShelfRoot;
     private ModuleI18n.Binding moduleI18n;
+    private ContextualHelpButtonBinder contextualHelpButtons;
+
+    public void configureContextualHelp(com.cryptocarver.model.help.HelpContextState state,
+            java.util.function.Consumer<com.cryptocarver.model.help.HelpContext> opener) {
+        if (state == null || contextualHelpButtons != null) return;
+        contextualHelpButtons = new ContextualHelpButtonBinder(state, opener);
+        contextualHelpButtons.bind("op_gen_clipboard", "op_gen_clipboard", "search", "search", searchField);
+        contextualHelpButtons.bind("op_gen_clipboard", "op_gen_clipboard", "filter", "pin", pinnedFilterCombo);
+        contextualHelpButtons.bind("op_gen_clipboard", "op_gen_clipboard", "filter", "format", formatFilterCombo);
+        contextualHelpButtons.bind("op_gen_clipboard", "op_gen_clipboard", "use", "entry", useInMenu);
+        contextualHelpButtons.bind("op_gen_clipboard", "op_gen_clipboard", "compare", "comparison", compareBtn);
+        contextualHelpButtons.bind("op_gen_clipboard", "op_gen_clipboard", "copy", "entry", copyBtn);
+        contextualHelpButtons.bind("op_gen_clipboard", "op_gen_clipboard", "open_expanded", "details", expandBtn);
+        setActiveContextualHelpOperation("", false);
+    }
+
+    public void setActiveContextualHelpOperation(String operationId, boolean enabled) {
+        if (contextualHelpButtons == null) return;
+        contextualHelpButtons.setActiveRoute(operationId);
+        contextualHelpButtons.setEnabled(enabled && com.cryptocarver.model.AppSettings.getInstance().isContextualHelpEnabled());
+    }
 
     @FXML private TextField searchField;
     @FXML private ComboBox<String> pinnedFilterCombo;

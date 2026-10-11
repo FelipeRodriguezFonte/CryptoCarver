@@ -19,8 +19,8 @@
                             <Label text="Search:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                             <TextField fx:id="keyLabSearchField" promptText="Search keys by name or algorithm..." HBox.hgrow="ALWAYS"/>
                             <ComboBox fx:id="keyLabStatusFilterCombo" prefWidth="120"/>
-                            <Button text="Import Metadata" onAction="#handleImportKeyLabMetadata" styleClass="secondary-button"/>
-                            <Button text="Export Metadata" onAction="#handleExportKeyLabMetadata" styleClass="secondary-button"/>
+                            <Button id="help_handleImportKeyLabMetadata" text="Import Metadata" onAction="#handleImportKeyLabMetadata" styleClass="secondary-button"/>
+                            <Button id="help_handleExportKeyLabMetadata" text="Export Metadata" onAction="#handleExportKeyLabMetadata" styleClass="secondary-button"/>
                         </HBox>
                         <SplitPane styleClass="ux-inline-45aaaa888d" dividerPositions="0.6" VBox.vgrow="ALWAYS">
                             <!-- Left Side: Table & Creation Toolbar -->
@@ -52,7 +52,7 @@
                                             <ComboBox fx:id="keyLabNewSizeCombo" GridPane.rowIndex="2" GridPane.columnIndex="1" maxWidth="Infinity"/>
                                         </GridPane>
                                         <HBox spacing="8" alignment="CENTER_LEFT">
-                                            <Button text="Generate Key" onAction="#handleKeyLabGenerate" styleClass="action-button-primary"/>
+                                            <Button id="help_handleKeyLabGenerate" text="Generate Key" onAction="#handleKeyLabGenerate" styleClass="action-button-primary"/>
                                             <Separator orientation="VERTICAL"/>
                                             <PasswordField fx:id="keyLabImportBytesField" promptText="Or paste raw key bytes in hex..." HBox.hgrow="ALWAYS" styleClass="monospace-field"/>
                                             <Button fx:id="keyLabImportBtn" text="Import Key" onAction="#handleKeyLabImport" styleClass="secondary-button"/>
@@ -116,7 +116,7 @@
                                             <TextField fx:id="keyLabDetailValueField" editable="false" styleClass="monospace-field"/>
                                             <FlowPane hgap="6" vgap="4">
                                                 <Button fx:id="keyLabRevealBtn" text="Reveal Value" onAction="#handleKeyLabReveal" styleClass="secondary-button,ux-inline-ab4da656fa" minWidth="-Infinity"/>
-                                                <Button text="Copy ID" onAction="#handleKeyLabCopyId" styleClass="secondary-button,ux-inline-ab4da656fa" minWidth="-Infinity"/>
+                                                <Button id="help_handleKeyLabCopyId" text="Copy ID" onAction="#handleKeyLabCopyId" styleClass="secondary-button,ux-inline-ab4da656fa" minWidth="-Infinity"/>
                                             </FlowPane>
                                         </VBox>
                                     </GridPane>
@@ -128,9 +128,9 @@
                                         <Button fx:id="keyLabUseMacBtn" text="Use in MAC"
                                                 onAction="#handleUseKeyLabInMac" disable="true"
                                                 styleClass="action-button-primary"/>
-                                        <Button text="Save Metadata" onAction="#handleKeyLabSaveMetadata" styleClass="action-button-primary"/>
+                                        <Button id="help_handleKeyLabSaveMetadata" text="Save Metadata" onAction="#handleKeyLabSaveMetadata" styleClass="action-button-primary"/>
                                         <Button fx:id="keyLabArchiveBtn" text="Archive" onAction="#handleKeyLabArchive" styleClass="secondary-button"/>
-                                        <Button text="Delete Key" onAction="#handleKeyLabDelete" styleClass="btn-danger"/>
+                                        <Button id="help_handleKeyLabDelete" text="Delete Key" onAction="#handleKeyLabDelete" styleClass="btn-danger"/>
                                     </FlowPane>
                                 </VBox>
                             </ScrollPane>
@@ -156,7 +156,7 @@
                     </GridPane>
 
                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                        <Button text="Generate Key" onAction="#handleGenerateKey"
+                        <Button id="help_handleGenerateKey" text="Generate Key" onAction="#handleGenerateKey"
                                 styleClass="action-button,primary-action"/>
                         <Button fx:id="saveGeneratedKeyButton" text="Save to Simulated HSM / Key Lab…" onAction="#handleSaveGeneratedKeyToLab"
                                 disable="true" styleClass="action-button,secondary-action"/>
@@ -216,7 +216,7 @@
                     <TextField fx:id="keyInputField" promptText="Enter key in hexadecimal..."
                               styleClass="form-field,monospace-field"/>
 
-                    <Button text="Validate &amp; Calculate KCVs" onAction="#handleValidateKey"
+                    <Button id="help_handleValidateKey" text="Validate &amp; Calculate KCVs" onAction="#handleValidateKey"
                             styleClass="action-button,primary-action"/>
 
                     <TextArea fx:id="validationResultArea" prefHeight="260" editable="false" wrapText="true"
@@ -232,7 +232,7 @@
                     <Label text="Paste a PEM public/private key or an X.509 certificate to inspect its fingerprint, size and security hints." wrapText="true" styleClass="helper-text" minHeight="-Infinity"/>
                     <TextArea fx:id="keyMaterialInputArea" prefHeight="110" wrapText="true" promptText="-----BEGIN PUBLIC KEY----- / -----BEGIN PRIVATE KEY----- / -----BEGIN CERTIFICATE-----"
                               styleClass="monospace-field"/>
-                    <Button text="Inspect Material" onAction="#handleInspectKeyMaterial" styleClass="action-button,primary-action"/>
+                    <Button id="help_handleInspectKeyMaterial" text="Inspect Material" onAction="#handleInspectKeyMaterial" styleClass="action-button,primary-action"/>
                     <TextArea fx:id="keyMaterialReportArea" prefHeight="210" editable="false" wrapText="true"
                               styleClass="result-area,monospace-field"/>
                 </VBox>
@@ -245,7 +245,7 @@
                     <Label styleClass="ux-inline-39414733db" text="Lists metadata only; it never exports private or secret keys."/>
                     <HBox spacing="5">
                         <ComboBox fx:id="keyStoreProfileCombo" promptText="Saved profile" HBox.hgrow="ALWAYS"/>
-                        <Button text="Load" onAction="#handleLoadKeyStoreProfile" styleClass="secondary-button"/>
+                        <Button id="help_handleLoadKeyStoreProfile" text="Load" onAction="#handleLoadKeyStoreProfile" styleClass="secondary-button"/>
                     </HBox>
                     <HBox spacing="6">
                         <ComboBox fx:id="keyStoreTypeCombo" prefWidth="110"/>
@@ -254,13 +254,13 @@
                     <CheckBox styleClass="ux-inline-db352fe452" fx:id="keyStoreUnsafeExtractCheck" text="Unsafe extraction: show exportable private/secret keys in clear (laboratory only)" wrapText="true"/>
                     <HBox spacing="5">
                         <TextField styleClass="ux-inline-ba9ea6419e" fx:id="keyStorePathField" promptText="PKCS#12, JKS or JCEKS file path" HBox.hgrow="ALWAYS"/>
-                        <Button text="Browse…" onAction="#handleChooseKeyStore" styleClass="secondary-button"/>
+                        <Button id="help_handleChooseKeyStore" text="Browse…" onAction="#handleChooseKeyStore" styleClass="secondary-button"/>
                     </HBox>
                     <HBox spacing="5">
                         <TextField fx:id="keyStoreProfileNameField" promptText="Profile name (path/type only; no password)" HBox.hgrow="ALWAYS"/>
-                        <Button text="Save Profile" onAction="#handleSaveKeyStoreProfile" styleClass="secondary-button"/>
+                        <Button id="help_handleSaveKeyStoreProfile" text="Save Profile" onAction="#handleSaveKeyStoreProfile" styleClass="secondary-button"/>
                     </HBox>
-                    <Button text="Inspect KeyStore" onAction="#handleInspectKeyStore" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="160"/>
+                    <Button id="help_handleInspectKeyStore" text="Inspect KeyStore" onAction="#handleInspectKeyStore" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="160"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="keyStoreReportArea" prefHeight="190" editable="false" wrapText="true"/>
                 </VBox>
             </TitledPane>
@@ -276,16 +276,16 @@
                     </HBox>
                     <HBox spacing="5">
                         <TextField styleClass="ux-inline-ba9ea6419e" fx:id="pkcs11LibraryField" promptText="Native PKCS#11 library (.dylib, .so or .dll)" HBox.hgrow="ALWAYS"/>
-                        <Button text="Browse…" onAction="#handleChoosePkcs11Library" styleClass="secondary-button"/>
+                        <Button id="help_handleChoosePkcs11Library" text="Browse…" onAction="#handleChoosePkcs11Library" styleClass="secondary-button"/>
                     </HBox>
                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <ComboBox fx:id="pkcs11ProfileCombo" promptText="Saved Profiles" prefWidth="200"/>
-                        <Button text="Save Profile" onAction="#handleSavePkcs11Profile" styleClass="secondary-button"/>
-                        <Button text="Delete" onAction="#handleDeletePkcs11Profile" styleClass="btn-danger"/>
+                        <Button id="help_handleSavePkcs11Profile" text="Save Profile" onAction="#handleSavePkcs11Profile" styleClass="secondary-button"/>
+                        <Button id="help_handleDeletePkcs11Profile" text="Delete" onAction="#handleDeletePkcs11Profile" styleClass="btn-danger"/>
                     </FlowPane>
                     <HBox spacing="6">
-                        <Button text="Connect &amp; Inspect" onAction="#handleConnectPkcs11" styleClass="action-button"/>
-                        <Button text="Disconnect" onAction="#handleDisconnectPkcs11" styleClass="secondary-button"/>
+                        <Button id="help_handleConnectPkcs11" text="Connect &amp; Inspect" onAction="#handleConnectPkcs11" styleClass="action-button"/>
+                        <Button id="help_handleDisconnectPkcs11" text="Disconnect" onAction="#handleDisconnectPkcs11" styleClass="secondary-button"/>
                     </HBox>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="pkcs11ReportArea" prefHeight="190" editable="false" wrapText="true"
                               promptText="Token provider and public object metadata will appear here; keys are never exported."/>
@@ -298,16 +298,16 @@
                     </HBox>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="pkcs11DataArea" prefHeight="55" promptText="Data to sign (hexadecimal)" wrapText="true"/>
                     <HBox spacing="6">
-                        <Button text="Sign Data" onAction="#handlePkcs11Sign" styleClass="action-button"/>
-                        <Button text="Verify Signature" onAction="#handlePkcs11Verify" styleClass="secondary-button"/>
+                        <Button id="help_handlePkcs11Sign" text="Sign Data" onAction="#handlePkcs11Sign" styleClass="action-button"/>
+                        <Button id="help_handlePkcs11Verify" text="Verify Signature" onAction="#handlePkcs11Verify" styleClass="secondary-button"/>
                     </HBox>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="pkcs11SignatureArea" prefHeight="55" promptText="Signature (hexadecimal)" wrapText="true"/>
                     <Separator/>
                     <Label styleClass="ux-inline-0ed0fa4650" text="Public certificate chain"/>
                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <ComboBox fx:id="pkcs11CertificateAliasCombo" promptText="Certificate alias" HBox.hgrow="ALWAYS"/>
-                        <Button text="Show PEM Chain" onAction="#handleShowPkcs11Certificate" styleClass="secondary-button"/>
-                        <Button text="Update Chain" onAction="#handleUpdatePkcs11CertificateChain" styleClass="action-button-primary"/>
+                        <Button id="help_handleShowPkcs11Certificate" text="Show PEM Chain" onAction="#handleShowPkcs11Certificate" styleClass="secondary-button"/>
+                        <Button id="help_handleUpdatePkcs11CertificateChain" text="Update Chain" onAction="#handleUpdatePkcs11CertificateChain" styleClass="action-button-primary"/>
                     </FlowPane>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="pkcs11CertificateArea" prefHeight="90" editable="true" promptText="Paste PEM chain here to update, or use Show PEM Chain to view." wrapText="true"/>
                     <Separator/>
@@ -315,14 +315,14 @@
                     <Label styleClass="ux-inline-39414733db" text="Creates a compact JWS with the same selected token private-key alias. Claims must be a JSON object." wrapText="true" minHeight="-Infinity"/>
                     <ComboBox fx:id="pkcs11JwtAlgorithmCombo" prefWidth="150"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="pkcs11JwtPayloadArea" prefHeight="65" promptText='JWT claims JSON, e.g. {&quot;sub&quot;:&quot;lab&quot;}' wrapText="true"/>
-                    <Button text="Create Signed JWT" onAction="#handleGeneratePkcs11Jwt" styleClass="action-button"/>
+                    <Button id="help_handleGeneratePkcs11Jwt" text="Create Signed JWT" onAction="#handleGeneratePkcs11Jwt" styleClass="action-button"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="pkcs11JwtOutputArea" prefHeight="75" editable="false" promptText="Compact JWS will appear here" wrapText="true"/>
                     <Separator/>
                     <Label styleClass="ux-inline-0ed0fa4650" text="CMS / PKCS#7 SignedData"/>
                     <Label styleClass="ux-inline-39414733db" text="Creates CMS with the selected token private-key and its public X.509 certificate. Output is Base64." wrapText="true" minHeight="-Infinity"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="pkcs11CmsDataArea" prefHeight="55" promptText="Content to sign (hexadecimal)" wrapText="true"/>
                     <CheckBox styleClass="ux-inline-ab4da656fa" fx:id="pkcs11CmsDetachedCheck" text="Detached CMS (do not embed content)"/>
-                    <Button text="Create CMS SignedData" onAction="#handleGeneratePkcs11Cms" styleClass="action-button"/>
+                    <Button id="help_handleGeneratePkcs11Cms" text="Create CMS SignedData" onAction="#handleGeneratePkcs11Cms" styleClass="action-button"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="pkcs11CmsOutputArea" prefHeight="75" editable="false" promptText="Base64 CMS/PKCS#7 will appear here" wrapText="true"/>
                     <Separator/>
                     <Label styleClass="ux-inline-0ed0fa4650" text="Wrap / Unwrap key objects (native token operation)"/>
@@ -332,7 +332,7 @@
                         <ComboBox fx:id="pkcs11WrapKeyCombo" promptText="Key to wrap alias" HBox.hgrow="ALWAYS"/>
                         <ComboBox fx:id="pkcs11WrapTransformationCombo" prefWidth="230"/>
                     </HBox>
-                    <Button text="Wrap Key" onAction="#handlePkcs11Wrap" styleClass="action-button"/>
+                    <Button id="help_handlePkcs11Wrap" text="Wrap Key" onAction="#handlePkcs11Wrap" styleClass="action-button"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="pkcs11WrapResultArea" prefHeight="65" editable="false" promptText="Wrapped key (hexadecimal) will appear here" wrapText="true"/>
                     <HBox spacing="6">
                         <ComboBox fx:id="pkcs11UnwrappingKeyCombo" promptText="Unwrapping key alias (private part)" HBox.hgrow="ALWAYS"/>
@@ -343,7 +343,7 @@
                         <TextField fx:id="pkcs11UnwrapAlgorithmField" promptText="Recovered key algorithm, e.g. AES" prefWidth="220"/>
                         <ComboBox fx:id="pkcs11UnwrapTypeCombo" prefWidth="150"/>
                     </HBox>
-                    <Button text="Unwrap Key" onAction="#handlePkcs11Unwrap" styleClass="action-button"/>
+                    <Button id="help_handlePkcs11Unwrap" text="Unwrap Key" onAction="#handlePkcs11Unwrap" styleClass="action-button"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="pkcs11UnwrapResultArea" prefHeight="65" editable="false" promptText="Unwrap result summary will appear here (key material itself is never displayed)" wrapText="true"/>
                 </VBox>
             </TitledPane>
@@ -354,7 +354,7 @@
                     <Label styleClass="ux-inline-39414733db" text="Checks the pair cryptographically with a temporary signing challenge; it does not compare PEM text." wrapText="true" minHeight="-Infinity"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="keyComparePublicArea" prefHeight="90" wrapText="true" promptText="Public key PEM or X.509 certificate PEM"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="keyComparePrivateArea" prefHeight="90" wrapText="true" promptText="Private key PEM"/>
-                    <Button text="Compare Pair" onAction="#handleCompareKeyPair" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="150"/>
+                    <Button id="help_handleCompareKeyPair" text="Compare Pair" onAction="#handleCompareKeyPair" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="150"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="keyCompareResultArea" prefHeight="100" editable="false" wrapText="true"/>
                 </VBox>
             </TitledPane>
@@ -371,7 +371,7 @@
                                 <HBox spacing="8" alignment="CENTER_LEFT">
                                     <Label text="Parts:"/>
                                     <ComboBox fx:id="numComponentsCombo" prefWidth="80"/>
-                                    <Button text="Split Key" onAction="#handleSplitKey"
+                                    <Button id="help_handleSplitKey" text="Split Key" onAction="#handleSplitKey"
                                             styleClass="action-button"/>
                                 </HBox>
                             </VBox>
@@ -406,7 +406,7 @@
                                               GridPane.rowIndex="4" GridPane.columnIndex="1"/>
                                 </GridPane>
 
-                                <Button text="Combine Components" onAction="#handleCombineComponents"
+                                <Button id="help_handleCombineComponents" text="Combine Components" onAction="#handleCombineComponents"
                                         styleClass="action-button" maxWidth="200"/>
                             </VBox>
                         </Tab>
@@ -461,7 +461,7 @@
                             <HBox spacing="3" alignment="CENTER_LEFT">
                                 <Label styleClass="ux-inline-ab4da656fa" text="Salt:"/>
                                 <ComboBox styleClass="ux-inline-ab4da656fa" fx:id="kdfSaltFormatCombo" prefWidth="70"/>
-                                <Button text="Generate" onAction="#handleGenerateKdfSalt" styleClass="secondary-button,ux-inline-6786c7b45a"/>
+                                <Button id="help_handleGenerateKdfSalt" text="Generate" onAction="#handleGenerateKdfSalt" styleClass="secondary-button,ux-inline-6786c7b45a"/>
                             </HBox>
                             <TextField styleClass="ux-inline-ab4da656fa" fx:id="kdfSaltField" promptText="Optional"/>
                             <Label fx:id="kdfSaltBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
@@ -477,7 +477,7 @@
                         </VBox>
                     </HBox>
 
-                    <Button text="Derive Key" onAction="#handleDeriveKey"
+                    <Button id="help_handleDeriveKey" text="Derive Key" onAction="#handleDeriveKey"
                             styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="150"/>
                     <Label fx:id="kdfValidationLabel" visible="false" managed="false" wrapText="true"
                            styleClass="helper-text,field-error" minHeight="-Infinity"/>
@@ -498,7 +498,7 @@
                     </HBox>
                     <TextField styleClass="ux-inline-ea21460dc9" fx:id="keyWrapKekField" promptText="KEK AES in hexadecimal (16, 24 or 32 bytes)"/>
                     <TextField styleClass="ux-inline-ea21460dc9" fx:id="keyWrapDataField" promptText="Key data / wrapped data in hexadecimal"/>
-                    <Button text="Execute Key Wrap" onAction="#handleAesKeyWrap" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="170"/>
+                    <Button id="help_handleAesKeyWrap" text="Execute Key Wrap" onAction="#handleAesKeyWrap" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="170"/>
                     <TextArea styleClass="ux-inline-ea21460dc9" fx:id="keyWrapResultArea" prefHeight="150" editable="false" wrapText="true"
                               managed="false" visible="false"/>
                 </VBox>
@@ -546,11 +546,11 @@
                                 <ComboBox styleClass="ux-inline-ba9ea6419e" fx:id="tr31OptionalBlockCombo" prefWidth="240"/>
                                 <TextField styleClass="ux-inline-ea21460dc9" fx:id="tr31OptionalBlocksField"/>
 
-                                <Button text="Wrap Key (Export)" onAction="#handleTR31Export"
+                                <Button id="help_handleTR31Export" text="Wrap Key (Export)" onAction="#handleTR31Export"
                                         styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
                                 <HBox spacing="6">
-                                    <Button text="Clear" onAction="#handleTR31Clear" styleClass="secondary-button"/>
-                                    <Button text="Reset Defaults" onAction="#handleTR31Reset" styleClass="secondary-button"/>
+                                    <Button id="help_handleTR31Clear" text="Clear" onAction="#handleTR31Clear" styleClass="secondary-button"/>
+                                    <Button id="help_handleTR31Reset" text="Reset Defaults" onAction="#handleTR31Reset" styleClass="secondary-button"/>
                                 </HBox>
 
                                 <TextArea styleClass="ux-inline-ea21460dc9" fx:id="tr31ExportResultArea" prefHeight="120" editable="false" wrapText="true"
@@ -574,9 +574,9 @@
                                 </HBox>
 
                                 <HBox spacing="6">
-                                    <Button text="Unwrap Key" onAction="#handleTR31Import"
+                                    <Button id="help_handleTR31Import" text="Unwrap Key" onAction="#handleTR31Import"
                                             styleClass="action-button,ux-inline-ba9ea6419e" HBox.hgrow="ALWAYS"/>
-                                    <Button text="Parse Header" onAction="#handleTR31ParseHeader"
+                                    <Button id="help_handleTR31ParseHeader" text="Parse Header" onAction="#handleTR31ParseHeader"
                                             styleClass="action-button,ux-inline-ba9ea6419e" HBox.hgrow="ALWAYS"/>
                                 </HBox>
 
@@ -627,11 +627,11 @@
                     <CheckBox fx:id="thalesComponentCheck" text="This is a key component, not a whole key"/>
 
                     <FlowPane hgap="10.0" vgap="8.0" alignment="CENTER_LEFT" styleClass="responsive-action-bar">
-                        <Button text="Encrypt Under LMK" onAction="#handleThalesEncrypt" styleClass="action-button,primary-action"/>
-                        <Button text="Decrypt Under LMK" onAction="#handleThalesDecrypt" styleClass="secondary-button"/>
-                        <Button text="Explain Wrapping" onAction="#handleThalesDescribe" styleClass="secondary-button"/>
-                        <Button text="Find Key Type" onAction="#handleThalesLookup" styleClass="secondary-button"/>
-                        <Button text="Load Manual Example" onAction="#handleThalesLoadExample" styleClass="secondary-button"/>
+                        <Button id="help_handleThalesEncrypt" text="Encrypt Under LMK" onAction="#handleThalesEncrypt" styleClass="action-button,primary-action"/>
+                        <Button id="help_handleThalesDecrypt" text="Decrypt Under LMK" onAction="#handleThalesDecrypt" styleClass="secondary-button"/>
+                        <Button id="help_handleThalesDescribe" text="Explain Wrapping" onAction="#handleThalesDescribe" styleClass="secondary-button"/>
+                        <Button id="help_handleThalesLookup" text="Find Key Type" onAction="#handleThalesLookup" styleClass="secondary-button"/>
+                        <Button id="help_handleThalesLoadExample" text="Load Manual Example" onAction="#handleThalesLoadExample" styleClass="secondary-button"/>
                     </FlowPane>
 
                     <TextArea fx:id="thalesResultArea" prefHeight="200" editable="false"
@@ -649,11 +649,11 @@
                     <TextField fx:id="keyBlockLmkField" promptText="Triple-length TDES, 48 hex characters"
                                maxWidth="Infinity" styleClass="monospace-field,form-field"/>
                     <HBox spacing="8">
-                        <Button text="Inspect Key Block" onAction="#handleKeyBlockInspect"
+                        <Button id="help_handleKeyBlockInspect" text="Inspect Key Block" onAction="#handleKeyBlockInspect"
                                 styleClass="action-button,primary-action"/>
-                        <Button text="Unwrap Key Block" onAction="#handleKeyBlockUnwrap"
+                        <Button id="help_handleKeyBlockUnwrap" text="Unwrap Key Block" onAction="#handleKeyBlockUnwrap"
                                 styleClass="secondary-button"/>
-                        <Button text="Load Manual Example" onAction="#handleKeyBlockExample"
+                        <Button id="help_handleKeyBlockExample" text="Load Manual Example" onAction="#handleKeyBlockExample"
                                 styleClass="secondary-button"/>
                     </HBox>
                     <TextArea fx:id="keyBlockResultArea" prefHeight="220" editable="false"
@@ -703,10 +703,10 @@
                     <TextArea fx:id="atallaBlockArea" prefHeight="60" wrapText="true"
                               promptText="1PUNE000,B17A04DC...,4FFC0BC8BCC1980E" styleClass="monospace-field"/>
                     <HBox spacing="8">
-                        <Button text="Generate AKB" onAction="#handleAtallaGenerate"
+                        <Button id="help_handleAtallaGenerate" text="Generate AKB" onAction="#handleAtallaGenerate"
                                 styleClass="action-button,primary-action"/>
-                        <Button text="Unwrap AKB" onAction="#handleAtallaUnwrap" styleClass="secondary-button"/>
-                        <Button text="Load Example" onAction="#handleAtallaExample" styleClass="secondary-button"/>
+                        <Button id="help_handleAtallaUnwrap" text="Unwrap AKB" onAction="#handleAtallaUnwrap" styleClass="secondary-button"/>
+                        <Button id="help_handleAtallaExample" text="Load Example" onAction="#handleAtallaExample" styleClass="secondary-button"/>
                     </HBox>
                     <TextArea fx:id="atallaResultArea" prefHeight="240" editable="false"
                               styleClass="result-area,monospace-field"/>
@@ -736,10 +736,10 @@
                                     <TextField styleClass="ux-inline-ba9ea6419e" fx:id="rsaKexKidField" promptText="Key ID (optional)"/>
                                     <TextField styleClass="ux-inline-ba9ea6419e" fx:id="rsaKexKeyVersionField" promptText="Key Version (optional)" prefWidth="140"/>
                                 </HBox>
-                                <Button text="Wrap Key (Export)" onAction="#handleRsaKexExport" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
+                                <Button id="help_handleRsaKexExport" text="Wrap Key (Export)" onAction="#handleRsaKexExport" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
                                 <HBox spacing="6">
-                                    <Button text="Clear" onAction="#handleRsaKexClear" styleClass="secondary-button"/>
-                                    <Button text="Reset Defaults" onAction="#handleRsaKexReset" styleClass="secondary-button"/>
+                                    <Button id="help_handleRsaKexClear" text="Clear" onAction="#handleRsaKexClear" styleClass="secondary-button"/>
+                                    <Button id="help_handleRsaKexReset" text="Reset Defaults" onAction="#handleRsaKexReset" styleClass="secondary-button"/>
                                 </HBox>
                                 <TextArea styleClass="ux-inline-ea21460dc9" fx:id="rsaKexExportResultArea" prefHeight="120" editable="false" wrapText="true"
                                           promptText="Export results will appear here..."/>
@@ -762,7 +762,7 @@
                                     <ComboBox styleClass="ux-inline-ba9ea6419e" fx:id="rsaKexImportProfileCombo" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200"/>
                                 </GridPane>
                                 <Label text="Ignored when the pasted data is already a Crypto Envelope — its own header is used instead." wrapText="true" styleClass="helper-text,ux-inline-ab4da656fa" minHeight="-Infinity"/>
-                                <Button text="Unwrap Key" onAction="#handleRsaKexImport" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
+                                <Button id="help_handleRsaKexImport" text="Unwrap Key" onAction="#handleRsaKexImport" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
                                 <TextArea styleClass="ux-inline-ea21460dc9" fx:id="rsaKexImportResultArea" prefHeight="120" editable="false" wrapText="true"
                                           promptText="Import results will appear here..."/>
                             </VBox>
@@ -796,10 +796,10 @@
                                 <Label styleClass="ux-inline-ba9ea6419e" text="Binding Nonce (optional, from receiver's challenge — two-pass):"/>
                                 <TextField styleClass="ux-inline-ea21460dc9" fx:id="tr34BindingNonceField" promptText="Hex nonce from the Receive tab's Generate Challenge — leave blank for one-pass"/>
                                 <CheckBox styleClass="ux-inline-ba9ea6419e" fx:id="tr34IncludeEnvelopeCheck" text="Wrap key as Crypto Envelope before distributing"/>
-                                <Button text="Distribute Key" onAction="#handleTr34Distribute" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
+                                <Button id="help_handleTr34Distribute" text="Distribute Key" onAction="#handleTr34Distribute" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
                                 <HBox spacing="6">
-                                    <Button text="Clear" onAction="#handleTr34Clear" styleClass="secondary-button"/>
-                                    <Button text="Reset Defaults" onAction="#handleTr34Reset" styleClass="secondary-button"/>
+                                    <Button id="help_handleTr34Clear" text="Clear" onAction="#handleTr34Clear" styleClass="secondary-button"/>
+                                    <Button id="help_handleTr34Reset" text="Reset Defaults" onAction="#handleTr34Reset" styleClass="secondary-button"/>
                                 </HBox>
                                 <TextArea styleClass="ux-inline-ea21460dc9" fx:id="tr34DistributeResultArea" prefHeight="120" editable="false" wrapText="true"
                                           promptText="Distribution results will appear here..."/>
@@ -820,9 +820,9 @@
                                 <HBox spacing="6">
                                     <TextField styleClass="ux-inline-ea21460dc9" fx:id="tr34ChallengeNonceField" HBox.hgrow="ALWAYS"
                                               promptText="Hex nonce — generate here, copy into the Distribute tab's Binding Nonce, leave blank for one-pass"/>
-                                    <Button text="Generate Challenge" onAction="#handleTr34GenerateChallenge" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                                    <Button id="help_handleTr34GenerateChallenge" text="Generate Challenge" onAction="#handleTr34GenerateChallenge" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
                                 </HBox>
-                                <Button text="Receive Key" onAction="#handleTr34Receive" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
+                                <Button id="help_handleTr34Receive" text="Receive Key" onAction="#handleTr34Receive" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
                                 <TextArea styleClass="ux-inline-ea21460dc9" fx:id="tr34ReceiveResultArea" prefHeight="120" editable="false" wrapText="true"
                                           promptText="Receive results will appear here..."/>
                             </VBox>
@@ -930,7 +930,7 @@
                         <HBox spacing="12" alignment="CENTER_LEFT">
                             <Label text="Curve:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                             <ComboBox fx:id="ecdsaCurveCombo" prefWidth="160" styleClass="form-field"/>
-                            <Button text="Generate ECDSA Key Pair" onAction="#handleGenerateECDSA" styleClass="action-button,primary-action"/>
+                            <Button id="help_handleGenerateECDSA" text="Generate ECDSA Key Pair" onAction="#handleGenerateECDSA" styleClass="action-button,primary-action"/>
                         </HBox>
 
                         <!-- Block 3: Summary -->
@@ -1076,7 +1076,7 @@
                         <HBox spacing="12" alignment="CENTER_LEFT">
                             <Label styleClass="ux-inline-0ed0fa4650" text="Curve: Ed25519 (fixed 255-bit)"/>
                             <Region HBox.hgrow="ALWAYS"/>
-                            <Button text="Generate EdDSA Key Pair" onAction="#handleGenerateEdDSA" styleClass="action-button,primary-action"/>
+                            <Button id="help_handleGenerateEdDSA" text="Generate EdDSA Key Pair" onAction="#handleGenerateEdDSA" styleClass="action-button,primary-action"/>
                         </HBox>
 
                         <!-- Block 3: Summary -->

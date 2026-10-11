@@ -1,0 +1,5 @@
+# Encrypted-file analysis
+
+The current screen exposes an explicit **Analyze Encrypted File** action from the file-cipher panel. It passes that form's source, profile, key, nonce/IV, AAD, and detached tag-file reference to the analyzer; execution reads the selected source and, when used, the tag file. The action runs directly with its defaults and opens no configuration dialog. An analysis may write report artifacts beside the source. Opening help only reports safe field-presence flags: it never copies settings into the other cipher form, starts analysis, or reads either path.
+
+Treat each candidate as a hypothesis. Readable output, a format hint, or unauthenticated CTR/CBC recovery does not establish the original algorithm or content. For an AEAD profile, authenticated recovery requires successful verification with the matching key, nonce, tag, and AAD. The current panel does not expose separate promote-candidate or export-report actions; use the results and report artifacts produced by the explicit analyzer action.

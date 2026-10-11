@@ -58,6 +58,7 @@ final class AsymmetricCipherCoordinator {
     private PublicKey panelPublicKey;
     private PrivateKey panelPrivateKey;
     private String loadedPublicText;
+    private Runnable publicKeyMetadataChanged = () -> { };
     private String loadedPrivateText;
 
     AsymmetricCipherCoordinator(View view, Supplier<StatusReporter> reporter, Supplier<Supplier<KeyPair>> sharedKeyPairs) {
@@ -80,6 +81,27 @@ final class AsymmetricCipherCoordinator {
 
     private Supplier<KeyPair> sharedKeyPairSupplier() {
         return sharedKeyPairs.get();
+    }
+
+    /** Returns metadata for the public key the operation would currently resolve; never parses form text. */
+    int publicModulusBitsForHelp() {
+        String visible = publicKeyArea == null ? "" : publicKeyArea.getText().trim();
+        PublicKey key;
+        if (visible.isEmpty()) {
+            KeyPair pair = sharedPair();
+            key = pair == null ? null : pair.getPublic();
+        } else {
+            // Match resolvePublicKey(): non-empty panel text is the selected source,
+            // but help only uses metadata from that text if it was already loaded.
+            if (!visible.equals(loadedPublicText)) return 0;
+            key = panelPublicKey;
+        }
+        return key instanceof java.security.interfaces.RSAPublicKey rsaKey
+                ? rsaKey.getModulus().bitLength() : 0;
+    }
+
+    void setPublicKeyMetadataChanged(Runnable callback) {
+        publicKeyMetadataChanged = callback == null ? () -> { } : callback;
     }
 
 
@@ -173,9 +195,11 @@ final class AsymmetricCipherCoordinator {
                 }
             }
             loadedPublicText = keyText;
+            publicKeyMetadataChanged.run();
         } catch (Exception e) {
             panelPublicKey = null;
             loadedPublicText = null;
+            publicKeyMetadataChanged.run();
             reporter().showError("Load Error", "Failed to load Public Key: " + e.getMessage());
             LOG.warn("Unable to load public key", e);
         }

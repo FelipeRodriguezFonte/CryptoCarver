@@ -123,8 +123,9 @@ class Ux23AccessibilityLiveUITest {
 
             HBox actions = (HBox) actionGo.getParent();
             assertEquals(actionGo, actions.getChildren().get(0));
-            assertEquals(actionCopy, actions.getChildren().get(1));
-            assertEquals(actionClose, actions.getChildren().get(2));
+            assertEquals("errorBannerHelpBtn", actions.getChildren().get(1).getId());
+            assertEquals(actionCopy, actions.getChildren().get(2));
+            assertEquals(actionClose, actions.getChildren().get(3));
         });
 
         // InlineErrorPresenter intentionally reasserts focus after two queued
@@ -141,9 +142,11 @@ class Ux23AccessibilityLiveUITest {
             Button actionCopy = copy[0];
             Button actionClose = close[0];
             actionGo.requestFocus();
+            Button actionHelp = (Button) ((HBox) actionGo.getParent()).getChildren().get(1);
+            Button afterGo = actionHelp.isVisible() && actionHelp.isManaged() ? actionHelp : actionCopy;
             fireKey(actionGo, KeyCode.TAB, false, true);
-            assertFocusOwnerWhenWindowFocused(actionCopy, scene[0], "Tab must move to copy details");
-            fireKey(actionCopy, KeyCode.TAB, true, true);
+            assertFocusOwnerWhenWindowFocused(afterGo, scene[0], "Tab must move to the next banner action");
+            fireKey(afterGo, KeyCode.TAB, true, true);
             assertFocusOwnerWhenWindowFocused(actionGo, scene[0], "Shift+Tab must return to go-to-field");
 
             actionGo.requestFocus();

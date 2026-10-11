@@ -67,10 +67,8 @@ class JoseJweCharacterizationUITest {
                     assertNull(p.reporter.error);
                     assertEquals(PAYLOAD, p.area("jweDecodedPayloadArea").getText());
                     assertTrue(p.label("jweStatusLabel").getStyle().contains("green"));
-                    if (serialization.equals("Compact")) {
-                        assertTrue(p.area("jweDecryptedKeyArea").getText().contains("not displayed automatically"));
-                        assertFalse(p.area("jweDecryptedKeyArea").getText().contains(KEY));
-                    }
+                    assertTrue(p.area("jweDecryptedKeyArea").getText().contains("not displayed automatically"));
+                    assertFalse(p.area("jweDecryptedKeyArea").getText().contains(KEY));
                     p.published("decrypted_"+serialization);
                     p.privacy(p.reporter.result, KEY, PAYLOAD);
                 }
@@ -110,11 +108,12 @@ class JoseJweCharacterizationUITest {
                         p.reporter.result = null;
                         p.invoke("handleDecryptJWE");
                         assertEquals(PAYLOAD, p.area("jweDecodedPayloadArea").getText());
-                        assertEquals(64, p.area("jweDecryptedKeyArea").getText().length());
+                        assertTrue(p.area("jweDecryptedKeyArea").getText().contains(
+                                I18nService.getInstance().text("module.jose.jwe.cekNotDisplayed")));
+                        assertFalse(p.area("jweDecryptedKeyArea").getText().contains(privatePem));
                         p.published(language+"_"+algorithm+"_decrypt");
-                        p.privacy(p.reporter.result, privatePem, PAYLOAD,
-                                p.area("jweDecryptedKeyArea").getText());
-                        p.line(language+"_"+algorithm+"_cek", "manual CEK recovered;random value normalized");
+                        p.privacy(p.reporter.result, privatePem, PAYLOAD);
+                        p.line(language+"_"+algorithm+"_cek", "CEK is not displayed;result fields contain no key material");
                     }
                 }
 
@@ -139,11 +138,11 @@ class JoseJweCharacterizationUITest {
                     p.invoke("handleDecryptJWE");
                     assertNull(p.reporter.error);
                     assertEquals(PAYLOAD, p.area("jweDecodedPayloadArea").getText());
-                    assertEquals(64, p.area("jweDecryptedKeyArea").getText().length());
+                    assertTrue(p.area("jweDecryptedKeyArea").getText().contains(
+                            I18nService.getInstance().text("module.jose.jwe.cekNotDisplayed")));
                     p.published(algorithm+"_decrypted");
-                    p.privacy(p.reporter.result, fixedSecret, PAYLOAD,
-                            p.area("jweDecryptedKeyArea").getText());
-                    p.line(algorithm+"_roundtrip", "payload roundtrip;manual CEK length=32;random value normalized");
+                    p.privacy(p.reporter.result, fixedSecret, PAYLOAD);
+                    p.line(algorithm+"_roundtrip", "payload roundtrip;CEK not displayed;random value normalized");
                 }
 
                 p.language(LanguagePreference.EN);
@@ -173,7 +172,7 @@ class JoseJweCharacterizationUITest {
                     p.line(language+"_invalid_iterations", p.reporter.error);
                 }
 
-                p.digest("784d6a61e011dee39d8c2c5f6798bd4a29484f2fbc86d8f041d4e39ed69272fd");
+                p.digest("a252a956316172e47d6345c70adc23a0bcb23dc2e08e4e59d6ccebd8f893af22");
             } catch (Exception e) { throw new RuntimeException(e); }
         });
     }

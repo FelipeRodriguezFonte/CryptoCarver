@@ -1,6 +1,7 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.model.process.NodeCatalog;
+import com.cryptocarver.model.process.NodeDescriptor;
 import com.cryptocarver.model.process.NodeExecutionEvent;
 import com.cryptocarver.model.process.NodeParameter;
 import com.cryptocarver.model.process.ProcessDefinition;
@@ -9,6 +10,7 @@ import com.cryptocarver.model.process.ProcessEngine;
 import com.cryptocarver.model.process.Representation;
 import com.cryptocarver.service.I18nService;
 import javafx.fxml.FXML;
+import javafx.beans.value.ChangeListener;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -49,6 +51,20 @@ public class ProcessDesignerController {
     @FXML private Button reverseConnectionButton;
     @FXML private Button reverseConnectionToolbarButton;
     @FXML private Button runProcessButton;
+    @FXML private Button dryRunProcessButton;
+    @FXML private Button openProcessButton;
+    @FXML private Button saveProcessButton;
+    @FXML private MenuButton editMenuButton;
+    @FXML private MenuButton presetsMenuButton;
+    @FXML private Button clearCanvasToolbarButton;
+    @FXML private Button expandResultsButton;
+    @FXML private Button openWindowButton;
+    @FXML private Button zoomInButton;
+    @FXML private Button zoomOutButton;
+    @FXML private Button resetZoomButton;
+    @FXML private Button zoomFitButton;
+    @FXML private Button saveNodeSettingsButton;
+    @FXML private Button clearCanvasInspectorButton;
     @FXML Button cancelProcessButton;
     @FXML private Button inspectorToggleButton;
     @FXML private SplitPane designerSplitPane;
@@ -74,6 +90,13 @@ public class ProcessDesignerController {
     @FXML Label processStatusLabel;
     @FXML TextArea executionOutputArea;
     @FXML MenuButton connectMenuButton;
+    private com.cryptocarver.model.help.HelpContextState contextualHelpState;
+    private ContextualHelpButtonBinder contextualHelpButtons;
+    private ContextualHelpButtonBinder nodeHelpButtons;
+    private ContextualHelpButtonBinder paletteHelpButtons;
+    private final Map<ComboBox<String>, ChangeListener<String>> nodeOptionContextListeners = new LinkedHashMap<>();
+    private java.util.function.Consumer<com.cryptocarver.model.help.HelpContext> contextualHelpOpener = ignored -> { };
+    private boolean contextualHelpEnabled;
 
     // --- State & Canvas ---
     final List<ProcessDefinition.Node> nodes = new ArrayList<>();
@@ -161,6 +184,159 @@ public class ProcessDesignerController {
         select(input);
     }
 
+    public void configureContextualHelp(com.cryptocarver.model.help.HelpContextState state,
+            java.util.function.Consumer<com.cryptocarver.model.help.HelpContext> opener) {
+        if (state == null || contextualHelpButtons != null) return;
+        contextualHelpState = state;
+        contextualHelpOpener = opener == null ? ignored -> { } : opener;
+        contextualHelpButtons = new ContextualHelpButtonBinder(state, this::openProcessHelp);
+        bindProcessHelp("run", "run_mode", runProcessButton);
+        bindProcessHelp("dry_run", "validation", dryRunProcessButton);
+        bindProcessHelp("cancel", "progress", cancelProcessButton);
+        bindProcessHelp("load", "process_file", openProcessButton);
+        bindProcessHelp("save", "process_file", saveProcessButton);
+        bindProcessHelp("save", "process_name", processNameField);
+        bindProcessHelp("edit_menu", "canvas", editMenuButton);
+        bindProcessHelp("presets", "canvas", presetsMenuButton);
+        bindProcessHelp("reverse_connection", "ports", reverseConnectionToolbarButton);
+        bindProcessHelp("clear", "canvas", clearCanvasToolbarButton);
+        bindProcessHelp("toggle_inspector", "inspector", inspectorToggleButton);
+        bindProcessHelp("focus_mode", "focus_mode", focusModeButton);
+        bindProcessHelp("expand_results", "result", expandResultsButton);
+        bindProcessHelp("open_window", "canvas", openWindowButton);
+        bindProcessHelp("zoom_in", "zoom", zoomInButton);
+        bindProcessHelp("zoom_out", "zoom", zoomOutButton);
+        bindProcessHelp("zoom_reset", "zoom", resetZoomButton);
+        bindProcessHelp("zoom_fit", "zoom", zoomFitButton);
+        bindProcessHelp("snap_to_grid", "snap_to_grid", snapToGridCheck);
+        bindProcessHelp("search_palette", "palette", paletteSearchField);
+        bindProcessHelp("connect", "ports", connectSelectedButton);
+        bindProcessHelp("connect", "target_port", connectMenuButton);
+        bindProcessHelp("reverse_connection", "connection", reverseConnectionButton);
+        bindProcessHelp("delete", "selection", deleteSelectedButton);
+        bindProcessHelp("save_node_settings", "parameters", saveNodeSettingsButton);
+        bindProcessHelp("clear", "clear_canvas", clearCanvasInspectorButton);
+        bindProcessHelp("configure_node", "node", selectedNodeLabel);
+        bindProcessHelp("configure_node", "node_name", nodeNameField);
+        bindProcessHelp("run", "result", executionOutputArea);
+        bindProcessHelp("run", "status", executionStatusTable);
+        bindProcessHelp("run", "progress", processProgressBar);
+        bindProcessHelp("run", "status_summary", processStatusLabel);
+        setActiveContextualHelpOperation("", false);
+        publishSelectedNodeHelpContext();
+        buildPalette();
+    }
+
+    private void bindProcessHelp(String action, String field, javafx.scene.Node target) {
+        if (contextualHelpButtons != null && target != null)
+            contextualHelpButtons.bind("op_gen_process_designer", "op_gen_process_designer", action, field, target);
+    }
+
+    public void setActiveContextualHelpOperation(String operationId, boolean enabled) {
+        contextualHelpEnabled = enabled;
+        if (contextualHelpButtons != null) {
+            contextualHelpButtons.setActiveRoute(operationId);
+            contextualHelpButtons.setEnabled(enabled && com.cryptocarver.model.AppSettings.getInstance().isContextualHelpEnabled());
+        }
+        if (!"op_gen_process_designer".equals(operationId)) {
+            clearSelectedNodeHelpBindings();
+        } else {
+            refreshSelectedNodeHelpBindings();
+            publishSelectedNodeHelpContext();
+        }
+        if (paletteHelpButtons != null) {
+            paletteHelpButtons.setActiveRoute(operationId);
+            paletteHelpButtons.setEnabled(enabled && com.cryptocarver.model.AppSettings.getInstance().isContextualHelpEnabled());
+        }
+        buildPalette();
+    }
+
+    private void openProcessHelp(com.cryptocarver.model.help.HelpContext context) {
+        if (context == null || !"op_gen_process_designer".equals(context.operationId())) return;
+        syncNodeParameterSelections(context);
+        contextualHelpOpener.accept(contextualHelpState.current());
+    }
+
+    /** Adds the focused node parameter (never a sensitive one) to the shared help state. */
+    private void syncNodeParameterSelections(com.cryptocarver.model.help.HelpContext context) {
+        if (context == null || !"op_gen_process_designer".equals(context.operationId())) return;
+        if (context.actionId() != null && context.actionId().startsWith("node_")) {
+            NodeDescriptor descriptor = selected == null ? null : NodeCatalog.getDescriptor(selected.type).orElse(null);
+            NodeParameter parameter = descriptor == null ? null : descriptor.parameters().stream()
+                    .filter(item -> item.key().equals(context.fieldId())).findFirst().orElse(null);
+            if (parameter != null && !parameter.sensitive()) {
+                contextualHelpState.setSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_PARAMETER,
+                        com.cryptocarver.model.help.HelpContext.PublicSelection.of(parameter.key()));
+                if (parameter.options().isEmpty()) {
+                    contextualHelpState.setSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_OPTION, null);
+                } else if (dynamicInspectorRenderer != null
+                        && dynamicInspectorRenderer.getControl(parameter.key()) instanceof ComboBox<?> combo
+                        && combo.getValue() instanceof String value && parameter.options().contains(value)) {
+                    contextualHelpState.setSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_OPTION,
+                            com.cryptocarver.model.help.HelpContext.PublicSelection.of(
+                                    com.cryptocarver.model.help.B05HelpCatalog.slug(value)));
+                }
+            } else {
+                contextualHelpState.setSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_PARAMETER, null);
+                contextualHelpState.setSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_OPTION, null);
+            }
+        } else {
+            contextualHelpState.setSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_PARAMETER, null);
+            contextualHelpState.setSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_OPTION, null);
+        }
+    }
+
+    private void publishSelectedNodeHelpContext() {
+        if (contextualHelpState == null || !"op_gen_process_designer".equals(contextualHelpState.current().operationId())) return;
+        NodeDescriptor descriptor = selected == null ? null : NodeCatalog.getDescriptor(selected.type).orElse(null);
+        String action = descriptor == null ? "" : com.cryptocarver.model.help.B05HelpCatalog.nodeActionId(descriptor.type());
+        contextualHelpState.setAction(action);
+        contextualHelpState.setField("");
+        contextualHelpState.setSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_PARAMETER, null);
+        contextualHelpState.setSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_OPTION, null);
+        contextualHelpState.setSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_TYPE,
+                descriptor == null ? null : com.cryptocarver.model.help.HelpContext.PublicSelection.of(descriptor.type()));
+    }
+
+    private void refreshSelectedNodeHelpBindings() {
+        clearSelectedNodeHelpBindings();
+        if (!contextualHelpEnabled || dynamicInspectorRenderer == null || selected == null) return;
+        NodeDescriptor descriptor = NodeCatalog.getDescriptor(selected.type).orElse(null);
+        if (descriptor == null) return;
+        nodeHelpButtons = new ContextualHelpButtonBinder(contextualHelpState, this::openProcessHelp,
+                this::syncNodeParameterSelections);
+        String action = com.cryptocarver.model.help.B05HelpCatalog.nodeActionId(descriptor.type());
+        dynamicInspectorRenderer.getControls().forEach((key, control) -> {
+            nodeHelpButtons.bind("op_gen_process_designer", "op_gen_process_designer", action, key, control);
+            if (control instanceof ComboBox<?> rawCombo && !rawCombo.getItems().isEmpty()) {
+                @SuppressWarnings("unchecked") ComboBox<String> combo = (ComboBox<String>) rawCombo;
+                NodeParameter parameter = descriptor.parameters().stream().filter(item -> item.key().equals(key)).findFirst().orElse(null);
+                if (parameter == null || parameter.sensitive()) return;
+                ChangeListener<String> listener = (obs, oldValue, newValue) -> {
+                    if (newValue == null || !parameter.options().contains(newValue) || !contextualHelpEnabled
+                            || !"op_gen_process_designer".equals(contextualHelpState.current().operationId())) return;
+                    contextualHelpState.setAction(action);
+                    contextualHelpState.setField(key);
+                    contextualHelpState.setSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_PARAMETER,
+                            com.cryptocarver.model.help.HelpContext.PublicSelection.of(key));
+                    contextualHelpState.setSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_OPTION,
+                            com.cryptocarver.model.help.HelpContext.PublicSelection.of(
+                                    com.cryptocarver.model.help.B05HelpCatalog.slug(newValue)));
+                };
+                combo.valueProperty().addListener(listener);
+                nodeOptionContextListeners.put(combo, listener);
+            }
+        });
+        nodeHelpButtons.setActiveRoute("op_gen_process_designer");
+        nodeHelpButtons.setEnabled(com.cryptocarver.model.AppSettings.getInstance().isContextualHelpEnabled());
+    }
+
+    private void clearSelectedNodeHelpBindings() {
+        nodeOptionContextListeners.forEach((combo, listener) -> combo.valueProperty().removeListener(listener));
+        nodeOptionContextListeners.clear();
+        if (nodeHelpButtons != null) { nodeHelpButtons.close(); nodeHelpButtons = null; }
+    }
+
     private ProcessCanvasEventsCoordinator processCanvasEventsCoordinator() {
         if (processCanvasEventsCoordinator == null) processCanvasEventsCoordinator = new ProcessCanvasEventsCoordinator();
         return processCanvasEventsCoordinator;
@@ -186,12 +362,32 @@ public class ProcessDesignerController {
 
     private ProcessPaletteCoordinator.View paletteView() {
         return new ProcessPaletteCoordinator.View(() -> paletteItemsContainer, this::t,
-                () -> nodes.size(), this::addNode, this::select);
+                () -> nodes.size(), this::addNode, this::select, this::bindPaletteNodeHelp);
     }
 
-    private void buildPalette() { processPaletteCoordinator().buildPalette(paletteView(), paletteSearchField == null ? null : paletteSearchField.getText()); }
+    private void buildPalette() {
+        if (paletteHelpButtons != null) { paletteHelpButtons.close(); paletteHelpButtons = null; }
+        processPaletteCoordinator().buildPalette(paletteView(), paletteSearchField == null ? null : paletteSearchField.getText());
+    }
 
-    private void filterPalette(String filter) { processPaletteCoordinator().filterPalette(paletteView(), filter); }
+    private void filterPalette(String filter) {
+        if (paletteHelpButtons != null) { paletteHelpButtons.close(); paletteHelpButtons = null; }
+        processPaletteCoordinator().filterPalette(paletteView(), filter);
+    }
+
+    private void bindPaletteNodeHelp(NodeDescriptor descriptor, VBox target) {
+        if (!contextualHelpEnabled || contextualHelpState == null || target == null) return;
+        if (paletteHelpButtons == null)
+            paletteHelpButtons = new ContextualHelpButtonBinder(contextualHelpState, this::openProcessHelp);
+        String action = com.cryptocarver.model.help.B05HelpCatalog.nodeActionId(descriptor.type());
+        target.setFocusTraversable(true); // palette entries are help targets: reachable by keyboard
+        paletteHelpButtons.bind("op_gen_process_designer", "op_gen_process_designer", action, "node_purpose", target,
+                next -> next.withSelection(com.cryptocarver.model.help.HelpContext.Selection.PROCESS_NODE_TYPE,
+                        com.cryptocarver.model.help.HelpContext.PublicSelection.of(descriptor.type())));
+        paletteHelpButtons.setActiveRoute("op_gen_process_designer");
+        paletteHelpButtons.setEnabled(contextualHelpEnabled
+                && com.cryptocarver.model.AppSettings.getInstance().isContextualHelpEnabled());
+    }
 
     // --- Expandable Canvas Geometry ---
     public void updateCanvasGeometry() {
@@ -316,7 +512,7 @@ public class ProcessDesignerController {
                 () -> connections,
                 () -> selectedNodeIds,
                 () -> selected,
-                node -> selected = node,
+                node -> { selected = node; publishSelectedNodeHelpContext(); },
                 () -> selectedConnection,
                 connection -> selectedConnection = connection,
                 this::saveSelectedNodeSettings,
@@ -325,7 +521,7 @@ public class ProcessDesignerController {
                 () -> nodeNameField,
                 () -> dynamicInspectorContainer,
                 () -> transientSecrets,
-                renderer -> dynamicInspectorRenderer = renderer,
+                renderer -> { dynamicInspectorRenderer = renderer; refreshSelectedNodeHelpBindings(); },
                 this::updateRepresentationContract,
                 this::redraw,
                 () -> connectSelectedButton,

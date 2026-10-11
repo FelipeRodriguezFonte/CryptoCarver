@@ -41,18 +41,7 @@ final class ModularArithmeticCoordinator {
     /** Fills the pane's choices. */
     void configure() {
         if (modOperationCombo != null) {
-            modOperationCombo.getItems().setAll(
-                    "Addition (a + b) mod m",
-                    "Subtraction (a - b) mod m",
-                    "Inverse -a mod m",
-                    "Multiplication (a * b) mod m",
-                    "Exponentiation (a^b) mod m",
-                    "Reciprocal (1/a) mod m",
-                    "GCD(a, b)",
-                    "LCM(a, b)",
-                    "Extended GCD",
-                    "XOR (Hex Input)",
-                    "XOR (Decimal Input)");
+            modOperationCombo.getItems().setAll(com.cryptocarver.model.GenericOperationOptions.MODULAR_OPERATIONS);
             modOperationCombo.getSelectionModel().select(0);
         }
     }

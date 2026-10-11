@@ -9,7 +9,7 @@
         <VBox styleClass="ux-inline-31b3bfce5a" spacing="10">
             <Label styleClass="ux-inline-689e8d50bc" text="CMS Source (Base64 / PEM / DER File):"/>
             <HBox spacing="10">
-                <Button text="Load CMS file..." onAction="#handleLoadCmsFile" />
+                <Button id="help_handleLoadCmsFile" text="Load CMS file..." onAction="#handleLoadCmsFile" />
                 <Label fx:id="cmsFilePathLabel" text="No file selected" />
             </HBox>
             <TextArea styleClass="ux-inline-8e6d20ca1b" fx:id="cmsInputArea" promptText="Or paste CMS bytes here..." prefHeight="80"/>
@@ -17,24 +17,24 @@
             <Label text="Detached Content (Optional, for detached signature verification):" />
             <CheckBox fx:id="cmsDetachedCheck" text="Provide detached content" onAction="#handleDetachedToggle" />
             <HBox spacing="10" fx:id="cmsDetachedFileBox" managed="false" visible="false">
-                <Button text="Load Content file..." onAction="#handleLoadContentFile" />
+                <Button id="help_handleLoadContentFile" text="Load Content file..." onAction="#handleLoadContentFile" />
                 <Label fx:id="cmsContentPathLabel" text="No file selected" />
             </HBox>
             <TextArea styleClass="ux-inline-8e6d20ca1b" fx:id="cmsContentArea" promptText="Or paste content here..." prefHeight="60" managed="false" visible="false"/>
 
             <Label text="Truststore (Optional, for PKIX path validation):" />
             <HBox spacing="10" alignment="CENTER_LEFT">
-                <Button text="Select Truststore..." onAction="#handleSelectTruststore" />
+                <Button id="help_handleSelectTruststore" text="Select Truststore..." onAction="#handleSelectTruststore" />
                 <Label fx:id="truststorePathLabel" text="No truststore selected" />
                 <PasswordField fx:id="truststorePasswordField" promptText="Password (not saved)" />
             </HBox>
 
             <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                <Button text="Inspect CMS" onAction="#handleInspectCms" styleClass="action-button-primary"/>
-                <Button text="Validate SignedData" onAction="#handleValidateSignedData" styleClass="action-button-secondary"/>
-                <Button text="Export Report" onAction="#handleExportReport" />
-                <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
-                <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+                <Button id="help_handleInspectCms" text="Inspect CMS" onAction="#handleInspectCms" styleClass="action-button-primary"/>
+                <Button id="help_handleValidateSignedData" text="Validate SignedData" onAction="#handleValidateSignedData" styleClass="action-button-secondary"/>
+                <Button id="help_handleExportReport" text="Export Report" onAction="#handleExportReport" />
+                <Button id="help_handleClear" text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+                <Button id="help_handleReset" text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
             </FlowPane>
 
             <Label styleClass="ux-inline-689e8d50bc" text="Inspection Results:"/>
