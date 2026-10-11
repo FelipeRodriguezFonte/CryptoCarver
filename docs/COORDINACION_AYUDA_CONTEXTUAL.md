@@ -1,0 +1,90 @@
+> **TRABAJO DETENIDO por el usuario el 2026-10-10:** rechazo a los botones «?» repartidos por la interfaz. Orden enviada a Luna y confirmada; chat idle. Automatización `coordinar-ayuda-contextual-con-luna` PAUSED. No hay autorización vigente para continuar la secuencia previa. Cambios conservados y última instalación aprobada sin modificar. Cursor final `ec598c5c-5c38-4bba-8a40-83054670cd5e:95`; turno detenido `01a12722-d9bf-7920-8a10-2b18ed838f88`. El registro inferior es histórico. Corrección R12–R15 sin dictamen final, no aprobada por el resumen de pruebas.
+
+# Coordinación de la ayuda contextual
+
+Actualización inicial: 10 de octubre de 2026. Codex revisa y coordina; Luna implementa.
+
+## Autorización y fuentes
+
+El usuario ha autorizado a Codex a enviar a Luna las tareas restantes y revisar sus cambios sin trasladar manualmente los mensajes entre chats. Se mantiene la secuencia B00–B15 del [encargo](ENCARGO_LUNA_AYUDA_CONTEXTUAL.md), con revisión entre bloques. No autoriza commits, pushes, publicación, despliegue ni cambios de comportamiento criptográfico.
+
+**Instrucción humana adicional, 10 de octubre de 2026:** «Acuerdate de ir instalando la version para poder ver como expone datos». Al cerrar una entrega revisada, Codex debe empaquetar e instalar localmente la versión en `/Applications/CryptoCarver.app` para que el usuario pueda examinarla. Esta autorización incluye actualizar la instalación local; no autoriza publicación ni despliegue externo. Registrar bloque, versión/build, ubicación y verificación de arranque. Conservar preferencias/datos y una copia recuperable de la instalación anterior; no cerrar una sesión activa con trabajo sin guardar. Coordinar un punto estable con Luna y evitar empaquetar cambios a medio implementar o ejecutar Maven en paralelo. El script `package_macos.sh` hace `clean package` por defecto; preparar un empaquetado controlado con `PACKAGE_SKIP_BUILD=true` después de la compilación secuencial pertinente, o usar una copia estable aislada. La instalación local actual existe en `/Applications/CryptoCarver.app`. Mientras B05 está en implementación, preparar la siguiente instalación al revisar su entrega. Instalar para inspección manual no sustituye el cierre de cobertura/recursos de B15.
+
+- Chat revisor: `01a124a6-c483-72b3-832d-b17d0f866bd4`, «Analiza la ayuda por operativa».
+- Chat implementador: `01a124e7-c02e-7801-8202-a6d05118a429`, host `local`, «Implementa ayuda contextual».
+- Workspace compartido: `/Users/feliperodriguezfonte/dev/CryptoCarver`.
+- Automatización del revisor: `coordinar-ayuda-contextual-con-luna`, «Coordinar ayuda contextual con Luna»; activa y vinculada al chat revisor.
+- Fuentes adicionales: inventario de UI, matriz de implementación e informes de revisión guardados en `docs`.
+
+## Estado vigente
+
+**Bloque activo: implementación B05 / C006–C017, A004/A005/A006/A011 y entradas dinámicas de lote/nodos. B00–B04 APROBADOS. Luna ha recibido el encargo B05 completo; B06 espera dictamen.**
+
+La corrección R8–R9 cierra B00/A002 y conserva R1–R7/contexto/adaptadores/lifecycle. La misma sonda JavaFX confirma en ES/EN las explicaciones específicas de tag ausente/MD5 y el ocultamiento automático al pasar a READY. El dictamen completo y sus límites están en [la quinta revisión](REVISION_B00_AYUDA_CONTEXTUAL_05.md). Su recuento integrado histórico de 72 mezcló informes antiguos: la [revisión B01 03](REVISION_B01_AYUDA_CONTEXTUAL_03.md) corrige la evidencia y revalida consumidores de B00/A002, incluidas las siete caracterizaciones actuales de readiness, sin regresión de B00.
+
+La primera entrega B01 se revisó con sonda JavaFX adicional ES/EN, inspector/compacto. Se confirmaron claves de traducción visibles, pérdida de selecciones al volver a la ficha, botones ocultos al reactivar desde un auxiliar y textos ES incompletos; también había opciones genéricas y controles por clasificar. El recuento histórico de 91 mezcló XML antiguos y se corrige en la revisión 03. Dictamen inicial: [primera revisión B01](REVISION_B01_AYUDA_CONTEXTUAL.md).
+
+La segunda entrega corrigió R1/R3/R4/R6, las opciones de padding/nonce C001 de R5 y la vuelta desde campo de R2. Una sonda ampliada ES/EN confirmó que R2 seguía abierto al regresar desde A001/A002 y registró cuatro divergencias de formatos A001 frente al consumidor simétrico real. El recuento histórico de 61 mezcló XML antiguos y se corrige en la revisión 03. Dictamen y reproducciones: [segunda revisión B01](REVISION_B01_AYUDA_CONTEXTUAL_02.md).
+
+La tercera entrega cierra R2 y las cuatro divergencias simétricas de R7. La sonda confirma una excepción Base64URL manual aún sin documentar. Al ejecutar unidad/contratos fuera del filtro UI se detectaron R8 (regla de plantillas sin traducción) y R9 (IDs de menús FXML sin campo correspondiente). Evidencia efectiva del revisor: **97 pruebas en tres ejecuciones secuenciales, 2 fallos, 0 errores/omisiones**, con XML nuevos copiados y fechados. Los fallos son B01; B00 mantiene aprobación. Dictamen: [tercera revisión B01](REVISION_B01_AYUDA_CONTEXTUAL_03.md).
+
+La cuarta entrega cierra R7/Base64URL manual, R8 y R9. **B01 completo APROBADO** en [la cuarta revisión](REVISION_B01_AYUDA_CONTEXTUAL_04.md): evidencia nueva de Luna de 98 pruebas correctas, 37 verificaciones focalizadas correctas del revisor y sonda independiente ES/EN a 1800/900, incluido GCM → CBC → Salsa20, preservación y negativos. Los recuentos son independientes y no se suman como pruebas distintas.
+
+Encargo B02 completo enviado y recibido: C073 `op_jose_jwe`, todos los campos/opciones/acciones ES/EN, contexto de alg/enc/serialización, privacidad y lifecycle, referencias locales, positivos RSA/dir/General multidestinatario y negativos AAD/Compact, longitud de secreto y tag alterado. Se conservan modelo, alcance y restricciones. Luna actualiza el estado aprobado de B01 en la matriz durante esta entrega.
+
+Primera entrega B02 revisada: 95 XML nuevos correctos, código/recursos contrastados y sonda independiente ES/EN a 1800/900. Dictamen [B02 01](REVISION_B02_AYUDA_CONTEXTUAL.md): R1 apertura no solicitada con modo desactivado; R2 reglas del generador mostradas en descifrado; R3 detalles editoriales de PBES2, reservados, General y formatos reales todavía pendientes. Protección de CEK aceptada conforme a C073. Encargo de corrección autocontenido enviado, con regresiones de interacción/preservación/lifecycle y alcance completo conservado.
+
+Corrección B02 aprobada en [dictamen 02](REVISION_B02_AYUDA_CONTEXTUAL_02.md): R1–R3 cerrados, 96 pruebas focalizadas distintas correctas y 14 compartidas aparte, con XML fechados conservados; una prueba UI focalizada reejecutada por Codex sin doble conteo. Sonda independiente ES/EN 1800/900 confirma modo desactivado, descifrado independiente, 33 botones locales traducidos y datos preservados, catálogo completo y dos tokens válidos discordantes.
+
+B03 completo enviado y recibido: C080 `op_pay_clear_pin` y C081 `op_pay_enc_pin`, formatos/rellenos/PAN por ruta y dirección, TDES/ISO-4 AES, estado sin clave, ES/EN, contextos seguros, preservación/lifecycle y fixtures positivos/negativos. No se reduce alcance ni se cambian comportamiento/modelos.
+
+Primera entrega B03 revisada en [dictamen 01](REVISION_B03_AYUDA_CONTEXTUAL.md). R1: restauración cruzada de acción/campo entre rutas; R2: rellenos seleccionables de C080 presentados como opciones C081; R3: textos ES de C081 con significado de bloque claro. Sonda ES/EN 1800/900 confirma R1/R2. Recuento declarado de 53 incluía 41 XML antiguos; el revisor revalidó 46 unidad/catálogo y conserva XML nuevos fechados, junto a las siete UI recientes de Luna. Corrección completa enviada y recibida con criterios de regresión y atribución de evidencia.
+
+B03 aprobado en [dictamen 02](REVISION_B03_AYUDA_CONTEXTUAL_02.md): R1–R3 cerrados, evidencia rectificada; cinco catálogo y una UI nuevas de Luna, 15 UI de Codex por cambio común (PIN repetida sin doble conteo), 41 criptográficas y seis caracterizaciones pertinentes conservadas. Sonda ES/EN 1800/900 confirma memoria por ruta, relleno efectivo, teclado, reapertura y 20 consultas locales sin alterar datos.
+
+B04 completo enviado y recibido: C002 FPE, C003 archivos/streaming/registros, C004 OpenPGP, C005 RSA y A008 análisis de archivo cifrado. Se permiten subentregas de casos sin declarar el bloque aprobado con deuda; B05 espera el dictamen completo. Propiedad, modelos y restricciones permanecen.
+
+Luna terminó el turno inicial B04 `01a12622-4e8f-7711-9647-f7bdb4616cb4` sin implementar, solicitando confirmación por provenir el mensaje de otro chat. Codex contrastó la petición humana original de implementar el documento completo y aclaró que B04 estaba dentro de ese alcance; no se pidió autorización adicional al usuario ni se duplicó el encargo. Luna confirmó la autorización original y retomó B04 en el turno siguiente.
+
+Primera entrega B04 revisada en [dictamen 01](REVISION_B04_AYUDA_CONTEXTUAL.md): R1 traducciones ES incompletas ocultadas por fallback; R2 OpenPGP con cero bindings en la carga real y IDs de grupo fuera del catálogo; R3 ayuda fija de archivo completo en modo por líneas; R4 presencia de material A008 tomada de controles distintos de los usados por su handler; R5 opciones RSA discordantes y parámetros/editorial pendientes. XML archivados de Luna: 42 unidad y 45 UI correctos. Sonda independiente ES/EN 1800/900 confirma los fallos de integración/contexto/traducción y las opciones RSA reales; no se repiten suites criptográficas. Corrección autocontenida R1–R5 enviada y recibida, con alcance completo conservado. La observación preliminar del revisor sobre un diálogo de análisis se rectifica: esa ruta usa opciones predeterminadas y no abre dicho diálogo.
+
+Segunda entrega B04 revisada en [dictamen 02](REVISION_B04_AYUDA_CONTEXTUAL_02.md): R1/R2/R4 cerrados, 22 unidad y 19 UI nuevas correctas inspeccionadas; sonda independiente ES/EN 1800/900 confirma traducciones propias, 41 bindings OpenPGP y presencia A008 correcta. R3 conserva acción obsoleta al cambiar líneas con ayuda abierta y bindings de campos fijos; R5 conserva metadatos RSA al vaciar clave y duplica el límite tweak FF1. Encargo autocontenido de remanentes enviado y recibido; B04 completo pendiente, B05 detenido.
+
+Tercera entrega B04 revisada en [dictamen 03](REVISION_B04_AYUDA_CONTEXTUAL_03.md): R5 cerrado, R3 correcto con contexto de archivo activo; sonda ES/EN 1800/900 confirma variante antigua al volver de A008 tras cambiar líneas en contexto auxiliar. Los 12 declarados mezclan cuatro UI nuevas con ocho FPE antiguas; XML/propiedades contrastados. Codex ejecutó 14 UI compartidas y una unidad FPE nuevas, correctas, conservando XML. Encargo de último remanente R3 y rectificación documental enviado y recibido; B05 detenido.
+
+B04 completo aprobado en [dictamen 04](REVISION_B04_AYUDA_CONTEXTUAL_04.md): R1–R5 cerrados, última regresión de cuatro UI nuevas y atribución documental rectificada. Sonda independiente ES/EN 1800/900 confirma restauración de variante efectiva al regresar de A008, RSA sin metadatos antiguos y 41 bindings OpenPGP. Recuentos separados por ejecución; no se repiten pruebas sin causa. Encargo B05 completo enviado y recibido: doce fichas C006–C017, A004/A005/A006/A011, todas las entradas seleccionables de lote y nodos, diálogos Java, campos/opciones/acciones ES/EN y contexto/lifecycle/preservación. Se permiten subentregas sin reducir alcance; B06 espera cierre completo.
+
+El primer turno B05 `01a1267c-5dd5-73f3-bdf8-0222290f3312` comenzó la exploración correcta, pero tras compactar retomó una solicitud antigua de B04 y terminó solo rectificando la matriz. No hay entrega funcional B05 que revisar. Codex leyó ese turno y aclaró la continuidad del encargo B05 vigente, preservando la exploración hecha y todas las restricciones. Reanudación enviada 17:52 Europe/Madrid; nuevo turno activo. No se repiten pruebas B04 ni se modifica su dictamen.
+
+**No reenviar B05 mientras Luna trabaje. No iniciar B06 antes de aprobar B05 completo.**
+
+Subentrega inicial B05 revisada en [dictamen 01](REVISION_B05_AYUDA_CONTEXTUAL.md): PARCIAL. Se verifican 41 XML nuevos unidad/contrato y un método UI nuevo, sin fallos; no acreditan cobertura integral. R1 clasificación completa prematura; R2 ES con textos ingleses; R3 contenido genérico y capacidades Epoch discordantes; R4 enlaces/contexto pendientes, incluida entrada Compressed Hex fija a expand; R5 evidencia insuficiente para todo el alcance. Continuación B05.1 enviada y recibida: C006/C007/C008/C011/C012/C013/C014 y A011, con clasificación global corregida al empezar. Después B05.2 lote/nodos, B05.3 Clipboard/Workbench/Envelope/Byte/Epoch/JSON y cierre integral; B06 espera aprobación completa. Se preserva la instalación local en punto estable, todavía no realizada.
+
+## Registro de envío y seguimiento
+
+El turno inicial B05.2b1 `01a126f5-cadd-7913-a6c2-4f854fae0a2e` aceptó el encargo y obtuvo los 36 IDs correctos, pero tras compactar retomó el pedido histórico B04 y terminó sin implementar. Codex contrastó el turno: no hay entrega ni cancelación humana que revisar. Reanudación enviada y recibida; se añade [puntero compacto del encargo vigente](ENCARGO_ACTIVO_LUNA_AYUDA_CONTEXTUAL.md), propiedad del revisor, para recuperar alcance después de compactar sin volcar documentos completos. Mantenerlo actualizado al cambiar encargo. No se repiten pruebas ni dictámenes B04.
+
+B05.2a/C009 APROBADO en [dictamen 05](REVISION_B05_AYUDA_CONTEXTUAL_05.md): 40 contratos/ejemplos/errores, 44 unidades y dos métodos UI nuevos correctos. Codex empaquetó e instaló secuencialmente 2.4.0 a las 17:55 UTC, conservando backups y proceso del usuario abierto; firma/JAR comprobados y sonda desde paquete fuera del checkout muestra 40 ejemplos ES compactos y C010 incompleto. El proceso anterior requiere reapertura para usar nueva instalación. B05.2b1 enviado y recibido: acciones generales C010 + Inputs/Outputs/Conversions/Plumbing/Utilities (36 nodos); 158 restantes conservados para familias siguientes. B05.3/B06 esperan y C010 sigue parcial.
+
+B05.2 primera entrega revisada en [dictamen 04](REVISION_B05_AYUDA_CONTEXTUAL_04.md): PARCIAL. XML correctos 112 unidad/9 UI; inventario de 194 nodos generado no equivale a diferencias/ejemplos específicos. R9 textos dinámicos todavía genéricos, R10 acciones/controles del diseñador sin enlaces completos, R11 matriz y pruebas insuficientes para todo el alcance. Encargo B05.2a C009 Batch completo enviado y recibido; C010 debe conservar estado parcial y se completará por familias después. B05.1/instalación estable conservados, B05.3/B06 esperan. Sin pruebas repetidas ni nueva instalación.
+
+B05.1 APROBADO en [dictamen 03](REVISION_B05_AYUDA_CONTEXTUAL_03.md), R6–R8 cerrados. Nueva evidencia focalizada 14 unidad y un método UI, sin sumar repeticiones. Instalación 2.4.0 realizada por Luna durante su entrega: firma/JAR/recursos/copias recuperables comprobados por Codex; sonda desde JAR instalado y `/tmp` confirma Endian y contrato Random. No se duplicó instalación. B05.2 completo enviado y recibido (Batch/Process Designer y todas las entradas dinámicas); B05.3 y cierre integral siguen obligatorios. Próxima instalación coordinada tras revisar punto estable; Luna instruida a no empaquetar durante B05.2.
+
+B05.1 revisada en [dictamen 02](REVISION_B05_AYUDA_CONTEXTUAL_02.md): mejora de las ocho fichas y 15 unidades más un método UI nuevos correctos. Sonda independiente confirma R6: ejecutar Endian y consultar entrada devuelve Convertir; R7: selector Random conserva salida aunque el texto anuncia reformateo. R8: detalle de Check Digits y matriz por control/opción pendiente. Corrección acotada enviada y recibida; B05.2/B05.3/B06 esperan. Sin repetición de suites ni instalación durante esta revisión.
+
+| Dato | Valor |
+|---|---|
+| Último encargo enviado | Corrección B05.2b1 R12–R15 enviada y recibida 2026-10-10 20:46 Europe/Madrid; dictamen 06 y puntero activo actualizado. |
+| Último turno de Luna revisado | `01a126fc-d07b-76e1-b458-40e8fed39a5c`; B05.2b1 NO APROBADO, `REVISION_B05_AYUDA_CONTEXTUAL_06.md`, R12–R15. B05.2a aprobado e instalado, C010 parcial. |
+| Turno de Luna en curso tras el envío | `01a12722-d9bf-7920-8a10-2b18ed838f88` |
+| Último snapshot | 2026-10-10 21:03 Europe/Madrid: revisión 94, mismo turno de corrección R12–R15 activo. Luna comunica comprobación de borrado por teclado y ajuste para deshabilitar botones ocultos cuando el modo ayuda está apagado; todavía sin nueva entrega. Sin mensajes, pruebas ni instalación del revisor. |
+| Cursor de seguimiento | `ec598c5c-5c38-4bba-8a40-83054670cd5e:94` |
+| Siguiente encargo tras aprobar B05 | B06: firmas y MAC según encargo. |
+
+Actualizar este registro cuando cambie el turno/estado, se revise una entrega o se envíe un encargo. Mantener el ID del último turno revisado y el cursor nuevo para evitar repetir trabajo. Comprobar el último encargo del chat antes de enviar mensajes si existe alguna duda sobre si ya se despachó.
+
+## Continuación
+
+El seguimiento automático consulta el estado del chat implementador, revisa las entregas nuevas y envía correcciones o el siguiente bloque conforme al dictamen. Permanece silencioso mientras no haya cambios útiles. Codex escribe los informes y el registro; Luna modifica la aplicación y sus pruebas. Respetar archivos ajenos y no ejecutar Maven a la vez que la implementadora. Para pruebas mixtas, evitar que `-DrunUiTests=true` active el perfil que filtra solo grupos `ui`: desactivarlo con `-P'!ui-tests'`, omitir el argumento usando el valor predeterminado o separar UI/unidad. Contar solo informes nuevos y clases efectivamente ejecutadas.
+
+La secuencia restante y su alcance están en el informe 02 y en la tabla de paquetes del encargo. B15 exige aceptación integral, toda la cobertura obligatoria y comprobación del empaquetado fuera del checkout. Al terminar B15 se comunica el resultado y se desactiva la automatización. Si se necesita una decisión indispensable del usuario, se describe el bloqueo concreto.
