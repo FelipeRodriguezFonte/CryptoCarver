@@ -84,7 +84,8 @@ final class WalletTrustCoordinator extends WalletCoordinatorBase {
             report.append('\n').append(result.trustNote()).append('\n');
             String text = WalletPrivateMaterialPolicy.forDisplay(report.toString());
             view.trustedListOutputArea().get().setText(text);
-            updateStatus(t("module.wallet.status.verified"));
+            updateStatus(t(result.signatureValid()
+                    ? "module.wallet.status.verified" : "module.wallet.status.signatureInvalid"));
             publish("Trusted List Verify", text);
         } catch (Exception e) {
             fail(e, "trustedListXmlArea", "trusted list verify");

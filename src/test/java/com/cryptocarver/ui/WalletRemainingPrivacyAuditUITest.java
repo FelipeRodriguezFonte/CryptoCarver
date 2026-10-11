@@ -1,6 +1,11 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.CborInspector;
+import com.upokecenter.cbor.CBORObject;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import java.util.Base64;
+import java.util.HexFormat;
 import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.SecretVisibilityProfile;
 import com.cryptocarver.util.DataConverter;
@@ -135,5 +140,135 @@ class WalletRemainingPrivacyAuditUITest extends WalletExtractionCharacterization
             }
             default -> throw new IllegalArgumentException(name);
         }
+    }
+
+    @Test
+    void cborCosePrivateEc2IsHiddenOutsideFullLabAcrossViewsAndHandlers() throws Exception {
+        auditCoseKey(coseEc2Private(), "EC2 private", true);
+    }
+
+    @Test
+    void cborCoseSymmetricKeyIsHiddenOutsideFullLabAcrossViewsAndHandlers() throws Exception {
+        auditCoseKey(coseSymmetric(), "symmetric", true);
+    }
+
+    @Test
+    void cborCosePublicEc2RemainsVisibleInEveryProfile() throws Exception {
+        auditCoseKey(coseEc2Public(), "EC2 public", false);
+    }
+
+    private void auditCoseKey(CBORObject coseKey, String label, boolean privateMaterial) throws Exception {
+        withWallet(() -> {
+            List<String> violations = new ArrayList<>();
+            // The encoded input has an array enclosing an array enclosing the COSE map.
+            byte[] cbor = CBORObject.NewArray().Add(CBORObject.NewArray().Add(coseKey)).EncodeToBytes();
+            String inputHex = DataConverter.bytesToHex(cbor);
+            String notice = com.cryptocarver.service.I18nService.getInstance()
+                    .text("module.wallet.privateJwkHidden");
+            List<String> secretForms = privateMaterial ? secretForms(coseKey) : List.of();
+
+            for (SecretVisibilityProfile profile : SecretVisibilityProfile.values()) {
+                for (String view : List.of("tree", "diagnostic", "summary")) {
+                    resetShared();
+                    AppSettings.getInstance().setSecretVisibilityProfile(profile);
+                    shell.navigateTo("CBOR Inspector");
+                    replaceReporter();
+                    put("cborInputArea", inputHex);
+                    combo("cborViewCombo").setValue(view);
+                    String expectedInspect = switch (view) {
+                        case "diagnostic" -> CborInspector.diagnostic(cbor);
+                        case "summary" -> CborInspector.summary(cbor);
+                        default -> CborInspector.tree(cbor);
+                    };
+                    auditCborHandler(profile, label, privateMaterial, secretForms, notice,
+                            "handleCborInspect", expectedInspect, expectedInspect, violations);
+
+                    // Restore the same input and view after the previous handler's UI changes.
+                    resetShared();
+                    replaceReporter();
+                    put("cborInputArea", inputHex);
+                    combo("cborViewCombo").setValue(view);
+                    auditCborHandler(profile, label, privateMaterial, secretForms, notice,
+                            "handleCborToJson", CborInspector.toJson(cbor),
+                            CborInspector.toJson(CborInspector.parseHex(inputHex)), violations);
+                }
+            }
+            assertTrue(violations.isEmpty(), String.join("\n", violations));
+        });
+    }
+
+    private void auditCborHandler(SecretVisibilityProfile profile, String label, boolean privateMaterial,
+                                  List<String> secretForms, String notice, String handler,
+                                  String expectedDisplay, String expectedPublished, List<String> violations) throws Exception {
+        resetCborVisibleState();
+        showResult("cborOutputArea");
+        invoke(handler);
+        String caseLabel = profile + " COSE " + label + " " + handler;
+        assertNull(recorder.error, caseLabel + " must not fail");
+        assertNotNull(recorder.result, caseLabel + " must publish");
+        String displayed = text("cborOutputArea");
+        String published = new String(recorder.result.getOutput(), StandardCharsets.UTF_8);
+        assertFalse(displayed.isBlank(), caseLabel + " must produce output");
+
+        boolean hidden = privateMaterial && profile != SecretVisibilityProfile.FULL_LAB;
+        assertEquals(hidden ? notice : expectedDisplay, displayed, caseLabel + " display");
+        assertEquals(hidden ? notice : expectedPublished, published, caseLabel + " published output");
+
+        if (privateMaterial && profile != SecretVisibilityProfile.FULL_LAB) {
+            for (String secret : secretForms) {
+                assertFalse(displayed.contains(secret), caseLabel + " display leaked private bytes");
+                assertFalse(published.contains(secret), caseLabel + " published output leaked private bytes");
+            }
+            inspectSurfaces(profile, "COSE " + label, secretForms, shell, root, new ArrayList<>(), violations);
+            String historyFile = Files.readString(tempDir.resolve("history.json"));
+            if (secretForms.stream().anyMatch(historyFile::contains)) {
+                violations.add(caseLabel + " history.json exposed private bytes");
+            }
+        }
+    }
+
+    private void resetCborVisibleState() throws Exception {
+        resetShared();
+        put("cborOutputArea", "");
+    }
+
+    private static List<String> secretForms(CBORObject coseKey) {
+        // CBOR JSON represents byte strings as unpadded base64url. Tree/diagnostic render bytes as hex.
+        CBORObject secret = coseKey.get(CBORObject.FromObject(-4));
+        if (secret == null) secret = coseKey.get(CBORObject.FromObject(-1));
+        byte[] bytes = secret.GetByteString();
+        String hex = HexFormat.of().formatHex(bytes);
+        String encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        return List.of(hex, hex.toUpperCase(java.util.Locale.ROOT), encoded);
+    }
+
+    private static CBORObject coseEc2Private() throws Exception {
+        ECKey key = new ECKeyGenerator(Curve.P_256).generate();
+        byte[] x = Base64.getUrlDecoder().decode(key.getX().toString());
+        byte[] y = Base64.getUrlDecoder().decode(key.getY().toString());
+        byte[] d = Base64.getUrlDecoder().decode(key.getD().toString());
+        return coseEc2(x, y).Add(CBORObject.FromObject(-4), CBORObject.FromObject(d));
+    }
+
+    private static CBORObject coseEc2Public() throws Exception {
+        ECKey key = new ECKeyGenerator(Curve.P_256).generate();
+        return coseEc2(Base64.getUrlDecoder().decode(key.getX().toString()),
+                Base64.getUrlDecoder().decode(key.getY().toString()));
+    }
+
+    private static CBORObject coseEc2(byte[] x, byte[] y) {
+        // COSE EC2: integer label 1=kty with value 2; -1=crv, -2=x, -3=y, optional -4=d.
+        return CBORObject.NewMap().Add(CBORObject.FromObject(1), CBORObject.FromObject(2))
+                .Add(CBORObject.FromObject(-1), CBORObject.FromObject(1))
+                .Add(CBORObject.FromObject(-2), CBORObject.FromObject(x))
+                .Add(CBORObject.FromObject(-3), CBORObject.FromObject(y));
+    }
+
+    private static CBORObject coseSymmetric() throws Exception {
+        KeyGenerator generator = KeyGenerator.getInstance("AES");
+        generator.init(256);
+        SecretKey key = generator.generateKey();
+        return CBORObject.NewMap().Add(CBORObject.FromObject(1), CBORObject.FromObject(4))
+                .Add(CBORObject.FromObject(-1), CBORObject.FromObject(key.getEncoded()));
     }
 }

@@ -26,7 +26,7 @@ final class WalletCborCoordinator extends WalletCoordinatorBase {
             String hex = textOf(view.cborInputArea().get());
             if (isBlank(hex)) { showValidation(t("module.wallet.cborRequired"), "cborInputArea"); return; }
             byte[] cbor = CborInspector.parseHex(hex);
-            String report = WalletPrivateMaterialPolicy.forDisplay(switch (valueOf(view.cborViewCombo().get(), "tree")) {
+            String report = WalletPrivateMaterialPolicy.forCborDisplay(switch (valueOf(view.cborViewCombo().get(), "tree")) {
                 case "diagnostic" -> CborInspector.diagnostic(cbor);
                 case "summary" -> CborInspector.summary(cbor);
                 default -> CborInspector.tree(cbor);
@@ -43,7 +43,8 @@ final class WalletCborCoordinator extends WalletCoordinatorBase {
         try {
             String hex = textOf(view.cborInputArea().get());
             if (isBlank(hex)) { showValidation(t("module.wallet.cborRequired"), "cborInputArea"); return; }
-            String json = WalletPrivateMaterialPolicy.forDisplay(CborInspector.toJson(CborInspector.parseHex(hex)));
+            String rawJson = CborInspector.toJson(CborInspector.parseHex(hex));
+            String json = WalletPrivateMaterialPolicy.forCborDisplay(rawJson, rawJson);
             view.cborOutputArea().get().setText(json);
             updateStatus(t("module.wallet.status.converted"));
             publish("CBOR to JSON", json);
