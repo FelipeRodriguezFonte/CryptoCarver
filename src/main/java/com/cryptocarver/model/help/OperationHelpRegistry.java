@@ -78,7 +78,9 @@ public final class OperationHelpRegistry {
         OperationHelpDefinition auxiliary = AUXILIARY_DEFINITIONS.get(operationId);
         if (auxiliary != null) return Optional.of(auxiliary);
         OperationHelpDefinition b05 = B05HelpCatalog.find(operationId);
-        return Optional.ofNullable(b05 == null ? definitions.get(operationId) : b05);
+        if (b05 != null) return Optional.of(b05);
+        OperationHelpDefinition registered = definitions.get(operationId);
+        return Optional.ofNullable(registered == null ? ModuleHelpCatalog.find(operationId) : registered);
     }
 
     public OperationHelpDefinition resolve(String operationId) {
@@ -101,6 +103,7 @@ public final class OperationHelpRegistry {
         java.util.ArrayList<OperationHelpDefinition> all = new java.util.ArrayList<>(definitions.values());
         all.addAll(AUXILIARY_DEFINITIONS.values());
         all.addAll(B05HelpCatalog.definitions());
+        all.addAll(ModuleHelpCatalog.definitions());
         return List.copyOf(all);
     }
 

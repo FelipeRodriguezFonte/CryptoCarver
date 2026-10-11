@@ -198,6 +198,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Button resultShelfButton;
     @FXML private Button resultCopyButton;
     private ContextualHelpButtonBinder resultActionHelp;
+    private ModuleHelpInstaller moduleHelp;
     @FXML private Button resultSaveStepButton;
     @FXML private Button inspectorToggleButton;
 
@@ -668,6 +669,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             if (paymentsController != null) paymentsController.closePinBlockHelpBindings();
             if (joseController != null) joseController.closeJweHelpBindings();
             if (resultActionHelp != null) { resultActionHelp.close(); resultActionHelp = null; }
+            if (moduleHelp != null) { moduleHelp.close(); moduleHelp = null; }
             if (cipherContainerController != null) cipherContainerController.closeContextualHelpBindings();
             expandedTextViewer.dispose();
             sessionStepViewer.dispose();
@@ -810,6 +812,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (joseController != null) joseController.refreshJweContextHelpLocalization();
         if (paymentsController != null) paymentsController.refreshPinBlockContextHelpLocalization();
         if (resultActionHelp != null) resultActionHelp.refreshLocalization();
+        if (moduleHelp != null) moduleHelp.refreshLocalization();
         localizeFormatHelpButtons();
         if (cipherContainerController != null) cipherContainerController.refreshHelpButtonLocalization();
         if (readinessHelpBtn != null) {
@@ -1188,6 +1191,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             showPlaceholderContent(itemName);
         }
         updateHelpContextAdapters(itemName);
+        installModuleHelp(itemName);
 
         updateStatus("Loaded: " + itemName);
         // An untouched form is naturally incomplete. Do not make that the
@@ -1702,6 +1706,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 "Process Designer".equals(currentActiveOperation) ? "op_gen_process_designer" : "",
                 enabled && "Process Designer".equals(currentActiveOperation));
         if (utilityToolsCoordinator != null) utilityToolsCoordinator.setContextualHelpEnabled(enabled);
+        if (moduleHelp != null) moduleHelp.setEnabled(enabled);
         updateStatus(i18n.text(enabled ? "help.mode.enabled" : "help.mode.disabled"));
         if (enabled) handleShowOperationHelp();
     }
@@ -1741,6 +1746,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         boolean jwe = isJweRoute(currentActiveOperation);
         resultActionHelp.setActiveRoute(jwe ? "op_jose_jwe" : "");
         resultActionHelp.setEnabled(jwe && AppSettings.getInstance().isContextualHelpEnabled());
+    }
+
+    /** Modules declared in modules.spec get focus-following help from the shell, without controller wiring. */
+    private void installModuleHelp(String route) {
+        String operationId = com.cryptocarver.model.OperationRegistry.getInstance().getByNavigationPath(route)
+                .map(com.cryptocarver.model.OperationDescriptor::getId).orElse("");
+        if (moduleHelp == null) moduleHelp = new ModuleHelpInstaller(contextualHelpState, ignored -> showCurrentHelpContext());
+        moduleHelp.activate(operationId, rootStackPane != null ? rootStackPane : mainPane,
+                AppSettings.getInstance().isContextualHelpEnabled());
     }
 
     private void showPreflightHelpContext(HelpContext context) {

@@ -26,7 +26,7 @@
                     <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                         <Label text="Apply Template:" styleClass="form-label"/>
                         <ComboBox fx:id="signatureTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
-                        <Button text="Apply" onAction="#handleApplySignatureTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
+                        <Button id="help_handleApplySignatureTemplate" text="Apply" onAction="#handleApplySignatureTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
                         <MenuButton text="Manage Template" styleClass="secondary-button,ux-inline-401c00305b">
                             <items>
                                 <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveSignatureTemplate"/>
@@ -35,7 +35,7 @@
                                 <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteSignatureTemplate"/>
                             </items>
                         </MenuButton>
-                        <Button text="Reset Defaults" onAction="#handleResetSignatureDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
+                        <Button id="help_handleResetSignatureDefaults" text="Reset Defaults" onAction="#handleResetSignatureDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
                     </FlowPane>
 
                     <HBox spacing="8" alignment="CENTER_LEFT">
@@ -51,9 +51,9 @@
                                           wrapText="true" styleClass="monospace-field" VBox.vgrow="ALWAYS"/>
                                 <Label fx:id="sigPrivKeyBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                                 <FlowPane styleClass="responsive-action-bar">
-                                    <Button text="Paste Private Key from Clipboard" onAction="#handlePasteSignPrivateKey"
+                                    <Button id="help_handlePasteSignPrivateKey" text="Paste Private Key from Clipboard" onAction="#handlePasteSignPrivateKey"
                                             styleClass="secondary-button"/>
-                                    <Button text="Load Private Key…" onAction="#handleLoadSignPrivateKey"
+                                    <Button id="help_handleLoadSignPrivateKey" text="Load Private Key…" onAction="#handleLoadSignPrivateKey"
                                             styleClass="secondary-button"/>
                                     <MenuButton fx:id="sigPrivKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateSigPrivKeyShelf"/>
                                 </FlowPane>
@@ -65,9 +65,9 @@
                                           wrapText="true" styleClass="monospace-field" VBox.vgrow="ALWAYS"/>
                                 <Label fx:id="sigPubKeyBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                                 <FlowPane styleClass="responsive-action-bar">
-                                    <Button text="Paste Public Key from Clipboard" onAction="#handlePasteSignPublicKey"
+                                    <Button id="help_handlePasteSignPublicKey" text="Paste Public Key from Clipboard" onAction="#handlePasteSignPublicKey"
                                             styleClass="secondary-button"/>
-                                    <Button text="Load Public Key…" onAction="#handleLoadSignPublicKey"
+                                    <Button id="help_handleLoadSignPublicKey" text="Load Public Key…" onAction="#handleLoadSignPublicKey"
                                             styleClass="secondary-button"/>
                                     <MenuButton fx:id="sigPubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateSigPubKeyShelf"/>
                                 </FlowPane>
@@ -78,7 +78,7 @@
                            styleClass="helper-text"/>
                     <Separator/>
                     <Label text="Sign Operation (Requires Private Key PEM):" styleClass="form-label"/>
-                    <Button text="Sign" onAction="#handleSign"
+                    <Button id="help_handleSign" text="Sign" onAction="#handleSign"
                             styleClass="action-button,primary-action" maxWidth="200"/>
                     <Label text="ℹ️ Sign: Input data in section 1 → generated signature in Result below."
                            styleClass="helper-text"/>
@@ -90,7 +90,7 @@
                                    styleClass="form-field" maxWidth="Infinity"/>
                         <Label fx:id="sigVerifyBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                     </VBox>
-                    <Button text="Verify Signature" onAction="#handleVerify"
+                    <Button id="help_handleVerify" text="Verify Signature" onAction="#handleVerify"
                             styleClass="action-button,primary-action" maxWidth="200"/>
                     <Label text="ℹ️ Verify: Compares input data, public key, and existing signature."
                            styleClass="helper-text"/>
@@ -129,8 +129,8 @@
                         </StackPane>
                         <Label fx:id="macKeyBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                         <FlowPane styleClass="responsive-action-bar">
-                            <Button text="Paste MAC Key" onAction="#handlePasteMacKey" styleClass="secondary-button"/>
-                            <Button text="Load MAC Key…" onAction="#handleLoadMacKey" styleClass="secondary-button"/>
+                            <Button id="help_handlePasteMacKey" text="Paste MAC Key" onAction="#handlePasteMacKey" styleClass="secondary-button"/>
+                            <Button id="help_handleLoadMacKey" text="Load MAC Key…" onAction="#handleLoadMacKey" styleClass="secondary-button"/>
                             <Button fx:id="macInspectKeyBtn" text="Inspect in Key Lab" onAction="#handleInspectMacKey"
                                     visible="false" managed="false" styleClass="secondary-button"/>
                             <MenuButton fx:id="macKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateMacKeyShelf"/>
@@ -150,7 +150,7 @@
                         </columnConstraints>
                         <VBox spacing="8" GridPane.columnIndex="0" GridPane.rowIndex="0">
                             <Label text="Generate" styleClass="form-label"/>
-                            <Button text="Generate MAC" onAction="#handleGenerateMAC"
+                            <Button id="help_handleGenerateMAC" text="Generate MAC" onAction="#handleGenerateMAC"
                                     styleClass="action-button,primary-action" maxWidth="Infinity"/>
                             <Label text="Writes the MAC to Result below." styleClass="helper-text"/>
                         </VBox>
@@ -162,7 +162,7 @@
                                                styleClass="monospace-field,form-field" maxWidth="Infinity"/>
                                     <Label fx:id="macVerifyBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                                 </VBox>
-                                <Button text="Verify" onAction="#handleVerifyMAC"
+                                <Button id="help_handleVerifyMAC" text="Verify" onAction="#handleVerifyMAC"
                                         styleClass="secondary-button" minWidth="90"/>
                             </HBox>
                             <Label text="Uses the same message, algorithm, key and output length."
