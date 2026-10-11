@@ -4,8 +4,8 @@
 
 <VBox fx:id="asicRoot" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.AsicController" spacing="10" styleClass="content-container-vbox">
     <HBox alignment="CENTER_RIGHT">
-        <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
-        <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+        <Button id="help_handleClear" text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+        <Button id="help_handleReset" text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
     </HBox>
     <Accordion fx:id="asicAccordion" styleClass="module-accordion">
         <panes>
@@ -23,13 +23,13 @@
                         <Label text="Input File:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="asicInputPathField" promptText="Payload file or ASiC-S container path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="Choose input…" onAction="#handleChooseInput" styleClass="secondary-button"/>
+                            <Button id="help_handleChooseInput" text="Choose input…" onAction="#handleChooseInput" styleClass="secondary-button"/>
                         </HBox>
 
                         <Label text="Output File:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                         <HBox spacing="10" GridPane.rowIndex="1" GridPane.columnIndex="1">
                             <TextField fx:id="asicOutputPathField" promptText="New .asics output path (for create)" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="Choose output…" onAction="#handleChooseOutput" styleClass="secondary-button"/>
+                            <Button id="help_handleChooseOutput" text="Choose output…" onAction="#handleChooseOutput" styleClass="secondary-button"/>
                         </HBox>
                     </GridPane>
 
@@ -43,13 +43,13 @@
 
                     <HBox fx:id="asicLocalKeyBox" spacing="10">
                         <TextField fx:id="asicPkcs12PathField" promptText="PKCS#12 signing key (for create)" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button text="Choose key…" onAction="#handleChoosePkcs12" styleClass="secondary-button"/>
+                        <Button id="help_handleChoosePkcs12" text="Choose key…" onAction="#handleChoosePkcs12" styleClass="secondary-button"/>
                         <PasswordField fx:id="asicPasswordField" promptText="PKCS#12 password" prefWidth="180" styleClass="form-field"/>
                     </HBox>
 
                     <HBox fx:id="asicPkcs11Box" spacing="10" visible="false" managed="false">
                         <ComboBox fx:id="asicPkcs11AliasCombo" promptText="Token signing alias" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button text="Load Token Keys" onAction="#handleLoadTokenKeys" styleClass="secondary-button"/>
+                        <Button id="help_handleLoadTokenKeys" text="Load Token Keys" onAction="#handleLoadTokenKeys" styleClass="secondary-button"/>
                     </HBox>
 
                     <HBox spacing="10" alignment="CENTER_LEFT">
@@ -64,13 +64,13 @@
                     </HBox>
                     <HBox spacing="10" alignment="CENTER_LEFT">
                         <TextField fx:id="asicRevocationFilesField" editable="false" promptText="No local CRL/OCSP evidence selected" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button text="Choose CRL/OCSP…" onAction="#handleChooseRevocationFiles" styleClass="secondary-button"/>
+                        <Button id="help_handleChooseRevocationFiles" text="Choose CRL/OCSP…" onAction="#handleChooseRevocationFiles" styleClass="secondary-button"/>
                     </HBox>
                     <CheckBox fx:id="asicOnlineRevocationCheck" text="Validate revocation online (OCSP/CRL) — disabled by default" selected="false"/>
 
                     <HBox spacing="12">
-                        <Button text="Create ASiC-S" onAction="#handleCreate" styleClass="action-button,primary-action"/>
-                        <Button text="Inspect / Verify" onAction="#handleInspect" styleClass="secondary-button"/>
+                        <Button id="help_handleCreate" text="Create ASiC-S" onAction="#handleCreate" styleClass="action-button,primary-action"/>
+                        <Button id="help_handleInspect" text="Inspect / Verify" onAction="#handleInspect" styleClass="secondary-button"/>
                     </HBox>
 
                     <Separator/>
@@ -79,13 +79,13 @@
 
                     <HBox spacing="10">
                         <TextField fx:id="asicEPayloadsField" editable="false" promptText="No ASiC-E payload files selected" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button text="Choose payloads…" onAction="#handleChooseAsicEPayloads" styleClass="secondary-button"/>
-                        <Button text="Create ASiC-E" onAction="#handleCreateE" styleClass="action-button"/>
+                        <Button id="help_handleChooseAsicEPayloads" text="Choose payloads…" onAction="#handleChooseAsicEPayloads" styleClass="secondary-button"/>
+                        <Button id="help_handleCreateE" text="Create ASiC-E" onAction="#handleCreateE" styleClass="action-button"/>
                     </HBox>
 
                     <HBox spacing="10">
                         <TextField fx:id="asicTrustStorePathField" promptText="Optional local truststore (.p12/.pfx or .jks)" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button text="Choose truststore…" onAction="#handleChooseTrustStore" styleClass="secondary-button"/>
+                        <Button id="help_handleChooseTrustStore" text="Choose truststore…" onAction="#handleChooseTrustStore" styleClass="secondary-button"/>
                         <PasswordField fx:id="asicTrustStorePasswordField" promptText="Truststore password" prefWidth="160" styleClass="form-field"/>
                     </HBox>
 

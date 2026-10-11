@@ -300,3 +300,352 @@ example: help_handleKeyBlockExample -> block
 .lmk: keyBlockLmkField
 .result: keyBlockResultArea
 # module-help:op_pay_thales_key_block end
+# module-help:op_keys_icsf_token begin
+@op_keys_icsf_token icsf_token.fxml
+analyze: help_handleAnalyze -> origin, format, input, summary, detail
+load_save: help_handleLoadBinary, help_handleSaveReport -> input, detail
+examples: help_handleSampleAesFixed, help_handleSampleVariableCipher, help_handleSampleDesTriple, help_handleSamplePkaRsa -> input
+clear_reset: help_handleClear, help_handleReset -> input, origin
+.origin: icsfTokenOriginCombo
+.format: icsfTokenFormatCombo
+.input: icsfTokenInputArea
+.summary: icsfTokenSummaryTable
+.detail: icsfTokenDetailArea
+# module-help:op_keys_icsf_token end
+# module-help:op_keys_icsf_batch begin
+@op_keys_icsf_batch icsf_batch.fxml
+analyze: help_handleAnalyze -> origin, reading, input, statistics, findings, inventory, report
+load: help_handleLoadFile, help_handleLoadSample -> input
+save: help_handleSaveText, help_handleSaveCsv -> include_detail, report, inventory
+filter: help_handleClearFilter -> filter, inventory, findings
+clear_reset: help_handleClear, help_handleReset -> input, origin
+.origin: icsfBatchOriginCombo
+.reading: icsfBatchFormatCombo
+.input: icsfBatchInputArea
+.include_detail: icsfBatchDetailCheck
+.statistics: icsfBatchStatisticsTable
+.findings: icsfBatchFindingsTable, icsfBatchFindingDetailArea
+.filter: icsfBatchFilterField
+.inventory: icsfBatchInventoryTable
+.report: icsfBatchReportArea
+# module-help:op_keys_icsf_batch end
+# module-help:op_keys_icsf_keywrap begin
+@op_keys_icsf_keywrap icsf_keywrap.fxml
+export: help_handleExport, help_handleClearExport -> export_key, export_kek, export_type, export_cv, export_variant, export_mode, export_rn, export_options, report
+import: help_handleImport, help_handleClearImport -> import_input, import_kek, import_type, import_cv, import_variant, import_mode, report
+inspect: help_handleInspect, help_handleClearInspect -> inspect_input, report
+resolve: help_handleResolve, help_handleClearResolve -> resolve_input, resolve_kek, resolve_expected_key, resolve_expected_kcv, resolve_type, report
+result_actions: help_handleSaveReport, help_handleCopyToken, help_handleCopyKey, help_handleReset -> report
+.export_key: icsfExportKeyField
+.export_kek: icsfExportKekField
+.export_type: icsfExportTypeCombo
+.export_cv: icsfExportCvField
+.export_variant: icsfExportVariantCombo
+.export_mode: icsfExportModeCombo
+.export_rn: icsfExportRnField
+.export_options: icsfExportHostVersionCheck, icsfExportNocvCheck
+.import_input: icsfImportInputField
+.import_kek: icsfImportKekField
+.import_type: icsfImportTypeCombo
+.import_cv: icsfImportCvField
+.import_variant: icsfImportVariantCombo
+.import_mode: icsfImportModeCombo
+.inspect_input: icsfInspectInputArea
+.resolve_input: icsfResolveInputField
+.resolve_kek: icsfResolveKekField
+.resolve_expected_key: icsfResolveExpectedKeyField
+.resolve_expected_kcv: icsfResolveExpectedKcvField
+.resolve_type: icsfResolveTypeCombo
+.report: icsfKeyWrapReportArea
+# module-help:op_keys_icsf_keywrap end
+# module-help:op_cert_gen begin
+@op_cert_gen certificates.fxml
+generate: help_handleGenerateCertificate -> subject, validity, key_type, sign_algorithm, san, root_ca, output
+generate_csr: help_handleGenerateCSR -> subject, key_type, sign_algorithm, san, output
+.subject: certCNField, certOrgField, certOUField, certCountryField, certStateField, certLocalityField, certEmailField
+.validity: certValidityField
+.key_type: certKeyTypeCombo
+.sign_algorithm: certSignAlgoCombo
+.san: certSanDnsField, certSanIpField
+.root_ca: certRootCaCheck
+.output: certOutputArea
+# module-help:op_cert_gen end
+# module-help:op_cert_issue begin
+@op_cert_issue certificates.fxml
+issue: help_handleIssueCertificateFromCsr -> csr, ca_cert, ca_key, validity, signature, profile, path_length, result
+.csr: certIssueCsrArea
+.ca_cert: certIssueCaCertArea
+.ca_key: certIssueCaKeyArea
+.validity: certIssueValidityField
+.signature: certIssueSignatureField
+.profile: certIssueProfileCombo
+.path_length: certIssuePathLengthField
+.result: certIssueResultArea
+# module-help:op_cert_issue end
+# module-help:op_cert_parse begin
+@op_cert_parse certificates.fxml
+parse: help_handleParseCertificate -> format, input, result
+apply_template: help_handleApplyCertTemplate, help_handleResetCertDefaults -> template, format
+.template: certTemplateCombo
+.format: certFormatCombo
+.input: certInputArea
+.result: certParseResultArea
+# module-help:op_cert_parse end
+# module-help:op_cert_compare begin
+@op_cert_compare certificates.fxml
+compare: help_handleCompareCertificates -> left, right, result
+.left: certCompareLeftArea
+.right: certCompareRightArea
+.result: certCompareResultArea
+# module-help:op_cert_compare end
+# module-help:op_cert_val begin
+@op_cert_val certificates.fxml
+validate: help_handleValidateCertificate -> certificate, issuer, result
+.certificate: valCertInput
+.issuer: valIssuerInput
+.result: valResultArea
+# module-help:op_cert_val end
+# module-help:op_cert_chain begin
+@op_cert_chain certificates.fxml
+validate_chain: help_handleValidateCertificateChain, help_handleExportChainReport -> chain, crls, result
+generate_crl: help_handleGenerateCrl -> crl_issuer_cert, crl_issuer_key, crl_result
+revoke: help_handleRevokeCrl -> crl_issuer_cert, crl_issuer_key, existing_crl, serial, reason, crl_result
+.chain: chainInputArea
+.crls: chainCrlInputArea
+.result: chainResultArea
+.crl_issuer_cert: crlIssuerCertArea
+.crl_issuer_key: crlIssuerKeyArea
+.existing_crl: crlExistingCrlArea
+.serial: crlRevokeSerialField
+.reason: crlRevokeReasonCombo
+.crl_result: crlResultArea
+# module-help:op_cert_chain end
+# module-help:op_cert_cms begin
+@op_cert_cms certificates.fxml
+sign: help_handleCMSSign -> input, sign_source, signer_cert, signer_key, token_alias, detached, cades, tsa_url, output
+verify: help_handleCMSVerify -> input, detached_data, output
+add_lt: help_handleUpgradeCadesLt -> input, output
+encrypt: help_handleCMSEncrypt -> input, encrypt_source, recipient_cert, output
+decrypt: help_handleCMSDecrypt -> input, encrypt_source, recipient_key, encrypt_token_alias, output
+load_token_keys: help_handleLoadCMSKeys, help_handleLoadCMSEncryptKeys -> token_alias, encrypt_token_alias
+.input: cmsInputArea
+.sign_source: cmsSignSourceLocalRadio, cmsSignSourcePkcs11Radio
+.signer_cert: cmsSignCertArea
+.signer_key: cmsSignKeyArea
+.token_alias: cmsSignKeyAliasCombo
+.detached_data: cmsVerifyDataArea
+.detached: cmsDetachedCheck
+.cades: cmsCadesBesCheck, cmsCadesTCheck
+.tsa_url: cmsCadesTsaUrlField
+.encrypt_source: cmsEncryptSourceLocalRadio, cmsEncryptSourcePkcs11Radio
+.recipient_cert: cmsEncryptCertArea
+.recipient_key: cmsDecryptKeyArea
+.encrypt_token_alias: cmsEncryptKeyAliasCombo
+.output: cmsOutputArea
+# module-help:op_cert_cms end
+# module-help:op_pades begin
+@op_pades pades.fxml
+sign: help_handleSign -> input, output, key_source, pkcs12, token_alias, timestamp, visible, result
+inspect: help_handleInspect -> input, result
+validate: help_handleValidate, help_handleSaveValidationReports -> input, truststore, crl_evidence, result
+choose_files: help_handleChooseInput, help_handleChooseOutput, help_handleChoosePkcs12, help_handleChooseTrustStore, help_handleChooseCrlEvidence, help_handleLoadTokenKeys -> input, output, pkcs12, truststore, crl_evidence, token_alias
+clear_reset: help_handleClear, help_handleReset -> input
+.input: padesInputPathField
+.output: padesOutputPathField
+.key_source: padesSourceLocalRadio, padesSourcePkcs11Radio
+.pkcs12: padesPkcs12PathField, padesPasswordField
+.token_alias: padesPkcs11AliasCombo
+.timestamp: padesTimestampCheck, padesTsaUrlField
+.visible: padesVisibleSignatureCheck, padesVisiblePageField, padesVisibleXField, padesVisibleYField, padesVisibleWidthField, padesVisibleHeightField, padesVisibleTextField
+.truststore: padesTrustStorePathField, padesTrustStorePasswordField
+.crl_evidence: padesCrlEvidenceField
+.result: padesResultArea
+# module-help:op_pades end
+# module-help:op_asic_s begin
+@op_asic_s asic.fxml
+create: help_handleCreate -> input, output, key_source, pkcs12, token_alias, format, level, tsa_url, revocation, result
+create_e: help_handleCreateE, help_handleChooseAsicEPayloads -> payloads, output, key_source, format, level, result
+inspect: help_handleInspect -> input, truststore, revocation, online_revocation, result
+choose_files: help_handleChooseInput, help_handleChooseOutput, help_handleChoosePkcs12, help_handleChooseRevocationFiles, help_handleChooseTrustStore, help_handleLoadTokenKeys -> input, output, pkcs12, revocation, truststore, token_alias
+clear_reset: help_handleClear, help_handleReset -> input
+.input: asicInputPathField
+.output: asicOutputPathField
+.key_source: asicSourceLocalRadio, asicSourcePkcs11Radio
+.pkcs12: asicPkcs12PathField, asicPasswordField
+.token_alias: asicPkcs11AliasCombo
+.format: asicFormatCombo
+.level: asicLevelCombo
+.tsa_url: asicTsaUrlField
+.revocation: asicRevocationFilesField
+.online_revocation: asicOnlineRevocationCheck
+.payloads: asicEPayloadsField
+.truststore: asicTrustStorePathField, asicTrustStorePasswordField
+.result: asicResultArea
+# module-help:op_asic_s end
+# module-help:op_cms_inspector begin
+@op_cms_inspector cms_inspector.fxml
+inspect: help_handleInspectCms -> input, report
+validate: help_handleValidateSignedData -> input, detached, content, truststore_password, report
+load: help_handleLoadCmsFile, help_handleLoadContentFile, help_handleSelectTruststore -> input, content, truststore_password
+export: help_handleExportReport -> report
+clear_reset: help_handleClear, help_handleReset -> input
+.input: cmsInputArea
+.detached: cmsDetachedCheck
+.content: cmsContentArea
+.truststore_password: truststorePasswordField
+.report: cmsReportArea
+# module-help:op_cms_inspector end
+# module-help:op_jose_jwt begin
+@op_jose_jwt jose.fxml
+generate: help_handleGenerateSignedJWT -> algorithm, template, serialization, unencoded, signing_key, secret_format, second_signer, payload, protected_header, output
+apply_claims: help_handleApplyJWTClaims -> claims, payload
+load_signing_key: help_handleLoadJWTKey, jwtKeyShelfMenu -> signing_key
+validate: help_handleValidateJWT -> token, verification_key, validate_secret_format, expected_claims, time_checks, policy, header_trust, profile_checks, decoded, findings
+load_verification_key: help_handleLoadJWTValidateKey, jwtValidateKeyShelfMenu -> verification_key
+detached: help_handleGenerateDetachedJWS, help_handleVerifyDetachedJWS -> detached_algorithm, detached_serialization, detached_payload, detached_keys, detached_header, detached_token
+clear_reset: help_handleClear, help_handleReset -> algorithm
+.algorithm: jwtAlgoCombo
+.template: jwtTemplateCombo
+.serialization: jwsSerializationCombo
+.unencoded: jwsUnencodedPayloadCheck
+.signing_key: jwtKeyArea
+.secret_format: jwtSecretFormatCombo
+.second_signer: jwtAlgo2Combo, jwtKeyArea2
+.claims: jwtIssField, jwtSubField, jwtAudField, jwtExpField
+.payload: jwtPayloadArea
+.protected_header: jwtProtectedHeaderArea
+.output: jwtOutputArea
+.token: jwtValidateTokenArea
+.verification_key: jwtValidateKeyArea
+.validate_secret_format: jwtValidateSecretFormatCombo
+.expected_claims: jwtExpectedIssField, jwtExpectedAudField
+.time_checks: jwtCheckExpiryCheck, jwtClockSkewField
+.policy: jwtAllowedAlgorithmsField, jwtAcceptNoneCheck, jwtOidcStrictCheck, jwtRfc9068Check
+.header_trust: jwtTrustHeaderKeyCheck, jwtTrustAnchorsArea, jwtCertificateDateField, jwtUnderstoodCritField, jwtIgnoreCritCheck
+.profile_checks: jwtExpectedTypeField, jwtExpectedContentTypeField, jwtExpectedNonceField, jwtAccessTokenField, jwtAuthorizationCodeField, jwtExpectedJktField, jwtExpectedX5tField
+.decoded: jwtDecodedHeaderArea, jwtDecodedPayloadArea
+.findings: jwtFindingsArea
+.detached_algorithm: detachedAlgoCombo
+.detached_serialization: detachedSerializationCombo, detachedUnencodedCheck
+.detached_payload: detachedPayloadArea
+.detached_keys: detachedSigningKeyArea, detachedVerificationKeyArea, detachedSecretFormatCombo
+.detached_header: detachedProtectedHeaderSecretArea
+.detached_token: detachedTokenArea
+# module-help:op_jose_jwt end
+# module-help:op_jose_jwk begin
+@op_jose_jwk jose.fxml
+pem_to_jwk: pemToJwkBtn -> key_type, curve, kid, use, key_ops, secret_format, input, output
+jwk_to_pem: jwkToPemBtn -> input, secret_format, output
+thumbprint: help_handleCalculateThumbprint -> input, output
+inspect: jwkInspectMetadataBtn -> input, output
+jwks: help_handleNewJWKS, help_handleLoadJWKS, help_handleRotateKey, help_handleExportPublicJWKS -> jwks, rotate_algorithm
+.key_type: jwkKeyTypeCombo
+.curve: jwkCurveCombo
+.kid: jwkKeyIdField
+.use: jwkUseCombo
+.key_ops: jwkKeyOpsField
+.secret_format: jwkSecretFormatCombo
+.input: jwkInputArea
+.output: jwkOutputArea
+.jwks: jwksSecretArea
+.rotate_algorithm: jwksRotateAlgoCombo
+# module-help:op_jose_jwk end
+# module-help:op_jose_jwa begin
+@op_jose_jwa jose.fxml
+browse:  -> table
+.table: jwaTable
+# module-help:op_jose_jwa end
+# module-help:op_jose_insp begin
+@op_jose_insp jose.fxml
+analyze: help_handleInspectToken -> input
+report: help_handleOpenExpandedInspectorReport, help_handleCopyInspectorOutput, help_handleClearInspector -> input
+.input: inspectorInputArea
+# module-help:op_jose_insp end
+# module-help:op_cose_sign1 begin
+@op_cose_sign1 cose.fxml
+sign: help_handleSign1 -> algorithm, private_key, public_key, payload, output
+verify: help_handleVerify1 -> verify_public_key, message, result
+clear_reset: help_handleClear, help_handleReset -> algorithm
+.algorithm: sign1AlgoCombo
+.private_key: sign1PrivateKeyArea
+.public_key: sign1PublicKeyArea
+.payload: sign1PayloadArea
+.output: sign1OutputArea
+.verify_public_key: verify1PublicKeyArea
+.message: verify1MessageArea
+.result: verify1ResultArea
+# module-help:op_cose_sign1 end
+# module-help:op_cose_mac0 begin
+@op_cose_mac0 cose.fxml
+create: help_handleMac0, help_handleGenerateMac0Key -> algorithm, key, payload, output
+verify: help_handleVerifyMac0 -> verify_key, message, result
+clear_reset: help_handleClear, help_handleReset -> algorithm
+.algorithm: mac0AlgoCombo
+.key: mac0KeyField
+.payload: mac0PayloadArea
+.output: mac0OutputArea
+.verify_key: verifyMac0KeyField
+.message: verifyMac0MessageArea
+.result: verifyMac0ResultArea
+# module-help:op_cose_mac0 end
+# module-help:op_cose_encrypt0 begin
+@op_cose_encrypt0 cose.fxml
+encrypt: help_handleEncrypt0, help_handleGenerateEncrypt0Key -> algorithm, key, payload, output
+decrypt: help_handleDecrypt0 -> decrypt_key, message, result
+clear_reset: help_handleClear, help_handleReset -> algorithm
+.algorithm: encrypt0AlgoCombo
+.key: encrypt0KeyField
+.payload: encrypt0PayloadArea
+.output: encrypt0OutputArea
+.decrypt_key: decrypt0KeyField
+.message: decrypt0MessageArea
+.result: decrypt0ResultArea
+# module-help:op_cose_encrypt0 end
+# module-help:op_asn1_dec begin
+@op_asn1_dec asn1.fxml
+parse: help_handleParseASN1 -> input_format, example, input, strict_der, tree, details
+export: help_handleExportASN1Tree, help_handleExportASN1Json, help_handleExportASN1Markdown -> tree
+canonicalize: help_handleCanonicalizeASN1Der -> input, strict_der
+load_oids: help_handleLoadASN1OidRegistry -> tree
+clear_reset: help_handleClearASN1, help_resetModule -> input
+.input_format: asn1InputFormatCombo
+.example: asn1TypeCombo
+.input: asn1InputArea
+.strict_der: asn1StrictDerCheck
+.tree: asn1TreeView
+.details: asn1DetailsArea
+# module-help:op_asn1_dec end
+# module-help:op_asn1_enc begin
+@op_asn1_enc asn1.fxml
+encode: help_handleEncodeASN1 -> type, value_format, value, output
+copy: help_handleCopyASN1Output -> output
+.type: asn1EncodeTypeCombo
+.value_format: asn1EncodeInputFormatCombo
+.value: asn1EncodeInputArea
+.output: asn1EncodeOutputArea
+# module-help:op_asn1_enc end
+# module-help:op_pqc_gen begin
+@op_pqc_gen pqc.fxml
+generate: pqcGenerateKeyBtn -> algorithm, public_key, private_key, details
+import_export: help_handleImportPQCKeys, help_handleExportPQCPublicKey, help_handleExportPQCPrivateKey, pqcKeyShelfMenu -> public_key, private_key
+kem: help_handlePQCEncapsulate, help_handlePQCDecapsulate -> kem_algorithm, kem_ciphertext, kem_secrets
+benchmark: pqcBenchmarkBtn -> benchmark_algorithm, benchmark
+.algorithm: pqcAlgorithmCombo
+.public_key: pqcPublicKeyArea
+.private_key: pqcPrivateKeyArea
+.details: pqcKeyDetailsArea
+.kem_algorithm: pqcKemAlgoCombo
+.kem_ciphertext: pqcKemCiphertextArea
+.kem_secrets: pqcKemSharedSecretField, pqcAliceSecretField
+.benchmark_algorithm: pqcBenchmarkAlgoCombo
+.benchmark: pqcBenchmarkArea
+# module-help:op_pqc_gen end
+# module-help:op_pqc_sign begin
+@op_pqc_sign pqc.fxml
+sign: help_handlePQCSign -> algorithm, input, signature
+verify: help_handlePQCVerify, help_handlePastePqcVerifySignature, pqcVerifyShelfMenu -> algorithm, input, verify_signature
+.algorithm: pqcSignAlgoCombo
+.input: pqcSignInputArea
+.signature: pqcSignOutputArea
+.verify_signature: pqcVerifySignatureField
+# module-help:op_pqc_sign end

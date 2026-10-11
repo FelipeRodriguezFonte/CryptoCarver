@@ -9,8 +9,8 @@
      Labels below correctly keep a single underscore. -->
 <VBox fx:id="coseContainer" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.COSEController" managed="false" visible="false" spacing="10" styleClass="content-container-vbox,cose-module">
     <HBox alignment="CENTER_RIGHT">
-        <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
-        <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+        <Button id="help_handleClear" text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+        <Button id="help_handleReset" text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
     </HBox>
 
     <Label text="COSE (RFC 9052/9053) — CBOR-binary sibling of JOSE" styleClass="helper-text"/>
@@ -32,7 +32,7 @@
                         <TextArea styleClass="ux-inline-ea21460dc9" fx:id="sign1PublicKeyArea" prefHeight="80" wrapText="true" promptText="-----BEGIN PUBLIC KEY-----"/>
                         <Label text="Payload:" styleClass="form-label"/>
                         <TextArea fx:id="sign1PayloadArea" prefHeight="70" wrapText="true" promptText="Text to sign"/>
-                        <Button text="Sign (COSE__Sign1)" onAction="#handleSign1" styleClass="action-button" maxWidth="220"/>
+                        <Button id="help_handleSign1" text="Sign (COSE__Sign1)" onAction="#handleSign1" styleClass="action-button" maxWidth="220"/>
                         <TextArea styleClass="ux-inline-ea21460dc9" fx:id="sign1OutputArea" prefHeight="90" editable="false" wrapText="true"
                                   promptText="COSE_Sign1 message (hex) will appear here"/>
                     </VBox>
@@ -43,7 +43,7 @@
                         <TextArea styleClass="ux-inline-ea21460dc9" fx:id="verify1PublicKeyArea" prefHeight="80" wrapText="true" promptText="-----BEGIN PUBLIC KEY-----"/>
                         <Label text="COSE_Sign1 Message (hex):" styleClass="form-label"/>
                         <TextArea styleClass="ux-inline-ea21460dc9" fx:id="verify1MessageArea" prefHeight="90" wrapText="true" promptText="Paste the hex-encoded COSE_Sign1 message"/>
-                        <Button text="Verify (COSE__Sign1)" onAction="#handleVerify1" styleClass="action-button" maxWidth="220"/>
+                        <Button id="help_handleVerify1" text="Verify (COSE__Sign1)" onAction="#handleVerify1" styleClass="action-button" maxWidth="220"/>
                         <TextArea fx:id="verify1ResultArea" prefHeight="90" editable="false" wrapText="true"
                                   promptText="Verification result will appear here"/>
                     </VBox>
@@ -64,11 +64,11 @@
                         <Label text="Key (hex):" styleClass="form-label"/>
                         <HBox spacing="6">
                             <TextField styleClass="ux-inline-ea21460dc9" fx:id="mac0KeyField" HBox.hgrow="ALWAYS" promptText="Symmetric MAC key in hex"/>
-                            <Button text="Generate Key" onAction="#handleGenerateMac0Key" styleClass="secondary-button"/>
+                            <Button id="help_handleGenerateMac0Key" text="Generate Key" onAction="#handleGenerateMac0Key" styleClass="secondary-button"/>
                         </HBox>
                         <Label text="Payload:" styleClass="form-label"/>
                         <TextArea fx:id="mac0PayloadArea" prefHeight="70" wrapText="true" promptText="Text to MAC"/>
-                        <Button text="Create (COSE__Mac0)" onAction="#handleMac0" styleClass="action-button" maxWidth="220"/>
+                        <Button id="help_handleMac0" text="Create (COSE__Mac0)" onAction="#handleMac0" styleClass="action-button" maxWidth="220"/>
                         <TextArea styleClass="ux-inline-ea21460dc9" fx:id="mac0OutputArea" prefHeight="90" editable="false" wrapText="true"
                                   promptText="COSE_Mac0 message (hex) will appear here"/>
                     </VBox>
@@ -79,7 +79,7 @@
                         <TextField styleClass="ux-inline-ea21460dc9" fx:id="verifyMac0KeyField" promptText="Symmetric MAC key in hex"/>
                         <Label text="COSE_Mac0 Message (hex):" styleClass="form-label"/>
                         <TextArea styleClass="ux-inline-ea21460dc9" fx:id="verifyMac0MessageArea" prefHeight="90" wrapText="true" promptText="Paste the hex-encoded COSE_Mac0 message"/>
-                        <Button text="Verify (COSE__Mac0)" onAction="#handleVerifyMac0" styleClass="action-button" maxWidth="220"/>
+                        <Button id="help_handleVerifyMac0" text="Verify (COSE__Mac0)" onAction="#handleVerifyMac0" styleClass="action-button" maxWidth="220"/>
                         <TextArea fx:id="verifyMac0ResultArea" prefHeight="90" editable="false" wrapText="true"
                                   promptText="Verification result will appear here"/>
                     </VBox>
@@ -100,11 +100,11 @@
                         <Label text="Key (hex):" styleClass="form-label"/>
                         <HBox spacing="6">
                             <TextField styleClass="ux-inline-ea21460dc9" fx:id="encrypt0KeyField" HBox.hgrow="ALWAYS" promptText="Symmetric key in hex"/>
-                            <Button text="Generate Key" onAction="#handleGenerateEncrypt0Key" styleClass="secondary-button"/>
+                            <Button id="help_handleGenerateEncrypt0Key" text="Generate Key" onAction="#handleGenerateEncrypt0Key" styleClass="secondary-button"/>
                         </HBox>
                         <Label text="Payload:" styleClass="form-label"/>
                         <TextArea fx:id="encrypt0PayloadArea" prefHeight="70" wrapText="true" promptText="Text to encrypt"/>
-                        <Button text="Encrypt (COSE__Encrypt0)" onAction="#handleEncrypt0" styleClass="action-button" maxWidth="220"/>
+                        <Button id="help_handleEncrypt0" text="Encrypt (COSE__Encrypt0)" onAction="#handleEncrypt0" styleClass="action-button" maxWidth="220"/>
                         <TextArea styleClass="ux-inline-ea21460dc9" fx:id="encrypt0OutputArea" prefHeight="90" editable="false" wrapText="true"
                                   promptText="COSE_Encrypt0 message (hex) will appear here"/>
                     </VBox>
@@ -115,7 +115,7 @@
                         <TextField styleClass="ux-inline-ea21460dc9" fx:id="decrypt0KeyField" promptText="Symmetric key in hex"/>
                         <Label text="COSE_Encrypt0 Message (hex):" styleClass="form-label"/>
                         <TextArea styleClass="ux-inline-ea21460dc9" fx:id="decrypt0MessageArea" prefHeight="90" wrapText="true" promptText="Paste the hex-encoded COSE_Encrypt0 message"/>
-                        <Button text="Decrypt (COSE__Encrypt0)" onAction="#handleDecrypt0" styleClass="action-button" maxWidth="220"/>
+                        <Button id="help_handleDecrypt0" text="Decrypt (COSE__Encrypt0)" onAction="#handleDecrypt0" styleClass="action-button" maxWidth="220"/>
                         <TextArea fx:id="decrypt0ResultArea" prefHeight="90" editable="false" wrapText="true"
                                   promptText="Decrypted payload will appear here"/>
                     </VBox>

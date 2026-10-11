@@ -50,8 +50,8 @@
                               text="Byte 4 as real hosts write it (X'00' even for double and triple keys)"/>
                     <CheckBox fx:id="icsfExportNocvCheck" text="Mark the token NOCV"/>
                     <HBox spacing="8">
-                        <Button text="Export" onAction="#handleExport" styleClass="action-button"/>
-                        <Button text="Clear" onAction="#handleClearExport" styleClass="secondary-button"/>
+                        <Button id="help_handleExport" text="Export" onAction="#handleExport" styleClass="action-button"/>
+                        <Button id="help_handleClearExport" text="Clear" onAction="#handleClearExport" styleClass="secondary-button"/>
                     </HBox>
                 </VBox>
             </Tab>
@@ -84,8 +84,8 @@
                                   maxWidth="Infinity"/>
                     </GridPane>
                     <HBox spacing="8">
-                        <Button text="Import" onAction="#handleImport" styleClass="action-button"/>
-                        <Button text="Clear" onAction="#handleClearImport" styleClass="secondary-button"/>
+                        <Button id="help_handleImport" text="Import" onAction="#handleImport" styleClass="action-button"/>
+                        <Button id="help_handleClearImport" text="Clear" onAction="#handleClearImport" styleClass="secondary-button"/>
                     </HBox>
                 </VBox>
             </Tab>
@@ -99,8 +99,8 @@
                     <TextArea styleClass="ux-inline-00bdf36a65" fx:id="icsfInspectInputArea" prefHeight="80" wrapText="true"
                               promptText="paste the 64-byte token"/>
                     <HBox spacing="8">
-                        <Button text="Inspect" onAction="#handleInspect" styleClass="action-button"/>
-                        <Button text="Clear" onAction="#handleClearInspect" styleClass="secondary-button"/>
+                        <Button id="help_handleInspect" text="Inspect" onAction="#handleInspect" styleClass="action-button"/>
+                        <Button id="help_handleClearInspect" text="Clear" onAction="#handleClearInspect" styleClass="secondary-button"/>
                     </HBox>
                 </VBox>
             </Tab>
@@ -130,8 +130,8 @@
                                   maxWidth="Infinity"/>
                     </GridPane>
                     <HBox spacing="8">
-                        <Button text="Resolve" onAction="#handleResolve" styleClass="action-button"/>
-                        <Button text="Clear" onAction="#handleClearResolve" styleClass="secondary-button"/>
+                        <Button id="help_handleResolve" text="Resolve" onAction="#handleResolve" styleClass="action-button"/>
+                        <Button id="help_handleClearResolve" text="Clear" onAction="#handleClearResolve" styleClass="secondary-button"/>
                     </HBox>
                 </VBox>
             </Tab>
@@ -144,10 +144,10 @@
                   promptText="The report will appear here."/>
 
         <HBox spacing="8">
-            <Button text="Save Report…" onAction="#handleSaveReport" styleClass="secondary-button"/>
-            <Button text="Copy Token" onAction="#handleCopyToken" styleClass="secondary-button"/>
-            <Button text="Copy Key" onAction="#handleCopyKey" styleClass="secondary-button"/>
-            <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+            <Button id="help_handleSaveReport" text="Save Report…" onAction="#handleSaveReport" styleClass="secondary-button"/>
+            <Button id="help_handleCopyToken" text="Copy Token" onAction="#handleCopyToken" styleClass="secondary-button"/>
+            <Button id="help_handleCopyKey" text="Copy Key" onAction="#handleCopyKey" styleClass="secondary-button"/>
+            <Button id="help_handleReset" text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
         </HBox>
     </VBox>
 </TitledPane>
