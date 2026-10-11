@@ -100,6 +100,7 @@
 
                 <Menu fx:id="helpMenu" text="Help">
                     <MenuItem fx:id="operationHelpMenuItem" text="Help for this operation" onAction="#handleShowOperationHelp" accelerator="Shift+F1" />
+                    <MenuItem fx:id="readinessHelpMenuItem" text="Readiness help" onAction="#handleShowReadinessHelp" />
                     <CheckMenuItem fx:id="contextualHelpModeMenuItem" text="Contextual help mode" onAction="#handleToggleContextualHelpMode" />
                     <SeparatorMenuItem />
                     <MenuItem fx:id="shortcutsMenuItem" text="Keyboard Shortcuts..." onAction="#handleShowKeyboardShortcuts" accelerator="F1" />
@@ -135,7 +136,6 @@
                     <Label text="→" styleClass="format-flow-arrow"/>
 
                     <Label fx:id="contractOperationLabel" text="Operation" styleClass="format-flow-operation"/>
-                    <Button fx:id="formatContractHelpButton" text="?" onAction="#handleFormatContractHelp" styleClass="ghost-button" accessibleText="Help for the route format contract" accessibleHelp="Explain the current route input and output contract"/>
 
                     <Label text="→" styleClass="format-flow-arrow"/>
 
@@ -146,7 +146,6 @@
                 </HBox>
 
                 <Region HBox.hgrow="ALWAYS"/>
-                <Button fx:id="toolbarReadinessHelpButton" text="ⓘ" minWidth="-Infinity" onAction="#handleShowReadinessHelp" styleClass="ghost-button" accessibleText="Open help for execution readiness checks" accessibleHelp="Review the current readiness status and checks without executing the operation"/>
                 <Button fx:id="toolbarOperationHelpButton" text="?" minWidth="-Infinity" onAction="#handleShowOperationHelp" styleClass="ghost-button" accessibleText="Open local help for the current operation"/>
                 <Button text="Inspector" onAction="#handleToggleInspector" styleClass="ghost-button" accessibleText="Toggle inspector"/>
             </HBox>

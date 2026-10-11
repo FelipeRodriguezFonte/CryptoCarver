@@ -103,7 +103,7 @@ class ModernMainReadinessCharacterizationTest {
   @Test
   void readinessPanelHidesAfterHashInputBecomesComplete() throws Exception {
     AtomicReference<HBox> panel = new AtomicReference<>();
-    AtomicReference<Button> explicitHelp = new AtomicReference<>();
+    AtomicReference<javafx.scene.control.MenuItem> explicitHelp = new AtomicReference<>();
     runFx(
         () -> {
           controller.navigateToModule("Hashing");
@@ -114,7 +114,7 @@ class ModernMainReadinessCharacterizationTest {
           algorithm.setValue("SHA-256");
           controller.updateReadinessPanelForOperation("Hashing", true);
           panel.set(field(controller, "readinessPanel"));
-          explicitHelp.set(field(controller, "toolbarReadinessHelpButton"));
+          explicitHelp.set(field(controller, "readinessHelpMenuItem"));
         });
     assertTrue(panel.get().isVisible());
     assertEquals("INCOMPLETE", readReport().getOverallStatus().name());

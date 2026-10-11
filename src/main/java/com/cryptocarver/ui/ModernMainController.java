@@ -160,7 +160,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Button errorBannerCopyDetailsBtn;
     @FXML private Button errorBannerHelpBtn;
     @FXML private Button errorBannerCloseBtn;
-    @FXML private Button toolbarReadinessHelpButton;
+    @FXML private MenuItem readinessHelpMenuItem;
     private InlineErrorPresenter inlineErrorPresenter;
     private HelpContext bannerHelpContext;
     private StatusBarPresenter statusBarPresenter;
@@ -234,7 +234,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private ComboBox<String> inputFormatCombo;
     private boolean formatHelpShortcutsInstalled;
-    @FXML private Button formatContractHelpButton;
 
     @FXML
     private Label contractOperationLabel;
@@ -804,11 +803,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             errorBannerHelpBtn.setAccessibleText(i18n.text("help.aux.preflight.open"));
             errorBannerHelpBtn.setAccessibleHelp(i18n.text("help.aux.preflight.open.help"));
         }
-        if (toolbarReadinessHelpButton != null) {
-            toolbarReadinessHelpButton.setTooltip(new Tooltip(i18n.text("help.readiness.open")));
-            toolbarReadinessHelpButton.setAccessibleText(i18n.text("help.readiness.open"));
-            toolbarReadinessHelpButton.setAccessibleHelp(i18n.text("help.readiness.open.help"));
-        }
+        if (readinessHelpMenuItem != null) readinessHelpMenuItem.setText(i18n.text("help.readiness.open"));
         if (joseController != null) joseController.refreshJweContextHelpLocalization();
         if (paymentsController != null) paymentsController.refreshPinBlockContextHelpLocalization();
         if (resultActionHelp != null) resultActionHelp.refreshLocalization();
@@ -827,16 +822,25 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void localizeFormatHelpButtons() {
-        localizeFormatHelpButton(formatContractHelpButton, "contract");
         installFormatHelpShortcuts();
+        if (contractOperationLabel != null) {
+            String title = i18n.text("help.aux.global_formats.action.contract.title");
+            contractOperationLabel.setAccessibleHelp(title + ". " + i18n.text("help.control.shortcut"));
+            contractOperationLabel.setTooltip(new Tooltip(title));
+        }
     }
 
-    /** The format selectors answer Shift+F1 themselves; only the contract keeps a visible help button. */
+    /** The format bar has no help buttons: the selectors and the contract label answer Shift+F1 themselves. */
     private void installFormatHelpShortcuts() {
         if (formatHelpShortcutsInstalled || inputFormatCombo == null || outputFormatCombo == null) return;
         formatHelpShortcutsInstalled = true;
         onShiftF1(inputFormatCombo, this::handleInputFormatHelp);
         onShiftF1(outputFormatCombo, this::handleOutputFormatHelp);
+        if (contractOperationLabel != null) {
+            contractOperationLabel.setFocusTraversable(true);
+            onShiftF1(contractOperationLabel, this::handleFormatContractHelp);
+            contractOperationLabel.setOnMouseClicked(event -> { contractOperationLabel.requestFocus(); handleFormatContractHelp(); });
+        }
     }
 
     private static void onShiftF1(javafx.scene.Node control, Runnable help) {
@@ -848,11 +852,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         });
     }
 
-    private void localizeFormatHelpButton(Button button, String action) {
-        if (button == null) return;
-        button.setAccessibleText(i18n.text("help.aux.global_formats.action." + action + ".title"));
-        button.setAccessibleHelp(i18n.text("help.aux.global_formats.action." + action + ".description"));
-    }
 
     private ShellLocalizationCoordinator.View localizationView() { return ShellLocalizationCoordinator.createView(localizationControls(), COMMAND_PALETTE_SHORTCUT, FAVORITE_SHORTCUT); }
 

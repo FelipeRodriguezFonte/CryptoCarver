@@ -765,7 +765,7 @@ class ContextualHelpRegressionUITest {
                 ((TextField) field(cipher, "ivField")).setText("000102030405060708090A0B");
                 ((TextArea) field(cipher, "cipherOutputArea")).setText("OUTPUT_MUST_NOT_CHANGE");
 
-                Button toolbarHelp = field(shell, "toolbarReadinessHelpButton");
+                javafx.scene.control.MenuItem toolbarHelp = field(shell, "readinessHelpMenuItem");
                 toolbarHelp.fire();
                 var report = (com.cryptocarver.model.PreflightReport) field(shell, "currentPreflightReport");
                 assertNotNull(report);
@@ -857,7 +857,7 @@ class ContextualHelpRegressionUITest {
                 TextArea hashInput = field(generic, "hashInputArea");
                 @SuppressWarnings("unchecked") javafx.scene.control.ComboBox<String> digest = field(generic, "hashAlgorithmCombo");
                 hashInput.setText("DIGEST_HELP_FIXTURE"); digest.setValue("MD5");
-                Button readinessHelp = field(shell, "toolbarReadinessHelpButton"); readinessHelp.fire();
+                javafx.scene.control.MenuItem readinessHelp = field(shell, "readinessHelpMenuItem"); readinessHelp.fire();
                 var report = (com.cryptocarver.model.PreflightReport) field(shell, "currentPreflightReport");
                 assertEquals(com.cryptocarver.model.PreflightStatus.WARNING, report.getOverallStatus());
                 assertTrue(report.isExecutable());
