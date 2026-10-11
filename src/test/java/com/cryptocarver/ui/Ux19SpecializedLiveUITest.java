@@ -81,6 +81,8 @@ class Ux19SpecializedLiveUITest {
             tabPane.getTabs().forEach(tab -> result.addAll(findButtons(tab.getContent())));
         } else if (node instanceof javafx.scene.control.TitledPane pane && pane.getContent() != null) {
             result.addAll(findButtons(pane.getContent()));
+        } else if (node instanceof javafx.scene.control.SplitPane split) {
+            split.getItems().forEach(item -> result.addAll(findButtons(item)));
         } else if (node instanceof javafx.scene.Parent parent) {
             parent.getChildrenUnmodifiable().forEach(child -> result.addAll(findButtons(child)));
         }

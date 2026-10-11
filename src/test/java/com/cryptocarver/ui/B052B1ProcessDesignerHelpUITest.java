@@ -65,8 +65,8 @@ class B052B1ProcessDesignerHelpUITest {
 
                         for (String actionField : List.of("run_run_mode", "run_progress", "run_status_summary", "dry_run_validation", "cancel_progress",
                                 "load_process_file", "save_process_file", "save_process_name", "edit_menu_canvas", "presets_canvas",
-                                "connect_ports", "reverse_connection_ports", "reverse_connection_connection",
-                                "delete_selection", "clear_canvas", "clear_clear_canvas", "toggle_inspector_inspector", "focus_mode_focus_mode",
+                                "connect_ports", "reverse_connection_ports",
+                                "delete_selection", "clear_canvas", "toggle_inspector_inspector", "focus_mode_focus_mode",
                                 "zoom_in_zoom", "zoom_fit_zoom", "snap_to_grid_snap_to_grid", "expand_results_result",
                                 "open_window_canvas", "save_node_settings_parameters", "search_palette_palette")) {
                             javafx.scene.Node helpButton = ContextualHelpTestSupport.control(root, "contextHelp_op_gen_process_designer_" + actionField);
