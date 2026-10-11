@@ -68,7 +68,8 @@ public final class ShellTextResolver {
         translate.apply(keyPrefix + ".detail"),
         translate.apply(keyPrefix + ".remedy"),
         error.fieldKey(),
-        error.cause());
+        error.cause(),
+        error.helpContext());
   }
 
   /** Errors without a dedicated translation keep their detail but get a translated title and fallback remedy. */
@@ -83,7 +84,8 @@ public final class ShellTextResolver {
         error.detail(),
         fallbackRemedy ? translate.apply("error.wrap.fallback.remedy") : error.remedy(),
         error.fieldKey(),
-        error.cause());
+        error.cause(),
+        error.helpContext());
   }
 
   private static String commonTitleKey(String title) {

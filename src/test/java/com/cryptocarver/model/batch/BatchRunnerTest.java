@@ -80,6 +80,25 @@ class BatchRunnerTest {
     }
 
     @Test
+    void continuesAfterOneMalformedRecordAndKeepsRowSpecificResults() throws Exception {
+        List<Map<String, String>> rows = List.of(
+                Map.of("input", "48"), Map.of("input", "ZZ"), Map.of("input", "49"));
+        BatchRunner.Report report = BatchRunner.run(rows,
+                (rowNumber, row) -> BatchOperationCatalog.execute("Hexadecimal → UTF-8", row, "input", "output"),
+                () -> false);
+
+        assertFalse(report.cancelled());
+        assertEquals(3, report.results().size());
+        assertEquals(java.util.Arrays.asList("H", null, "I"), report.results().stream()
+                .map(result -> result.output().get("output")).toList());
+        assertTrue(report.results().get(0).succeeded());
+        assertFalse(report.results().get(1).succeeded());
+        assertTrue(report.results().get(1).error().contains("format"));
+        assertEquals(2, report.succeeded());
+        assertEquals(1, report.failed());
+    }
+
+    @Test
     void testBatchCryptoOperations() throws Exception {
         List<Map<String, String>> rows = List.of(
             Map.of("id", "1", "input", "secret 1"),

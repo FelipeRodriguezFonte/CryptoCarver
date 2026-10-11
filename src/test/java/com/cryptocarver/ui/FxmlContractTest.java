@@ -60,4 +60,27 @@ class FxmlContractTest {
             }
         }
     }
+
+    @Test
+    void jweAccordionPanesDoNotOpenHelpFromArbitraryClicks() throws Exception {
+        try (InputStream stream = getClass().getResourceAsStream("/fxml/jose.fxml")) {
+            assertNotNull(stream, "Missing production JWE FXML");
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            Document document = factory.newDocumentBuilder().parse(stream);
+            for (String paneId : new String[]{"jweEncryptPane", "jweDecryptPane"}) {
+                NodeList nodes = document.getElementsByTagName("TitledPane");
+                Element pane = null;
+                for (int i = 0; i < nodes.getLength(); i++) {
+                    Element candidate = (Element) nodes.item(i);
+                    if (paneId.equals(candidate.getAttributeNS("http://javafx.com/fxml/1", "id"))) {
+                        pane = candidate;
+                        break;
+                    }
+                }
+                assertNotNull(pane, "Missing " + paneId);
+                assertTrue(!pane.hasAttribute("onMouseClicked"), paneId + " must not treat arbitrary clicks as help requests");
+            }
+        }
+    }
 }

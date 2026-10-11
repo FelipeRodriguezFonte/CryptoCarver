@@ -34,6 +34,13 @@ public final class PreflightCheck {
         return targetControlKey;
     }
 
+    /** Stable link identity derived only from the check's canonical name and status. */
+    public String getRuleId() {
+        String slug = name.toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "_").replaceAll("^_+|_+$", "");
+        return "preflight." + (slug.isBlank() ? "check" : slug) + "." + status.name().toLowerCase(java.util.Locale.ROOT);
+    }
+
     @Override
     public String toString() {
         return "[" + status + "] " + name + ": " + message + (targetControlKey != null ? " (Focus: " + targetControlKey + ")" : "");

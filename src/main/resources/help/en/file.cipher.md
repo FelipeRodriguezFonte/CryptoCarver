@@ -1,0 +1,7 @@
+# File cipher and streaming records
+
+The file panel supports AES-256-GCM, AES-256-CTR, AES-256-CBC, and ChaCha20-Poly1305. Whole-file mode streams arbitrary bytes. GCM and ChaCha20-Poly1305 use a detached 16-byte tag file; decryption stages output until authentication succeeds. CTR and CBC do not authenticate ciphertext.
+
+Line mode treats each text line as an independent record and applies the selected charset and Base64URL or Hexadecimal encoding. AEAD records carry their own fresh nonce and tag. CBC line records use the supplied IV and have no authentication; compact headerless CBC records require the same compact option when reading. Preserve the key and the applicable nonce/IV, AAD, tag, charset, and record encoding for decryption.
+
+The explicit source/destination, tag selection, nonce generation, and recipe controls are separate actions. The generator creates 12-byte values for GCM and ChaCha20-Poly1305 and 16-byte values for CTR and CBC. These generated defaults are distinct from validation: whole-file input requires at least 12 bytes, with further mode/provider checks; AEAD line mode creates a fresh nonce for every record, while line CBC uses the supplied IV. The line charset selector offers UTF-8 and the listed IBM EBCDIC code pages from IBM037 through IBM1149. Recipes can preserve profile and public parameters but never contain the secret key. A canceled file selection or overwrite confirmation does not start the file job. Opening contextual help does not inspect or modify a file.

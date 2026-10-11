@@ -373,6 +373,10 @@ final class SymmetricCipherCoordinator {
         if (format == null)
             format = "Hexadecimal";
 
+        return parseInputData(input, format);
+    }
+
+    static byte[] parseInputData(String input, String format) {
         com.cryptocarver.util.InputValidator.validateInput(input, format);
 
         try {
@@ -401,6 +405,10 @@ final class SymmetricCipherCoordinator {
         if (format == null)
             format = "Hexadecimal";
 
+        cipherOutputArea.setText(formatOutputData(data, format));
+    }
+
+    static String formatOutputData(byte[] data, String format) {
         String output;
         switch (format) {
             case "Hexadecimal":
@@ -422,7 +430,7 @@ final class SymmetricCipherCoordinator {
                 output = DataConverter.bytesToHex(data);
         }
 
-        cipherOutputArea.setText(output);
+        return output;
     }
 
     /**

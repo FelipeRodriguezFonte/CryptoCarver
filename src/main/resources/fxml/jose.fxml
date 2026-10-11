@@ -286,20 +286,22 @@
                             <Label text="Key Type:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                             <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <ComboBox fx:id="jwkKeyTypeCombo" prefWidth="120" styleClass="form-field"/>
-                                <Label fx:id="jwkCurveLabel" text="OKP curve:" styleClass="form-label"/>
+                                <Label fx:id="jwkCurveLabel" text="OKP curve:" minWidth="-Infinity" styleClass="form-label"/>
                                 <ComboBox fx:id="jwkCurveCombo" prefWidth="120" styleClass="form-field"/>
-                                <Label text="Key ID (kid):" styleClass="form-label"/>
-                                <TextField fx:id="jwkKeyIdField" promptText="Optional / Auto" styleClass="form-field"/>
-                                <Label fx:id="jwkUseLabel" text="use:" styleClass="form-label"/>
-                                <ComboBox fx:id="jwkUseCombo" prefWidth="100" styleClass="form-field"/>
-                                <Label fx:id="jwkKeyOpsLabel" text="key_ops:" styleClass="form-label"/>
-                                <TextField fx:id="jwkKeyOpsField" promptText="sign, verify" styleClass="form-field"/>
+                                <Label text="Key ID (kid):" minWidth="-Infinity" styleClass="form-label"/>
+                                <TextField fx:id="jwkKeyIdField" promptText="Optional / Auto" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             </HBox>
 
-                            <Label text="Secret Format:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
-                            <ComboBox fx:id="jwkSecretFormatCombo" prefWidth="170" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field">
-                                <tooltip><Tooltip text="How an OCT secret is read. Ignored for RSA/EC/OKP keys."/></tooltip>
-                            </ComboBox>
+                            <Label fx:id="jwkUseLabel" text="use:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="1" GridPane.columnIndex="1">
+                                <ComboBox fx:id="jwkUseCombo" prefWidth="100" styleClass="form-field"/>
+                                <Label fx:id="jwkKeyOpsLabel" text="key_ops:" minWidth="-Infinity" styleClass="form-label"/>
+                                <TextField fx:id="jwkKeyOpsField" promptText="sign, verify" HBox.hgrow="ALWAYS" styleClass="form-field"/>
+                                <Label text="Secret Format:" minWidth="-Infinity" styleClass="form-label"/>
+                                <ComboBox fx:id="jwkSecretFormatCombo" prefWidth="170" minWidth="-Infinity" styleClass="form-field">
+                                    <tooltip><Tooltip text="How an OCT secret is read. Ignored for RSA/EC/OKP keys."/></tooltip>
+                                </ComboBox>
+                            </HBox>
 
                             <Label fx:id="jwkInputLabel" text="Input:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
                             <TextArea fx:id="jwkInputArea" promptText="Paste PEM Key or JWK JSON..." prefRowCount="4" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field"/>
@@ -348,9 +350,9 @@
     <VBox fx:id="jweSection" spacing="14" managed="false" visible="false">
         <Label text="JSON Web Encryption (JWE)" styleClass="section-header"/>
 
-        <Accordion styleClass="module-accordion">
+        <Accordion fx:id="jweAccordion" styleClass="module-accordion">
             <panes>
-                <TitledPane text="Encrypt" expanded="true">
+                <TitledPane fx:id="jweEncryptPane" text="Encrypt" expanded="true">
                     <VBox spacing="12" styleClass="module-pane-content">
                         <GridPane hgap="10" vgap="9" styleClass="form-grid">
                             <columnConstraints>
@@ -381,7 +383,7 @@
                             </VBox>
                             <VBox spacing="5" GridPane.rowIndex="2" GridPane.columnIndex="1">
                                 <FlowPane styleClass="responsive-action-bar">
-                                    <Button text="Import from File..." onAction="#handleLoadJWEPublicKey" styleClass="secondary-button"/>
+                                    <Button fx:id="jwePublicKeyImportBtn" text="Import from File..." onAction="#handleLoadJWEPublicKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwePubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwePubKeyShelf"/>
                                 </FlowPane>
                                 <TextArea fx:id="jwePublicKeyArea" promptText="RSA/EC public key (PEM, certificate or JWK) · JWKS with alg per key for several recipients (General JSON) · shared secret (AES-KW, dir) · password (PBES2)" prefRowCount="3" styleClass="monospace-field"/>
@@ -421,14 +423,14 @@
                             </VBox>
                         </TitledPane>
 
-                        <Button text="Encrypt &amp; Generate JWE" onAction="#handleGenerateJWE" styleClass="action-button,primary-action"/>
+                        <Button fx:id="jweEncryptActionBtn" text="Encrypt &amp; Generate JWE" onAction="#handleGenerateJWE" styleClass="action-button,primary-action"/>
 
                         <Label text="Output (JWE):" styleClass="form-label"/>
                         <TextArea fx:id="jweOutputArea" promptText="Generated JWE..." prefRowCount="3" styleClass="result-area,monospace-field" editable="false" wrapText="true"/>
                     </VBox>
                 </TitledPane>
 
-                <TitledPane text="Decrypt">
+                <TitledPane fx:id="jweDecryptPane" text="Decrypt">
                     <VBox spacing="12" styleClass="module-pane-content">
                         <Label text="JWE Token:" styleClass="form-label"/>
                         <TextArea fx:id="jweInputArea" promptText="Paste compact or JSON-serialized JWE here..." prefRowCount="3" styleClass="monospace-field" wrapText="true"/>
@@ -443,7 +445,7 @@
                             </VBox>
                             <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <FlowPane styleClass="responsive-action-bar">
-                                    <Button text="Import from File..." onAction="#handleLoadJWEPrivateKey" styleClass="secondary-button"/>
+                                    <Button fx:id="jwePrivateKeyImportBtn" text="Import from File..." onAction="#handleLoadJWEPrivateKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwePrivKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwePrivKeyShelf"/>
                                 </FlowPane>
                                 <TextArea fx:id="jwePrivateKeyArea" promptText="RSA/EC private key (PEM or JWK) · shared secret (AES-KW, dir) · password (PBES2)" prefRowCount="3" styleClass="monospace-field"/>
@@ -453,7 +455,7 @@
                         </GridPane>
 
                         <HBox spacing="10" alignment="CENTER_LEFT">
-                            <Button text="Decrypt JWE" onAction="#handleDecryptJWE" styleClass="action-button,primary-action"/>
+                            <Button fx:id="jweDecryptActionBtn" text="Decrypt JWE" onAction="#handleDecryptJWE" styleClass="action-button,primary-action"/>
                             <Label fx:id="jweStatusLabel" text="" styleClass="helper-text"/>
                         </HBox>
 
@@ -483,7 +485,7 @@
                                     <Label text="Encrypted Key:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                                     <TextArea fx:id="jweEncryptedKeyArea" prefRowCount="2" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field" editable="false"/>
 
-                                    <Label text="Decrypted CEK (Hex):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label text="CEK status:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
                                     <TextArea fx:id="jweDecryptedKeyArea" prefRowCount="2" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field" editable="false"/>
 
                                     <Label text="Initialization Vector (IV):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>

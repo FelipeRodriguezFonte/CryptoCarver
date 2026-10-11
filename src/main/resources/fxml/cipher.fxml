@@ -18,16 +18,16 @@
             <FlowPane prefWrapLength="420" styleClass="template-toolbar">
                 <Label text="Apply Template:" styleClass="form-label"/>
                 <ComboBox fx:id="cipherTemplateCombo" prefWidth="210" promptText="Select a template..." styleClass="form-field"/>
-                <Button text="Apply" onAction="#handleApplyCipherTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
-                <MenuButton text="Manage Template" styleClass="secondary-button,ux-inline-401c00305b">
+                <Button fx:id="applyCipherTemplateBtn" text="Apply" onAction="#handleApplyCipherTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
+                <MenuButton fx:id="cipherTemplateMenu" text="Manage Template" styleClass="secondary-button,ux-inline-401c00305b">
                     <items>
-                        <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveCipherTemplate"/>
-                        <MenuItem text="Export Selected Template..." onAction="#handleExportCipherTemplate"/>
-                        <MenuItem text="Import Template File..." onAction="#handleImportCipherTemplate"/>
-                        <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteCipherTemplate"/>
+                        <MenuItem fx:id="saveCipherTemplateItem" text="Save Current as Personal Template..." onAction="#handleSaveCipherTemplate"/>
+                        <MenuItem fx:id="exportCipherTemplateItem" text="Export Selected Template..." onAction="#handleExportCipherTemplate"/>
+                        <MenuItem fx:id="importCipherTemplateItem" text="Import Template File..." onAction="#handleImportCipherTemplate"/>
+                        <MenuItem fx:id="deleteCipherTemplateItem" text="Delete Selected Personal Template" onAction="#handleDeleteCipherTemplate"/>
                     </items>
                 </MenuButton>
-                <Button text="Reset Defaults" onAction="#handleResetCipherDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
+                <Button fx:id="resetCipherDefaultsBtn" text="Reset Defaults" onAction="#handleResetCipherDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
             </FlowPane>
             </TitledPane>
 
@@ -36,28 +36,30 @@
                 <Label text="Algorithm &amp; Mode" styleClass="form-group-title"/>
                 <FlowPane hgap="10" vgap="8">
                     <VBox spacing="4"><Label text="Algorithm:" styleClass="cipher-field-label"/>
-                        <ComboBox fx:id="symmetricAlgorithmCombo" prefWidth="175" styleClass="cipher-field"/></VBox>
+                        <HBox spacing="4"><ComboBox fx:id="symmetricAlgorithmCombo" prefWidth="175" styleClass="cipher-field" HBox.hgrow="ALWAYS"/></HBox></VBox>
                     <VBox spacing="4"><Label text="Mode:" styleClass="cipher-field-label"/>
-                        <ComboBox fx:id="cipherModeCombo" prefWidth="100" styleClass="cipher-field"/></VBox>
+                        <HBox spacing="4"><ComboBox fx:id="cipherModeCombo" prefWidth="100" styleClass="cipher-field" HBox.hgrow="ALWAYS"/></HBox></VBox>
                     <VBox spacing="4"><Label text="Padding:" styleClass="cipher-field-label"/>
-                        <ComboBox fx:id="paddingCombo" prefWidth="155" styleClass="cipher-field"/></VBox>
+                        <HBox spacing="4"><ComboBox fx:id="paddingCombo" prefWidth="155" styleClass="cipher-field" HBox.hgrow="ALWAYS"/></HBox></VBox>
                 </FlowPane>
             </VBox>
 
             <!-- Group 2: Key Source -->
             <VBox styleClass="form-group-box">
                 <Label text="Key Source" styleClass="form-group-title"/>
-                <ComboBox fx:id="symKeySourceCombo" maxWidth="Infinity" styleClass="cipher-field"/>
-                <StackPane>
+                <HBox spacing="4"><ComboBox fx:id="symKeySourceCombo" maxWidth="Infinity" styleClass="cipher-field" HBox.hgrow="ALWAYS"/></HBox>
+                <HBox spacing="4">
+                <StackPane HBox.hgrow="ALWAYS">
                     <TextField fx:id="symmetricKeyField" promptText="Enter key in hex (required)..." styleClass="cipher-field,cipher-monospace"/>
                     <ComboBox fx:id="symHsmKeyCombo" maxWidth="Infinity" visible="false" managed="false" styleClass="cipher-field"/>
                 </StackPane>
+                </HBox>
                 <Label fx:id="symKeyBadgeLabel" styleClass="material-field-badge" managed="false" visible="false"/>
                 <FlowPane styleClass="responsive-action-bar,ux-inline-2b55dc6342">
                     <Button fx:id="inspectKeyBtn" text="Inspect" onAction="#handleInspectKey" styleClass="secondary-button" visible="false" managed="false"/>
                     <Button fx:id="saveToLabBtn" text="Save to Lab" onAction="#saveCurrentKeyToHsm" styleClass="secondary-button"/>
-                    <Button text="Paste Key" onAction="#handlePasteSymKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
-                    <Button text="Load Key…" onAction="#handleLoadSymKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                    <Button fx:id="pasteSymKeyBtn" text="Paste Key" onAction="#handlePasteSymKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                    <Button fx:id="loadSymKeyBtn" text="Load Key…" onAction="#handleLoadSymKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
                     <MenuButton fx:id="symKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button,ux-inline-ba9ea6419e" onShowing="#handlePopulateSymKeyShelf"/>
                 </FlowPane>
                 <Label text="Note: Select 'Simulated HSM' to load keys securely from Key Lab, or enter raw hex key." styleClass="helper-text,ux-inline-2b55dc6342" wrapText="true"/>
@@ -74,20 +76,20 @@
                     <VBox spacing="2" GridPane.columnIndex="0" GridPane.rowIndex="1">
                         <HBox fx:id="ivContainer" spacing="8" alignment="CENTER_LEFT">
                             <TextField fx:id="ivField" promptText="Hex IV (required for CBC/CTR/GCM modes)..." HBox.hgrow="ALWAYS" styleClass="cipher-field,cipher-monospace"/>
-                            <Button text="Generate" onAction="#generateIV" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="generateIvBtn" text="Generate" onAction="#generateIV" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
                         </HBox>
                         <Label fx:id="ivBadgeLabel" styleClass="material-field-badge" managed="false" visible="false"/>
                     </VBox>
                     <Label fx:id="gcmTagLabel" text="AEAD Auth Tag:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
                     <VBox spacing="2" GridPane.columnIndex="0" GridPane.rowIndex="3">
-                        <TextField fx:id="gcmTagField" promptText="Hex Tag (16 bytes; required for AEAD Decryption)"
-                                   maxWidth="Infinity" styleClass="cipher-field,cipher-monospace"/>
+                        <HBox spacing="4"><TextField fx:id="gcmTagField" promptText="Hex Tag (16 bytes; required for AEAD Decryption)"
+                                   maxWidth="Infinity" styleClass="cipher-field,cipher-monospace" HBox.hgrow="ALWAYS"/></HBox>
                         <Label fx:id="gcmTagBadgeLabel" styleClass="material-field-badge" managed="false" visible="false"/>
                     </VBox>
                     <Label fx:id="aadLabel" text="AAD (Optional):" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
                     <VBox spacing="2" GridPane.columnIndex="0" GridPane.rowIndex="5">
-                        <TextField fx:id="aadField" promptText="Hex Additional Authenticated Data (optional)"
-                                   maxWidth="Infinity" styleClass="cipher-field,cipher-monospace"/>
+                        <HBox spacing="4"><TextField fx:id="aadField" promptText="Hex Additional Authenticated Data (optional)"
+                                   maxWidth="Infinity" styleClass="cipher-field,cipher-monospace" HBox.hgrow="ALWAYS"/></HBox>
                         <Label fx:id="aadBadgeLabel" styleClass="material-field-badge" managed="false" visible="false"/>
                     </VBox>
                 </GridPane>
@@ -106,12 +108,12 @@
                     <ColumnConstraints percentWidth="100" hgrow="ALWAYS"/>
                 </columnConstraints>
                 <VBox spacing="7" styleClass="cipher-io-column" GridPane.columnIndex="0">
-                    <Label text="Input data" styleClass="cipher-io-label"/>
+                    <HBox spacing="5" alignment="CENTER_LEFT"><Label text="Input data" styleClass="cipher-io-label" HBox.hgrow="ALWAYS"/></HBox>
                     <TextArea fx:id="cipherInputArea" prefHeight="160" wrapText="true"
                               VBox.vgrow="ALWAYS" styleClass="cipher-io-area,cipher-monospace"/>
                 </VBox>
                 <VBox spacing="7" styleClass="cipher-io-column" GridPane.columnIndex="0" GridPane.rowIndex="1">
-                    <Label text="Output result" styleClass="cipher-io-label"/>
+                    <HBox spacing="5" alignment="CENTER_LEFT"><Label text="Output result" styleClass="cipher-io-label" HBox.hgrow="ALWAYS"/></HBox>
                     <TextArea fx:id="cipherOutputArea" prefHeight="160" editable="false" wrapText="true"
                               VBox.vgrow="ALWAYS" styleClass="cipher-io-area,cipher-output-area,cipher-monospace"/>
                     <FlowPane hgap="6" vgap="6" alignment="CENTER_RIGHT" styleClass="cipher-output-actions">
@@ -162,7 +164,7 @@
                         <VBox spacing="5" GridPane.columnIndex="0"><Label text="Input" styleClass="cipher-io-label" /><TextArea fx:id="fpeInputArea" prefHeight="90" wrapText="true" styleClass="cipher-io-area,cipher-monospace" /></VBox>
                         <VBox spacing="5" GridPane.columnIndex="1"><Label text="Output" styleClass="cipher-io-label" /><TextArea fx:id="fpeOutputArea" prefHeight="90" editable="false" wrapText="true" styleClass="cipher-io-area,cipher-output-area,cipher-monospace" /></VBox>
                     </GridPane>
-                    <FlowPane styleClass="responsive-action-bar"><Button text="Run FPE" onAction="#handleFpe" styleClass="action-button-primary" /></FlowPane>
+                    <FlowPane styleClass="responsive-action-bar"><Button fx:id="fpeRunButton" text="Run FPE" onAction="#handleFpe" styleClass="action-button-primary" /></FlowPane>
                 </VBox>
             </TitledPane>
 
@@ -172,21 +174,21 @@
                     <ComboBox styleClass="ux-inline-ba9ea6419e" fx:id="fileCipherAlgorithmCombo" prefWidth="250"/>
                     <HBox spacing="5">
                         <TextField styleClass="ux-inline-ba9ea6419e" fx:id="fileCipherSourceField" promptText="Source file path" HBox.hgrow="ALWAYS"/>
-                        <Button text="…" accessibleText="Choose source file" onAction="#chooseFileCipherSource" styleClass="secondary-button"/>
+                        <Button fx:id="fileCipherChooseSourceBtn" text="…" accessibleText="Choose source file" onAction="#chooseFileCipherSource" styleClass="secondary-button"/>
                     </HBox>
                     <HBox spacing="5">
                         <TextField styleClass="ux-inline-ba9ea6419e" fx:id="fileCipherDestinationField" promptText="Output file path" HBox.hgrow="ALWAYS"/>
-                        <Button text="…" accessibleText="Choose destination file" onAction="#chooseFileCipherDestination" styleClass="secondary-button"/>
+                        <Button fx:id="fileCipherChooseDestinationBtn" text="…" accessibleText="Choose destination file" onAction="#chooseFileCipherDestination" styleClass="secondary-button"/>
                     </HBox>
                     <HBox spacing="5">
                         <TextField styleClass="ux-inline-ba9ea6419e" fx:id="fileCipherTagField" promptText="Detached AEAD tag path (.tag; required for GCM / ChaCha)" HBox.hgrow="ALWAYS"/>
-                        <Button text="…" accessibleText="Choose authentication tag file" onAction="#chooseFileCipherTag" styleClass="secondary-button"/>
+                        <Button fx:id="fileCipherChooseTagBtn" text="…" accessibleText="Choose authentication tag file" onAction="#chooseFileCipherTag" styleClass="secondary-button"/>
                     </HBox>
                     <TextField styleClass="ux-inline-74263851ef" fx:id="fileCipherKeyField" promptText="Key in hexadecimal"/>
                     <HBox spacing="5">
                         <TextField styleClass="ux-inline-74263851ef" fx:id="fileCipherNonceField" promptText="IV / nonce in hexadecimal (fresh value for AEAD encryption)"
                                    HBox.hgrow="ALWAYS"/>
-                        <Button text="Generate" onAction="#generateFileCipherNonce" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+                        <Button fx:id="fileCipherGenerateNonceBtn" text="Generate" onAction="#generateFileCipherNonce" styleClass="secondary-button,ux-inline-ab4da656fa"/>
                     </HBox>
                     <TextField styleClass="ux-inline-74263851ef" fx:id="fileCipherAadField" promptText="AAD in hexadecimal (optional, AEAD only)"/>
                     <CheckBox styleClass="ux-inline-ab4da656fa" fx:id="fileCipherLinesCheck"
@@ -203,8 +205,8 @@
                         <Button fx:id="fileCipherEncryptBtn" text="Encrypt File" onAction="#handleFileCipherEncrypt" styleClass="action-button"/>
                         <Button fx:id="fileCipherDecryptBtn" text="Decrypt File" onAction="#handleFileCipherDecrypt" styleClass="action-button"/>
                         <Button fx:id="fileCipherAnalyzeBtn" text="Analyze Encrypted File" onAction="#handleAnalyzeFileCipher" styleClass="secondary-button"/>
-                        <Button text="Export Recipe..." onAction="#handleExportFileCipherRecipe" styleClass="secondary-button"/>
-                        <Button text="Import Recipe..." onAction="#handleImportFileCipherRecipe" styleClass="secondary-button"/>
+                        <Button fx:id="fileCipherExportRecipeBtn" text="Export Recipe..." onAction="#handleExportFileCipherRecipe" styleClass="secondary-button"/>
+                        <Button fx:id="fileCipherImportRecipeBtn" text="Import Recipe..." onAction="#handleImportFileCipherRecipe" styleClass="secondary-button"/>
                     </FlowPane>
                     <TextArea styleClass="ux-inline-74c2908b8c" fx:id="fileCipherResultArea" editable="false" prefHeight="100" wrapText="true"/>
                 </VBox>
@@ -234,8 +236,8 @@
                         <Label styleClass="ux-inline-ba9ea6419e" text="Public Key (PEM or Hex):"/>
                         <TextArea styleClass="ux-inline-74263851ef" fx:id="publicKeyArea" prefHeight="60" wrapText="true"/>
                         <FlowPane styleClass="responsive-action-bar">
-                            <Button text="Paste Public Key" onAction="#handlePastePublicKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
-                            <Button text="Load from File..." onAction="#handleReadPublicKeyFile" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="asymPastePublicKeyBtn" text="Paste Public Key" onAction="#handlePastePublicKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="asymLoadPublicKeyBtn" text="Load from File..." onAction="#handleReadPublicKeyFile" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
                             <MenuButton fx:id="cipherPubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button,ux-inline-ba9ea6419e" onShowing="#handlePopulateCipherPubKeyShelf"/>
                         </FlowPane>
                     </VBox>
@@ -243,15 +245,15 @@
                         <Label styleClass="ux-inline-ba9ea6419e" text="Private Key (PEM or Hex):"/>
                         <TextArea styleClass="ux-inline-74263851ef" fx:id="privateKeyArea" prefHeight="60" wrapText="true"/>
                         <FlowPane styleClass="responsive-action-bar">
-                            <Button text="Paste Private Key" onAction="#handlePastePrivateKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
-                            <Button text="Load from File..." onAction="#handleReadPrivateKeyFile" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="asymPastePrivateKeyBtn" text="Paste Private Key" onAction="#handlePastePrivateKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="asymLoadPrivateKeyBtn" text="Load from File..." onAction="#handleReadPrivateKeyFile" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
                             <MenuButton fx:id="cipherPrivKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button,ux-inline-ba9ea6419e" onShowing="#handlePopulateCipherPrivKeyShelf"/>
                         </FlowPane>
                     </VBox>
                     <Separator orientation="HORIZONTAL"/>
                     <FlowPane styleClass="responsive-action-bar">
-                        <Button text="Encrypt (Public Key)" onAction="#handleAsymmetricEncrypt" styleClass="action-button-primary"/>
-                        <Button text="Decrypt (Private Key)" onAction="#handleAsymmetricDecrypt" styleClass="secondary-button"/>
+                        <Button fx:id="asymEncryptBtn" text="Encrypt (Public Key)" onAction="#handleAsymmetricEncrypt" styleClass="action-button-primary"/>
+                        <Button fx:id="asymDecryptBtn" text="Decrypt (Private Key)" onAction="#handleAsymmetricDecrypt" styleClass="secondary-button"/>
                     </FlowPane>
                 </VBox>
             </TitledPane>

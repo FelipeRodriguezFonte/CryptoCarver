@@ -1,6 +1,8 @@
 package com.cryptocarver.crypto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.HexFormat;
@@ -47,6 +49,30 @@ class FormatPreservingEncryptionTest {
         assertEquals(input.length(), ciphertext.length());
         assertEquals(input, FormatPreservingEncryption.decrypt(
                 FormatPreservingEncryption.Algorithm.FF3_1, ciphertext, AES128, DECIMAL, tweak));
+    }
+
+    @Test
+    void ff3_1HelpLengthBoundMatchesTheAlgorithmValidation() {
+        for (int radix : new int[]{2, 10, 62, 95, 256}) {
+            int maximum = FormatPreservingEncryption.maximumFf3_1InputLength(radix);
+            assertTrue(maximum > 0);
+            String alphabet = java.util.stream.IntStream.range(0, radix)
+                    .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
+            assertDoesNotThrow(() -> FormatPreservingEncryption.encrypt(FormatPreservingEncryption.Algorithm.FF3_1,
+                    String.valueOf(alphabet.charAt(0)).repeat(maximum), new byte[16], alphabet, new byte[7]));
+        }
+        assertEquals(4096, FormatPreservingEncryption.maximumInputLength());
+    }
+
+    @Test void ff1AcceptsA1024ByteTweakAndRejectsTheNextByte() {
+        byte[] key = new byte[16];
+        String input = "123456";
+        int maximumTweakLength = FormatPreservingEncryption.maximumTweakLength();
+        assertEquals(1024, maximumTweakLength);
+        assertDoesNotThrow(() -> FormatPreservingEncryption.validate(FormatPreservingEncryption.Algorithm.FF1,
+                input, key, "0123456789", new byte[maximumTweakLength]));
+        assertThrows(IllegalArgumentException.class, () -> FormatPreservingEncryption.validate(
+                FormatPreservingEncryption.Algorithm.FF1, input, key, "0123456789", new byte[maximumTweakLength + 1]));
     }
 
     @Test

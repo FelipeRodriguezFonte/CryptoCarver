@@ -103,13 +103,21 @@ class ModernMainReadinessCharacterizationTest {
   @Test
   void readinessPanelHidesAfterHashInputBecomesComplete() throws Exception {
     AtomicReference<HBox> panel = new AtomicReference<>();
+    AtomicReference<Button> explicitHelp = new AtomicReference<>();
     runFx(
         () -> {
           controller.navigateToModule("Hashing");
+          GenericController generic = field(controller, "genericContainerController");
+          ComboBox<String> format = field(controller, "inputFormatCombo");
+          ComboBox<String> algorithm = field(generic, "hashAlgorithmCombo");
+          format.setValue("Text (UTF-8)");
+          algorithm.setValue("SHA-256");
           controller.updateReadinessPanelForOperation("Hashing", true);
           panel.set(field(controller, "readinessPanel"));
+          explicitHelp.set(field(controller, "toolbarReadinessHelpButton"));
         });
     assertTrue(panel.get().isVisible());
+    assertEquals("INCOMPLETE", readReport().getOverallStatus().name());
     runFx(
         () -> {
           GenericController generic = field(controller, "genericContainerController");
@@ -117,7 +125,13 @@ class ModernMainReadinessCharacterizationTest {
           input.setText("characterization input");
           controller.updateReadinessPanel();
         });
+    PreflightReport readyReport = readReport();
+    assertEquals("READY", readyReport.getOverallStatus().name());
+    assertTrue(readyReport.isExecutable());
     assertFalse(panel.get().isVisible());
+    runFx(() -> explicitHelp.get().fire());
+    assertTrue(panel.get().isVisible(), "An explicit help request may show a READY checklist");
+    assertTrue(readReport().isExecutable(), "Showing READY help must not change executability");
   }
 
   @Test

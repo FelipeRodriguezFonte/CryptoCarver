@@ -99,6 +99,9 @@
                 </Menu>
 
                 <Menu fx:id="helpMenu" text="Help">
+                    <MenuItem fx:id="operationHelpMenuItem" text="Help for this operation" onAction="#handleShowOperationHelp" accelerator="Shift+F1" />
+                    <CheckMenuItem fx:id="contextualHelpModeMenuItem" text="Contextual help mode" onAction="#handleToggleContextualHelpMode" />
+                    <SeparatorMenuItem />
                     <MenuItem fx:id="shortcutsMenuItem" text="Keyboard Shortcuts..." onAction="#handleShowKeyboardShortcuts" accelerator="F1" />
                     <SeparatorMenuItem />
                     <MenuItem fx:id="diagnosticsMenuItem" text="Diagnostics" onAction="#handleDiagnostics"/>
@@ -132,6 +135,7 @@
                     <Label text="→" styleClass="format-flow-arrow"/>
 
                     <Label fx:id="contractOperationLabel" text="Operation" styleClass="format-flow-operation"/>
+                    <Button fx:id="formatContractHelpButton" text="?" onAction="#handleFormatContractHelp" styleClass="ghost-button" accessibleText="Help for the route format contract" accessibleHelp="Explain the current route input and output contract"/>
 
                     <Label text="→" styleClass="format-flow-arrow"/>
 
@@ -142,6 +146,8 @@
                 </HBox>
 
                 <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="toolbarReadinessHelpButton" text="ⓘ" minWidth="-Infinity" onAction="#handleShowReadinessHelp" styleClass="ghost-button" accessibleText="Open help for execution readiness checks" accessibleHelp="Review the current readiness status and checks without executing the operation"/>
+                <Button fx:id="toolbarOperationHelpButton" text="?" minWidth="-Infinity" onAction="#handleShowOperationHelp" styleClass="ghost-button" accessibleText="Open local help for the current operation"/>
                 <Button text="Inspector" onAction="#handleToggleInspector" styleClass="ghost-button" accessibleText="Toggle inspector"/>
             </HBox>
         </VBox>
@@ -204,6 +210,7 @@
                     </VBox>
                     <HBox spacing="6" alignment="CENTER_RIGHT">
                         <Button fx:id="errorBannerGoToFieldBtn" text="Go to field" onAction="#handleErrorBannerGoToField" focusTraversable="true" accessibleText="Go to field" accessibleHelp="Move focus to the invalid field" styleClass="error-banner-btn-secondary" managed="false" visible="false"/>
+                        <Button fx:id="errorBannerHelpBtn" text="Help" onAction="#handleErrorBannerHelp" focusTraversable="true" accessibleText="Open help for this validation error" accessibleHelp="Explain the validation status and any linked rule" styleClass="error-banner-btn-secondary"/>
                         <Button fx:id="errorBannerCopyDetailsBtn" text="Copy technical details" onAction="#handleErrorBannerCopyDetails" focusTraversable="true" accessibleText="Copy technical details" accessibleHelp="Copy redacted technical details" styleClass="error-banner-btn-secondary"/>
                         <Button fx:id="errorBannerCloseBtn" text="✕" onAction="#handleErrorBannerClose" focusTraversable="true" styleClass="error-banner-btn-close" accessibleText="Dismiss the validation message" accessibleHelp="Close the error and restore focus"/>
                     </HBox>
@@ -230,6 +237,7 @@
                         <Label styleClass="ux-inline-d9f657c0dd" fx:id="readinessSummaryLabel" text="Execution Readiness Checklist"/>
                         <FlowPane fx:id="readinessChecksContainer" hgap="10" vgap="4"/>
                     </VBox>
+                    <Button fx:id="readinessHelpBtn" text="Help for checks" onAction="#handleShowReadinessHelp" styleClass="secondary-button" accessibleText="Help for readiness checks" accessibleHelp="Review the state and meaning of the current checks"/>
                     <Button fx:id="readinessToggleDetailsBtn" text="Show Details" onAction="#handleToggleReadinessDetails" styleClass="secondary-button,ux-inline-8e3aa95844"/>
                 </HBox>
 
@@ -405,7 +413,10 @@
                     <Button fx:id="inspectorOpenSessionStepButton" styleClass="ux-inline-7c4e63cc14" text="View data" onAction="#handleOpenSelectedSessionStep" accessibleText="View saved operation data"/>
                 </HBox>
 
-                <ScrollPane styleClass="ux-inline-062b25176d" fitToWidth="true" VBox.vgrow="ALWAYS">
+                <TabPane fx:id="inspectorTabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+                <tabs>
+                <Tab fx:id="inspectorResultTab" text="Result">
+                <ScrollPane styleClass="ux-inline-062b25176d" fitToWidth="true">
                     <VBox spacing="0">
 
                         <!-- Input/Output Section -->
@@ -453,6 +464,12 @@
 
                     </VBox>
                 </ScrollPane>
+                </Tab>
+                <Tab fx:id="inspectorHelpTab" text="Help">
+                    <ScrollPane fitToWidth="true"><VBox fx:id="contextualHelpContent" spacing="10"/></ScrollPane>
+                </Tab>
+                </tabs>
+                </TabPane>
                 </VBox>
             </items>
         </ResponsiveWorkspaceSplitPane>

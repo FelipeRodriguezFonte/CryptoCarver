@@ -1,6 +1,7 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.SymmetricCipher;
+import com.cryptocarver.model.help.SymmetricCapabilityPolicy;
 import com.cryptocarver.ui.component.MaterialFieldBadge;
 import com.cryptocarver.util.DataConverter;
 import javafx.scene.control.ComboBox;
@@ -109,9 +110,10 @@ final class SymmetricFieldsPresenter {
         String algo = symmetricAlgorithmCombo.getValue() != null ? symmetricAlgorithmCombo.getValue() : "AES-256";
         String mode = cipherModeCombo != null && cipherModeCombo.getValue() != null ? cipherModeCombo.getValue() : "CBC";
 
-        boolean isStreamCipher = SymmetricCipher.isStreamCipher(algo);
+        SymmetricCapabilityPolicy.State capabilities = SymmetricCapabilityPolicy.resolve(algo, mode);
+        boolean isStreamCipher = capabilities.streamCipher();
         boolean isGCM = !isStreamCipher && mode.equalsIgnoreCase("GCM");
-        boolean isECB = !isStreamCipher && mode.equalsIgnoreCase("ECB");
+        boolean isECB = capabilities.ecb();
         boolean isChaChaPoly = algo.equalsIgnoreCase("ChaCha20-Poly1305");
         boolean isXChaChaPoly = algo.equalsIgnoreCase("XChaCha20-Poly1305");
         boolean isAEAD = isGCM || isChaChaPoly || isXChaChaPoly;
@@ -123,7 +125,7 @@ final class SymmetricFieldsPresenter {
         } else {
             if (cipherModeCombo != null) { cipherModeCombo.setDisable(false); cipherModeCombo.setStyle("-fx-opacity: 1.0;"); }
             if (paddingCombo != null) {
-                boolean supportsPadding = SymmetricCipher.supportsPadding(mode);
+                boolean supportsPadding = capabilities.paddingSelectable();
                 paddingCombo.setDisable(!supportsPadding);
                 paddingCombo.setStyle(supportsPadding ? "-fx-opacity: 1.0;" : "-fx-opacity: 0.5;");
             }
@@ -276,7 +278,7 @@ final class SymmetricFieldsPresenter {
             symKeyBadge.updateState();
         }
 
-        int expectedNonceBytes = recommendedIvLength(algo, mode);
+        int expectedNonceBytes = SymmetricCapabilityPolicy.resolve(algo, mode).generatedIvBytes();
         if (ivBadge != null) {
             if (expectedNonceBytes > 0) ivBadge.setExpectedBytes(expectedNonceBytes);
             ivBadge.updateState();
@@ -312,7 +314,8 @@ final class SymmetricFieldsPresenter {
     void updatePaddingFieldState() {
         if (paddingCombo != null && cipherModeCombo != null) {
             String mode = cipherModeCombo.getValue();
-            boolean supportsPadding = SymmetricCipher.supportsPadding(mode);
+            String algorithm = symmetricAlgorithmCombo == null ? null : symmetricAlgorithmCombo.getValue();
+            boolean supportsPadding = SymmetricCapabilityPolicy.resolve(algorithm, mode).paddingSelectable();
 
             if (supportsPadding) {
                 paddingCombo.setDisable(false);
@@ -335,7 +338,6 @@ final class SymmetricFieldsPresenter {
 
     /** Stream ciphers ignore the (disabled) mode selector, so a leftover ECB must not zero their nonce. */
     private static int recommendedIvLength(String algorithm, String mode) {
-        boolean stream = algorithm != null && SymmetricCipher.isStreamCipher(algorithm);
-        return SymmetricCipher.getRecommendedIvLength(algorithm, stream ? null : mode);
+        return SymmetricCapabilityPolicy.resolve(algorithm, mode).generatedIvBytes();
     }
 }

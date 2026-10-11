@@ -78,6 +78,25 @@ public class KeyCertificateWorkbenchController {
     private OperationDetail.Classification currentOutputClassification = OperationDetail.Classification.PUBLIC;
     private String lastParsedInput;
     private ShelfOutputState shelfOutputState = ShelfOutputState.NONE;
+    private ContextualHelpButtonBinder contextualHelpButtons;
+
+    public void configureContextualHelp(com.cryptocarver.model.help.HelpContextState state,
+            java.util.function.Consumer<com.cryptocarver.model.help.HelpContext> opener) {
+        if (state == null || contextualHelpButtons != null) return;
+        contextualHelpButtons = new ContextualHelpButtonBinder(state, opener);
+        contextualHelpButtons.bind("op_keys_format_workbench", "op_keys_format_workbench", "parse", "input", workbenchInputArea);
+        contextualHelpButtons.bind("op_keys_format_workbench", "op_keys_format_workbench", "parse", "password", workbenchPasswordField);
+        contextualHelpButtons.bind("op_keys_format_workbench", "op_keys_format_workbench", "convert", "destination_format", convertToCombo);
+        contextualHelpButtons.bind("op_keys_format_workbench", "op_keys_format_workbench", "validate", "secondary_input", validationSecondaryInput);
+        contextualHelpButtons.bind("op_keys_format_workbench", "op_keys_format_workbench", "convert", "output", workbenchOutputArea);
+        setActiveContextualHelpOperation("", false);
+    }
+
+    public void setActiveContextualHelpOperation(String operationId, boolean enabled) {
+        if (contextualHelpButtons == null) return;
+        contextualHelpButtons.setActiveRoute(operationId);
+        contextualHelpButtons.setEnabled(enabled && com.cryptocarver.model.AppSettings.getInstance().isContextualHelpEnabled());
+    }
 
     private enum ShelfOutputState {
         NONE,

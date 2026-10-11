@@ -19,7 +19,10 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.MenuButton;
+import javafx.scene.control.Button;
 import javafx.stage.FileChooser;
+import com.cryptocarver.model.help.HelpContext;
+import com.cryptocarver.model.help.HelpContextState;
 
 /** OpenPGP laboratory UI, interoperable with ASCII-armored GnuPG material. */
 public final class OpenPgpController {
@@ -41,8 +44,21 @@ public final class OpenPgpController {
     @FXML private Label openPgpGnuPgStatusLabel;
     @FXML private MenuButton openPgpPubKeyShelfMenu;
     @FXML private MenuButton openPgpSecretKeyShelfMenu;
+    @FXML private Button handleProbeGnuPgButton, handleRunGnuPgInteropButton, handleGenerateKeyPairButton;
+    @FXML private Button handlePastePublicKeyButton, handleLoadPublicKeyButton, handleSavePublicKeyButton, handleInspectPublicKeyButton;
+    @FXML private Button handlePasteSecretKeyButton, handleLoadSecretKeyButton, handleSaveSecretKeyButton, handleInspectSecretKeyButton;
+    @FXML private Button handleClearSecretMaterialButton, handleLoadInputButton, handleEncryptButton, handleDecryptButton;
+    @FXML private Button handleSignDetachedButton, handleSignAttachedButton, handleClearSignButton;
+    @FXML private Button handleVerifyDetachedButton, handleVerifyAttachedButton, handleVerifyClearSignedButton;
+    @FXML private Button handleVerifyWithGnuPgButton, handleClearButton, handleEncryptFileButton, handleDecryptFileButton;
+    @FXML private Button handleSignFileDetachedButton, handleVerifyFileDetachedButton, handleLoadSignatureButton;
+    @FXML private Button handleSaveSignatureButton, handleInspectDetachedSignatureButton, handleSaveOutputButton;
 
     private StatusReporter statusReporter;
+    private ContextualHelpButtonBinder contextualHelpButtons;
+    private HelpContextAdapter contextualHelpAdapter;
+    private HelpContextState contextualHelpState;
+    private java.util.function.Consumer<HelpContext> contextualHelpOpener = ignored -> { };
 
     @FXML
     public void initialize() {
@@ -51,6 +67,94 @@ public final class OpenPgpController {
         IngestionUIHelper.bindField(openPgpSecretKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_PRIVATE_KEY);
         IngestionUIHelper.bindField(openPgpInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_MESSAGE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
         IngestionUIHelper.bindField(openPgpSignatureArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_SIGNATURE);
+    }
+
+    public void configureContextualHelp(HelpContextState state, java.util.function.Consumer<HelpContext> opener) {
+        configureContextualHelp(state, opener, null);
+    }
+
+    public void configureContextualHelp(HelpContextState state, java.util.function.Consumer<HelpContext> opener,
+                                        java.util.function.Consumer<HelpContext> onPublished) {
+        contextualHelpState = state;
+        contextualHelpOpener = opener == null ? ignored -> { } : opener;
+        if (state == null || openPgpAccordion == null) return;
+        if (contextualHelpButtons != null) return;
+        if (contextualHelpAdapter == null) {
+            contextualHelpAdapter = new HelpContextAdapter(state);
+            contextualHelpAdapter.bindPresence(HelpContext.Selection.OPENPGP_PUBLIC_KEY_PRESENT, openPgpPublicKeyArea);
+            contextualHelpAdapter.bindPresence(HelpContext.Selection.OPENPGP_SECRET_KEY_PRESENT, openPgpSecretKeyArea);
+            contextualHelpAdapter.bindPresence(HelpContext.Selection.OPENPGP_SIGNATURE_PRESENT, openPgpSignatureArea);
+            contextualHelpAdapter.bindPresence(HelpContext.Selection.OPENPGP_INPUT_PRESENT, openPgpInputArea);
+            contextualHelpAdapter.bindPresence(HelpContext.Selection.OPENPGP_PASSPHRASE_PRESENT, openPgpPassphraseField);
+        }
+        contextualHelpButtons = new ContextualHelpButtonBinder(state, contextualHelpOpener, onPublished);
+        String op = "op_openpgp";
+        bindHelpButton(op, "generate_key_pair", "", handleGenerateKeyPairButton);
+        bindHelpButton(op, "generate_key_pair", "user_id", openPgpUserIdField);
+        bindHelpButton(op, "generate_key_pair", "passphrase", openPgpPassphraseField);
+        bindHelpButton(op, "inspect_public_key", "public_key", openPgpPublicKeyArea);
+        bindHelpButton(op, "paste_public_key", "", handlePastePublicKeyButton);
+        bindHelpButton(op, "load_public_key", "", handleLoadPublicKeyButton);
+        bindHelpButton(op, "save_public_key", "", handleSavePublicKeyButton);
+        bindHelpButton(op, "inspect_public_key", "", handleInspectPublicKeyButton);
+        bindHelpButton(op, "use_public_key_shelf", "", openPgpPubKeyShelfMenu);
+        bindHelpButton(op, "inspect_secret_key", "secret_key", openPgpSecretKeyArea);
+        bindHelpButton(op, "decrypt_text", "passphrase", openPgpPassphraseField);
+        bindHelpButton(op, "paste_secret_key", "", handlePasteSecretKeyButton);
+        bindHelpButton(op, "load_secret_key", "", handleLoadSecretKeyButton);
+        bindHelpButton(op, "save_secret_key", "", handleSaveSecretKeyButton);
+        bindHelpButton(op, "inspect_secret_key", "", handleInspectSecretKeyButton);
+        bindHelpButton(op, "use_secret_key_shelf", "", openPgpSecretKeyShelfMenu);
+        bindHelpButton(op, "clear_secret_material", "", handleClearSecretMaterialButton);
+        bindHelpButton(op, "load_input", "input", openPgpInputArea);
+        bindHelpButton(op, "load_input", "", handleLoadInputButton);
+        bindHelpButton(op, "encrypt_text", "", handleEncryptButton);
+        bindHelpButton(op, "decrypt_text", "", handleDecryptButton);
+        bindHelpButton(op, "sign_detached", "", handleSignDetachedButton);
+        bindHelpButton(op, "sign_attached", "", handleSignAttachedButton);
+        bindHelpButton(op, "clear_sign", "", handleClearSignButton);
+        bindHelpButton(op, "verify_detached", "signature", openPgpSignatureArea);
+        bindHelpButton(op, "verify_detached", "", handleVerifyDetachedButton);
+        bindHelpButton(op, "verify_attached", "", handleVerifyAttachedButton);
+        bindHelpButton(op, "verify_clear_signed", "", handleVerifyClearSignedButton);
+        bindHelpButton(op, "verify_with_gnupg", "", handleVerifyWithGnuPgButton);
+        bindHelpButton(op, "clear_data", "", handleClearButton);
+        bindHelpButton(op, "encrypt_file", "", handleEncryptFileButton);
+        bindHelpButton(op, "decrypt_file", "", handleDecryptFileButton);
+        bindHelpButton(op, "sign_file", "", handleSignFileDetachedButton);
+        bindHelpButton(op, "verify_file", "", handleVerifyFileDetachedButton);
+        bindHelpButton(op, "load_signature", "", handleLoadSignatureButton);
+        bindHelpButton(op, "save_signature", "", handleSaveSignatureButton);
+        bindHelpButton(op, "inspect_detached_signature", "", handleInspectDetachedSignatureButton);
+        bindHelpButton(op, "save_output", "output", openPgpOutputArea);
+        bindHelpButton(op, "save_output", "", handleSaveOutputButton);
+        bindHelpButton(op, "probe_gnupg", "gnupg_status", handleProbeGnuPgButton);
+        bindHelpButton(op, "run_gnupg_interop", "", handleRunGnuPgInteropButton);
+    }
+
+    private void bindHelpButton(String operation, String action, String field, javafx.scene.Node target) {
+        if (target != null) contextualHelpButtons.bind(operation, operation, action, field, target);
+    }
+
+    public void setContextualHelpEnabled(boolean enabled) {
+        if (contextualHelpAdapter != null) {
+            if (enabled) contextualHelpAdapter.activate(); else contextualHelpAdapter.deactivate();
+        }
+        if (contextualHelpButtons != null) contextualHelpButtons.setEnabled(enabled);
+    }
+
+    /** Shift+F1 works whenever the OpenPGP route is shown, independently of the help mode. */
+    public void setContextualHelpRouteActive(boolean active) {
+        if (contextualHelpButtons != null) contextualHelpButtons.setActiveRoute(active ? "op_openpgp" : "");
+    }
+
+    public void closeContextualHelpBindings() {
+        if (contextualHelpAdapter != null) contextualHelpAdapter.close();
+        if (contextualHelpButtons != null) contextualHelpButtons.close();
+    }
+
+    public void refreshContextualHelpLocalization() {
+        if (contextualHelpButtons != null) contextualHelpButtons.refreshLocalization();
     }
 
     @FXML
@@ -335,6 +439,8 @@ public final class OpenPgpController {
     @FXML
     private void handleProbeGnuPg() {
         GnuPgInterop.Availability status = GnuPgInterop.probe();
+        if (contextualHelpState != null) contextualHelpState.setSelection(HelpContext.Selection.OPENPGP_GNUPG_AVAILABLE,
+                HelpContext.PublicSelection.flag(status.available()));
         String message = status.available()
                 ? "GnuPG available: " + status.version() + " (" + status.executable() + ")"
                 : status.message();

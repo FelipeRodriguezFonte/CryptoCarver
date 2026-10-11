@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.List;
 import com.cryptocarver.crypto.HashOperations;
 import com.cryptocarver.crypto.MACOperations;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,24 @@ class ProcessEngineTest {
 
         assertEquals("2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824", ProcessEngine.executeAndRender(process).get("output"));
         assertTrue(ProcessDefinitionCodec.deserialize(ProcessDefinitionCodec.serialize(process)).nodes.size() == 3);
+    }
+
+    @Test void convertsBase64ToBytesBeforeHashingInTypedFlow() throws Exception {
+        ProcessDefinition process = new ProcessDefinition();
+        ProcessDefinition.Node input = new ProcessDefinition.Node("input", "CONSOLE_INPUT", "Encoded input", 0, 0);
+        input.configuration.put("value", "SG9sYQ=="); // UTF-8 text encoding of "Hola"
+        ProcessDefinition.Node decode = new ProcessDefinition.Node("decode", "BASE64_DECODE", "Decode Base64", 1, 0);
+        ProcessDefinition.Node hash = new ProcessDefinition.Node("hash", "HASH", "SHA-256", 2, 0);
+        hash.configuration.put("algorithm", "SHA-256");
+        ProcessDefinition.Node output = new ProcessDefinition.Node("output", "CONSOLE_OUTPUT", "Digest", 3, 0);
+        process.nodes.addAll(List.of(input, decode, hash, output));
+        process.connections.add(new ProcessDefinition.Connection("input", "decode", "input"));
+        process.connections.add(new ProcessDefinition.Connection("decode", "hash", "input"));
+        process.connections.add(new ProcessDefinition.Connection("hash", "output", "input"));
+
+        String expected = java.util.HexFormat.of().withUpperCase().formatHex(
+                HashOperations.calculateHash("Hola".getBytes(java.nio.charset.StandardCharsets.UTF_8), "SHA-256"));
+        assertEquals(expected, ProcessEngine.executeAndRender(process).get("output"));
     }
 
     @Test void base64EncodesDigestBytesInsteadOfTheHexRendering() throws Exception {

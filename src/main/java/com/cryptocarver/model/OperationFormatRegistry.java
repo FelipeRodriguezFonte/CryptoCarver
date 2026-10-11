@@ -125,4 +125,9 @@ public class OperationFormatRegistry {
         if (operationPath == null) return defaultFallbackProfile;
         return profiles.getOrDefault(operationPath, defaultFallbackProfile);
     }
+
+    /** Registered format contracts in stable declaration order, for help and coverage checks. */
+    public List<OperationFormatProfile> profiles() {
+        return List.copyOf(profiles.values());
+    }
 }

@@ -12,6 +12,7 @@ public class KeyboardShortcutRegistry {
     private static final List<KeyboardShortcutEntry> SHORTCUTS = List.of(
             new KeyboardShortcutEntry("Command Palette", "Shortcut+K", "Open operation search and quick palette", "Navigation"),
             new KeyboardShortcutEntry("Keyboard Shortcuts", "F1", "Show application keyboard shortcuts reference", "Help"),
+            new KeyboardShortcutEntry("Help for this operation", "Shift+F1", "Open help for the focused control, or for the operation when the control has none", "Help"),
             new KeyboardShortcutEntry("Save Session", "Shortcut+S", "Save current workspace state to session file", "File"),
             new KeyboardShortcutEntry("Import Key", "Shortcut+O", "Import cryptographic key or certificate file", "File"),
             new KeyboardShortcutEntry("Exit Application", "Shortcut+Q", "Close CryptoCarver workbench", "File"),

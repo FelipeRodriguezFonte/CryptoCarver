@@ -3222,3 +3222,20 @@
 .navigation-tree .tree-cell > .tree-disclosure-node > .arrow {
     -fx-background-color: -cc-navigation-text-background;
 }
+
+/* Inspector tabs: readable captions in both themes; the accent rule marks the selected tab. */
+#inspectorTabs .tab {
+    -fx-background-color: -cc-bg-surface-raised;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 2 0;
+}
+
+#inspectorTabs .tab .tab-label,
+#inspectorTabs .tab:selected .tab-label {
+    -fx-text-fill: -cc-text;
+}
+
+#inspectorTabs .tab:selected {
+    -fx-background-color: -cc-bg-surface-raised;
+    -fx-border-color: transparent transparent -cc-accent transparent;
+}

@@ -3,6 +3,7 @@ package com.cryptocarver.ui;
 import com.cryptocarver.crypto.UUIDGenerator;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.util.DataConverter;
+import com.cryptocarver.model.help.HelpContext;
 import com.cryptocarver.codec.ByteFormat;
 import com.cryptocarver.codec.CodecRegistry;
 import com.cryptocarver.codec.CodecException;
@@ -49,6 +50,13 @@ public class GenericController {
     private boolean preflightListenersInstalled;
     @FXML private Accordion genericContainer;
     private ModuleI18n.Binding moduleI18n;
+    private com.cryptocarver.model.help.HelpContextState contextualHelpState;
+    private ContextualHelpButtonBinder contextualHelpButtons;
+    private java.util.function.Consumer<com.cryptocarver.model.help.HelpContext> contextualHelpOpener = ignored -> { };
+    private final java.util.Map<String, com.cryptocarver.model.help.HelpContext> savedHelpContexts = new java.util.HashMap<>();
+    private String activeContextualHelpOperation = "";
+    private String activeContextualHelpRoute = "";
+    private final java.util.Map<String, HelpContextAdapter> contextualHelpAdapters = new java.util.LinkedHashMap<>();
 
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
@@ -89,6 +97,7 @@ public class GenericController {
 
     @FXML private TitledPane compressedHexPane;
     @FXML private CompressedHexController compressedHexPaneController;
+    @FXML private TitledPane uuidPane;
 
     @FXML private KeyCertificateWorkbenchController keyCertificateWorkbenchController;
     @FXML private javafx.scene.layout.VBox keyCertificateWorkbench;
@@ -132,6 +141,313 @@ public class GenericController {
 
     @FXML private TextArea fileResultArea;
     @FXML private TextField fileComparePathField;
+
+    @FXML private javafx.scene.control.Button help_handleCalculateHash;
+    @FXML private javafx.scene.control.Button help_handleResetHashDefaults;
+    @FXML private javafx.scene.control.Button help_handleApplyHashTemplate;
+    @FXML private javafx.scene.control.MenuButton hashManageTemplateButton;
+    @FXML private javafx.scene.control.MenuButton manualManageTemplateButton;
+    @FXML private javafx.scene.control.Button help_handleApplyManualTemplate;
+    @FXML private javafx.scene.control.Button help_handleResetManualDefaults;
+    @FXML private javafx.scene.control.Button help_handleManualConvert;
+    @FXML private javafx.scene.control.Button help_handleEncodeBase64Url;
+    @FXML private javafx.scene.control.Button help_handleDecodeBase64Url;
+    @FXML private javafx.scene.control.Button help_handleEncodeBase32;
+    @FXML private javafx.scene.control.Button help_handleDecodeBase32;
+    @FXML private javafx.scene.control.Button help_handleConvertEndian;
+    @FXML private javafx.scene.control.Button help_handleEncodeUrl;
+    @FXML private javafx.scene.control.Button help_handleDecodeUrl;
+    @FXML private javafx.scene.control.Button help_handleCompressData;
+    @FXML private javafx.scene.control.Button help_handleDecompressData;
+    @FXML private javafx.scene.control.Button help_handleEncodeBcd;
+    @FXML private javafx.scene.control.Button help_handleDecodeBcd;
+    @FXML private javafx.scene.control.Button help_handleEncodeComp3;
+    @FXML private javafx.scene.control.Button help_handleDecodeComp3;
+    @FXML private javafx.scene.control.Button help_handleShiftLeft;
+    @FXML private javafx.scene.control.Button help_handleShiftRight;
+    @FXML private javafx.scene.control.Button help_handleExtractTraceHex;
+    @FXML private javafx.scene.control.Button help_handleBrowseBatchInput;
+    @FXML private javafx.scene.control.Button help_handleRunBatch;
+    @FXML private javafx.scene.control.Button help_handleDryRunBatch;
+    @FXML private javafx.scene.control.Button help_handleCancelBatch;
+    @FXML private javafx.scene.control.Button help_handleResetBatch;
+    @FXML private javafx.scene.control.Button help_handleExportBatchResults;
+    @FXML private javafx.scene.control.Button help_handleBrowseInputFile;
+    @FXML private javafx.scene.control.Button help_handleBrowseOutputFile;
+    @FXML private javafx.scene.control.Button help_handleBrowseCompareFile;
+    @FXML private javafx.scene.control.Button help_handleConvertFile;
+    @FXML private javafx.scene.control.Button help_handleCompareFiles;
+    @FXML private javafx.scene.control.Button help_handleHashFileStreaming;
+    @FXML private javafx.scene.control.Button help_handlePreviewFileStreaming;
+    @FXML private javafx.scene.control.Button help_handleGenerateRandom;
+    @FXML private javafx.scene.control.Button help_handleCalculateCheckDigit;
+    @FXML private javafx.scene.control.Button help_handleValidateCheckDigit;
+    @FXML private javafx.scene.control.Button help_handleModularCalculate;
+    @FXML private javafx.scene.control.Button help_handleGenerateUUID;
+    @FXML private javafx.scene.control.Button help_handleCopyUUID;
+
+    /** Connects local help affordances after the shell has created its shared inspector state. */
+    public void configureContextualHelp(com.cryptocarver.model.help.HelpContextState state,
+            java.util.function.Consumer<com.cryptocarver.model.help.HelpContext> opener) {
+        if (state == null || contextualHelpButtons != null) return;
+        contextualHelpState = state;
+        contextualHelpOpener = opener == null ? ignored -> { } : opener;
+        configureGenericHelpAdapters(state);
+        contextualHelpButtons = new ContextualHelpButtonBinder(state, this::openGenericHelp);
+        if (uuidPane != null) uuidPane.expandedProperty().addListener((obs, wasExpanded, expanded) ->
+                setActiveContextualHelpOperation(activeContextualHelpOperation));
+        bindGenericHelp("op_gen_hash", hashInputArea, "calculate", "input");
+        bindGenericHelp("op_gen_hash", hashAlgorithmCombo, "select_algorithm", "algorithm");
+        bindGenericHelp("op_gen_hash", hashOutputArea, "calculate", "output");
+        bindGenericHelp("op_gen_hash", hashTemplateCombo, "apply_template", "template");
+        bindGenericHelp("op_gen_hash", hashManageTemplateButton, "manage_templates", "template");
+        bindGenericHelpById("op_gen_hash", "calculate", "", "help_handleCalculateHash");
+        bindGenericHelpById("op_gen_hash", "manage_templates", "template", "help_handleResetHashDefaults");
+        bindGenericHelpById("op_gen_hash", "apply_template", "template", "help_handleApplyHashTemplate");
+        bindGenericHelpDynamic("op_gen_manual", manualInputArea, "convert", "input");
+        bindGenericHelp("op_gen_manual", manualInputFormatCombo, "convert", "input_format");
+        bindGenericHelp("op_gen_manual", manualOutputFormatCombo, "convert", "output_format");
+        bindGenericHelpDynamic("op_gen_manual", manualOutputArea, "convert", "output");
+        bindGenericHelp("op_gen_manual", manualTemplateCombo, "manage_templates", "template");
+        bindGenericHelp("op_gen_manual", manualManageTemplateButton, "manage_templates", "template");
+        bindGenericHelp("op_gen_manual", ebcdicConversionCheck, "convert", "ebcdic_direction");
+        bindGenericHelp("op_gen_manual", ebcdicDirectionCombo, "convert", "ebcdic_direction");
+        bindGenericHelp("op_gen_manual", ebcdicCodePageCombo, "convert", "code_page");
+        bindGenericHelp("op_gen_manual", endianWordSizeCombo, "endian", "word_size");
+        bindGenericHelp("op_gen_manual", compressionFormatCombo, "compress", "compression");
+        bindGenericHelp("op_gen_manual", bitShiftBitsField, "shift_left", "shift");
+        bindGenericHelpById("op_gen_manual", "manage_templates", "template", "help_handleApplyManualTemplate");
+        bindGenericHelpById("op_gen_manual", "manage_templates", "template", "help_handleResetManualDefaults");
+        bindGenericHelpById("op_gen_manual", "convert", "", "help_handleManualConvert");
+        bindGenericHelpById("op_gen_manual", "base64url_encode", "input", "help_handleEncodeBase64Url");
+        bindGenericHelpById("op_gen_manual", "base64url_decode", "input", "help_handleDecodeBase64Url");
+        bindGenericHelpById("op_gen_manual", "base32_encode", "input", "help_handleEncodeBase32");
+        bindGenericHelpById("op_gen_manual", "base32_decode", "input", "help_handleDecodeBase32");
+        bindGenericHelpById("op_gen_manual", "endian", "input", "help_handleConvertEndian");
+        bindGenericHelpById("op_gen_manual", "url_encode", "input", "help_handleEncodeUrl");
+        bindGenericHelpById("op_gen_manual", "url_decode", "input", "help_handleDecodeUrl");
+        bindGenericHelpById("op_gen_manual", "compress", "input", "help_handleCompressData");
+        bindGenericHelpById("op_gen_manual", "decompress", "input", "help_handleDecompressData");
+        bindGenericHelpById("op_gen_manual", "bcd_encode", "input", "help_handleEncodeBcd");
+        bindGenericHelpById("op_gen_manual", "bcd_decode", "input", "help_handleDecodeBcd");
+        bindGenericHelpById("op_gen_manual", "comp3_encode", "input", "help_handleEncodeComp3");
+        bindGenericHelpById("op_gen_manual", "comp3_decode", "input", "help_handleDecodeComp3");
+        bindGenericHelpById("op_gen_manual", "shift_left", "input", "help_handleShiftLeft");
+        bindGenericHelpById("op_gen_manual", "shift_right", "input", "help_handleShiftRight");
+        bindGenericHelpById("op_gen_manual", "extract_trace_hex", "input", "help_handleExtractTraceHex");
+        bindGenericHelp("op_gen_batch", batchOperationCombo, "select_operation", "operation");
+        bindGenericHelp("op_gen_batch", batchInputFormatCombo, "load_input", "input_format");
+        bindGenericHelp("op_gen_batch", batchColumnField, "run", "source_column");
+        bindGenericHelp("op_gen_batch", batchOutputColumnField, "run", "destination_column");
+        bindGenericHelp("op_gen_batch", batchAlgorithmCombo, "run", "algorithm");
+        bindGenericHelp("op_gen_batch", batchRecordEncodingCombo, "run", "record_encoding");
+        bindGenericHelp("op_gen_batch", batchKeyField, "run", "key");
+        bindGenericHelp("op_gen_batch", batchIvNonceField, "run", "iv_nonce");
+        bindGenericHelp("op_gen_batch", batchAadField, "run", "aad");
+        bindGenericHelp("op_gen_batch", batchCharsetCombo, "run", "charset");
+        bindGenericHelp("op_gen_batch", batchStopOnErrorCheck, "run", "stop_on_error");
+        bindGenericHelp("op_gen_batch", batchCompactModeCheck, "run", "compact");
+        bindGenericHelp("op_gen_batch", batchInputArea, "load_input", "input");
+        bindGenericHelp("op_gen_batch", batchResultArea, "export", "results");
+        bindGenericHelp("op_gen_batch", batchExportFormatCombo, "export", "export_format");
+        bindGenericHelp("op_gen_batch", batchProgressBar, "run", "progress");
+        bindGenericHelp("op_gen_batch", batchStatusLabel, "run", "status");
+        bindGenericHelpById("op_gen_batch", "load_input", "", "help_handleBrowseBatchInput");
+        bindGenericHelpById("op_gen_batch", "run", "", "help_handleRunBatch");
+        bindGenericHelpById("op_gen_batch", "dry_run", "", "help_handleDryRunBatch");
+        bindGenericHelpById("op_gen_batch", "cancel", "progress", "help_handleCancelBatch");
+        bindGenericHelpById("op_gen_batch", "reset", "input", "help_handleResetBatch");
+        bindGenericHelpById("op_gen_batch", "export", "results", "help_handleExportBatchResults");
+        bindGenericHelpDynamic("op_gen_file", fileInputPathField, "choose_source", "source_path");
+        bindGenericHelpDynamic("op_gen_file", fileOutputPathField, "choose_destination", "destination_path");
+        bindGenericHelpDynamic("op_gen_file", fileComparePathField, "compare", "comparison_path");
+        bindGenericHelp("op_gen_file", fileInputFormatCombo, "convert", "input_format");
+        bindGenericHelp("op_gen_file", fileOutputFormatCombo, "convert", "output_format");
+        bindGenericHelp("op_gen_file", fileEncodingCombo, "convert", "encoding");
+        bindGenericHelpDynamic("op_gen_file", fileResultArea, "convert", "result");
+        bindGenericHelpById("op_gen_file", "choose_source", "source_path", "help_handleBrowseInputFile");
+        bindGenericHelpById("op_gen_file", "choose_destination", "destination_path", "help_handleBrowseOutputFile");
+        bindGenericHelpById("op_gen_file", "compare", "comparison_path", "help_handleBrowseCompareFile");
+        bindGenericHelpById("op_gen_file", "convert", "", "help_handleConvertFile");
+        bindGenericHelpById("op_gen_file", "compare", "", "help_handleCompareFiles");
+        bindGenericHelpById("op_gen_file", "hash_file", "source_path", "help_handleHashFileStreaming");
+        bindGenericHelpById("op_gen_file", "preview", "result", "help_handlePreviewFileStreaming");
+        bindGenericHelp("op_gen_random", randomBytesField, "generate", "byte_count");
+        bindGenericHelp("op_gen_random", randomFormatCombo, "select_format", "format");
+        bindGenericHelp("op_gen_random", randomOutputArea, "generate", "output");
+        bindGenericHelpById("op_gen_random", "generate", "", "help_handleGenerateRandom");
+        bindGenericHelpDynamic("op_gen_check_digits", checkDigitInput, "calculate", "input");
+        bindGenericHelp("op_gen_check_digits", checkDigitAlgorithmCombo, "select_algorithm", "algorithm");
+        bindGenericHelpDynamic("op_gen_check_digits", checkDigitOutput, "calculate", "result");
+        bindGenericHelpById("op_gen_check_digits", "calculate", "", "help_handleCalculateCheckDigit");
+        bindGenericHelpById("op_gen_check_digits", "validate", "", "help_handleValidateCheckDigit");
+        bindGenericHelp("op_gen_mod", modOperationCombo, "select_operation", "operation");
+        bindGenericHelp("op_gen_mod", modOperandAField, "calculate", "operand_a");
+        bindGenericHelp("op_gen_mod", modOperandBField, "calculate", "operand_b");
+        bindGenericHelp("op_gen_mod", modModulusField, "calculate", "modulus");
+        bindGenericHelp("op_gen_mod", modResultArea, "calculate", "result");
+        bindGenericHelpById("op_gen_mod", "calculate", "", "help_handleModularCalculate");
+        bindGenericHelp("aux_uuid", uuidOutputField, "generate", "identifier");
+        bindGenericHelp("aux_uuid", uuidOutputField, "copy", "identifier");
+        bindGenericHelpById("aux_uuid", "generate", "", "help_handleGenerateUUID");
+        bindGenericHelpById("aux_uuid", "copy", "", "help_handleCopyUUID");
+        if (keyCertificateWorkbenchController != null)
+            keyCertificateWorkbenchController.configureContextualHelp(state, this::openGenericHelp);
+        if (cryptoEnvelopeInspectorController != null)
+            cryptoEnvelopeInspectorController.configureContextualHelp(state, this::openGenericHelp);
+        if (compressedHexPaneController != null)
+            compressedHexPaneController.configureContextualHelp(state, this::openGenericHelp);
+        setActiveContextualHelpOperation(activeContextualHelpOperation);
+    }
+
+    private void bindGenericHelp(String operationId, javafx.scene.Node target, String action, String field) {
+        if (contextualHelpButtons != null && target != null)
+            contextualHelpButtons.bind(operationId, operationId, action, field, target);
+    }
+
+    private void bindGenericHelpDynamic(String operationId, javafx.scene.Node target, String fallbackAction, String field) {
+        if (contextualHelpButtons != null && target != null)
+            contextualHelpButtons.bind(operationId, operationId, () -> activeHelpAction(operationId, fallbackAction, field), field, target);
+    }
+
+    private String activeHelpAction(String operationId, String fallbackAction, String field) {
+        if (contextualHelpState == null || !operationId.equals(contextualHelpState.current().operationId())) return fallbackAction;
+        String activeAction = contextualHelpState.current().actionId();
+        return com.cryptocarver.model.help.OperationHelpRegistry.getInstance().find(operationId)
+                .stream().flatMap(definition -> definition.actions().stream())
+                .filter(action -> action.id().equals(activeAction))
+                .anyMatch(action -> action.fields().stream().anyMatch(candidate -> candidate.id().equals(field)))
+                ? activeAction : fallbackAction;
+    }
+
+    /** Keep shared-field help aligned with the last real action attempted in the visible operation. */
+    private void recordContextualAction(String operationId, String actionId) {
+        if (contextualHelpState == null || !operationId.equals(effectiveContextualHelpOperation())) return;
+        com.cryptocarver.model.help.HelpContext current = contextualHelpState.current();
+        if (!operationId.equals(current.operationId())) return;
+        contextualHelpState.setAction(actionId);
+        contextualHelpState.setField("");
+        savedHelpContexts.put(operationId, contextualHelpState.current());
+    }
+
+    private void bindGenericHelpById(String operationId, String action, String field, String targetId) {
+        if (genericContainer == null) return;
+        javafx.scene.Node target = switch (targetId) {
+            case "help_handleCalculateHash" -> help_handleCalculateHash;
+            case "help_handleResetHashDefaults" -> help_handleResetHashDefaults;
+            case "help_handleApplyHashTemplate" -> help_handleApplyHashTemplate;
+            case "hashManageTemplateButton" -> hashManageTemplateButton;
+            case "manualManageTemplateButton" -> manualManageTemplateButton;
+            case "help_handleApplyManualTemplate" -> help_handleApplyManualTemplate;
+            case "help_handleResetManualDefaults" -> help_handleResetManualDefaults;
+            case "help_handleManualConvert" -> help_handleManualConvert;
+            case "help_handleEncodeBase64Url" -> help_handleEncodeBase64Url;
+            case "help_handleDecodeBase64Url" -> help_handleDecodeBase64Url;
+            case "help_handleEncodeBase32" -> help_handleEncodeBase32;
+            case "help_handleDecodeBase32" -> help_handleDecodeBase32;
+            case "help_handleConvertEndian" -> help_handleConvertEndian;
+            case "help_handleEncodeUrl" -> help_handleEncodeUrl;
+            case "help_handleDecodeUrl" -> help_handleDecodeUrl;
+            case "help_handleCompressData" -> help_handleCompressData;
+            case "help_handleDecompressData" -> help_handleDecompressData;
+            case "help_handleEncodeBcd" -> help_handleEncodeBcd;
+            case "help_handleDecodeBcd" -> help_handleDecodeBcd;
+            case "help_handleEncodeComp3" -> help_handleEncodeComp3;
+            case "help_handleDecodeComp3" -> help_handleDecodeComp3;
+            case "help_handleShiftLeft" -> help_handleShiftLeft;
+            case "help_handleShiftRight" -> help_handleShiftRight;
+            case "help_handleExtractTraceHex" -> help_handleExtractTraceHex;
+            case "help_handleBrowseBatchInput" -> help_handleBrowseBatchInput;
+            case "help_handleRunBatch" -> help_handleRunBatch;
+            case "help_handleDryRunBatch" -> help_handleDryRunBatch;
+            case "help_handleCancelBatch" -> help_handleCancelBatch;
+            case "help_handleResetBatch" -> help_handleResetBatch;
+            case "help_handleExportBatchResults" -> help_handleExportBatchResults;
+            case "help_handleBrowseInputFile" -> help_handleBrowseInputFile;
+            case "help_handleBrowseOutputFile" -> help_handleBrowseOutputFile;
+            case "help_handleBrowseCompareFile" -> help_handleBrowseCompareFile;
+            case "help_handleConvertFile" -> help_handleConvertFile;
+            case "help_handleCompareFiles" -> help_handleCompareFiles;
+            case "help_handleHashFileStreaming" -> help_handleHashFileStreaming;
+            case "help_handlePreviewFileStreaming" -> help_handlePreviewFileStreaming;
+            case "help_handleGenerateRandom" -> help_handleGenerateRandom;
+            case "help_handleCalculateCheckDigit" -> help_handleCalculateCheckDigit;
+            case "help_handleValidateCheckDigit" -> help_handleValidateCheckDigit;
+            case "help_handleModularCalculate" -> help_handleModularCalculate;
+            case "help_handleGenerateUUID" -> help_handleGenerateUUID;
+            case "help_handleCopyUUID" -> help_handleCopyUUID;
+            default -> genericContainer.lookup("#" + targetId);
+        };
+        bindGenericHelp(operationId, target, action, field);
+    }
+
+    private void openGenericHelp(com.cryptocarver.model.help.HelpContext context) {
+        if (context == null || !context.operationId().equals(effectiveContextualHelpOperation())) return;
+        savedHelpContexts.put(context.operationId(), context);
+        contextualHelpOpener.accept(context);
+    }
+
+    public void setActiveContextualHelpOperation(String operationId) {
+        String next = operationId == null ? "" : operationId;
+        String previousOperation = activeContextualHelpOperation;
+        String previousRoute = activeContextualHelpRoute;
+        activeContextualHelpOperation = next;
+        String effectiveRoute = effectiveContextualHelpOperation();
+        boolean changed = !next.equals(previousOperation) || !effectiveRoute.equals(previousRoute);
+        activeContextualHelpRoute = effectiveRoute;
+        if (contextualHelpButtons != null) {
+            contextualHelpButtons.setActiveRoute(effectiveRoute);
+            contextualHelpButtons.setEnabled(!next.isBlank()
+                    && com.cryptocarver.model.AppSettings.getInstance().isContextualHelpEnabled());
+        }
+        boolean enabled = !next.isBlank() && com.cryptocarver.model.AppSettings.getInstance().isContextualHelpEnabled();
+        if (compressedHexPaneController != null) compressedHexPaneController.setActiveContextualHelpOperation(next, enabled);
+        if (keyCertificateWorkbenchController != null) keyCertificateWorkbenchController.setActiveContextualHelpOperation(next, enabled);
+        if (cryptoEnvelopeInspectorController != null) cryptoEnvelopeInspectorController.setActiveContextualHelpOperation(next, enabled);
+        contextualHelpAdapters.forEach((route, adapter) -> {
+            if (route.equals(next)) adapter.activate(); else adapter.deactivate();
+        });
+        if (!changed || effectiveRoute.isBlank() || contextualHelpState == null) return;
+        com.cryptocarver.model.help.HelpContext saved = savedHelpContexts.get(effectiveRoute);
+        contextualHelpState.setOperation(effectiveRoute);
+        contextualHelpState.setAction(saved == null ? "" : saved.actionId());
+        contextualHelpState.setField(saved == null ? "" : saved.fieldId());
+        HelpContextAdapter activeAdapter = contextualHelpAdapters.get(effectiveRoute);
+        if (activeAdapter != null) activeAdapter.refreshCurrentSelections();
+    }
+
+    public String activeContextualHelpRoute() { return effectiveContextualHelpOperation(); }
+
+    private String effectiveContextualHelpOperation() {
+        return uuidPane != null && uuidPane.isExpanded() ? "aux_uuid" : activeContextualHelpOperation;
+    }
+
+    private void configureGenericHelpAdapters(com.cryptocarver.model.help.HelpContextState state) {
+        bindHelpSelections("op_gen_hash", Map.of(HelpContext.Selection.GENERIC_ALGORITHM, hashAlgorithmCombo));
+        bindHelpSelections("op_gen_manual", Map.of(HelpContext.Selection.GENERIC_FORMAT, manualInputFormatCombo,
+                HelpContext.Selection.GENERIC_ENCODING, ebcdicDirectionCombo));
+        bindHelpSelections("op_gen_batch", Map.of(HelpContext.Selection.BATCH_OPERATION, batchOperationCombo,
+                HelpContext.Selection.GENERIC_FORMAT, batchInputFormatCombo,
+                HelpContext.Selection.GENERIC_ALGORITHM, batchAlgorithmCombo,
+                HelpContext.Selection.GENERIC_ENCODING, batchRecordEncodingCombo,
+                HelpContext.Selection.FORMAT, batchExportFormatCombo));
+        bindHelpSelections("op_gen_file", Map.of(HelpContext.Selection.GENERIC_FORMAT, fileInputFormatCombo,
+                HelpContext.Selection.FORMAT, fileOutputFormatCombo,
+                HelpContext.Selection.GENERIC_ENCODING, fileEncodingCombo));
+        bindHelpSelections("op_gen_random", Map.of(HelpContext.Selection.RANDOM_FORMAT, randomFormatCombo));
+        bindHelpSelections("op_gen_check_digits", Map.of(HelpContext.Selection.CHECK_DIGIT_ALGORITHM, checkDigitAlgorithmCombo));
+        bindHelpSelections("op_gen_mod", Map.of(HelpContext.Selection.MODULAR_OPERATION, modOperationCombo));
+        if (cryptoEnvelopeInspectorController != null && cryptoEnvelopeInspectorController.getUnwrapProfileCombo() != null)
+            bindHelpSelections("op_gen_envelope_inspector", Map.of(HelpContext.Selection.ENVELOPE_PROFILE,
+                    cryptoEnvelopeInspectorController.getUnwrapProfileCombo()));
+    }
+
+    private void bindHelpSelections(String route, Map<HelpContext.Selection, javafx.scene.control.ComboBox<String>> selections) {
+        if (selections.values().stream().anyMatch(java.util.Objects::isNull)) return;
+        HelpContextAdapter adapter = new HelpContextAdapter(contextualHelpState);
+        selections.forEach(adapter::bindSelection);
+        contextualHelpAdapters.put(route, adapter);
+    }
 
     public void fillHashInput(String text) { hashing().fillHashInput(text); }
 
@@ -265,17 +581,17 @@ public class GenericController {
         return genericContainer == null || genericContainer.getScene() == null ? null : genericContainer.getScene().getWindow();
     }
 
-    @FXML public void handleBrowseInputFile() { fileConversion().handleBrowseInputFile(); }
+    @FXML public void handleBrowseInputFile() { recordContextualAction("op_gen_file", "choose_source"); fileConversion().handleBrowseInputFile(); }
 
-    @FXML public void handleBrowseOutputFile() { fileConversion().handleBrowseOutputFile(); }
+    @FXML public void handleBrowseOutputFile() { recordContextualAction("op_gen_file", "choose_destination"); fileConversion().handleBrowseOutputFile(); }
 
-    @FXML public void handleBrowseCompareFile() { fileConversion().handleBrowseCompareFile(); }
+    @FXML public void handleBrowseCompareFile() { recordContextualAction("op_gen_file", "compare"); fileConversion().handleBrowseCompareFile(); }
 
-    @FXML public void handleConvertFile() { fileConversion().handleConvertFile(); }
+    @FXML public void handleConvertFile() { recordContextualAction("op_gen_file", "convert"); fileConversion().handleConvertFile(); }
 
-    @FXML public void handleCompareFiles() { fileConversion().compareFiles(); }
-    @FXML public void handleHashFileStreaming() { fileConversion().hashFileStreaming(); }
-    @FXML public void handlePreviewFileStreaming() { fileConversion().previewFileStreaming(); }
+    @FXML public void handleCompareFiles() { recordContextualAction("op_gen_file", "compare"); fileConversion().compareFiles(); }
+    @FXML public void handleHashFileStreaming() { recordContextualAction("op_gen_file", "hash_file"); fileConversion().hashFileStreaming(); }
+    @FXML public void handlePreviewFileStreaming() { recordContextualAction("op_gen_file", "preview"); fileConversion().previewFileStreaming(); }
 
     @FXML public void handleResetBatch() { batchRunner().handleResetBatch(); }
 
@@ -293,39 +609,39 @@ public class GenericController {
 
     @FXML public void handleExportBatchResults() { batchRunner().handleExportBatchResults(); }
 
-    @FXML public void handleManualConvert() { manualConversion().handleManualConvert(); }
+    @FXML public void handleManualConvert() { recordContextualAction("op_gen_manual", "convert"); manualConversion().handleManualConvert(); }
 
-    @FXML public void handleEncodeBase64Url() { manualConversion().handleEncodeBase64Url(); }
+    @FXML public void handleEncodeBase64Url() { recordContextualAction("op_gen_manual", "base64url_encode"); manualConversion().handleEncodeBase64Url(); }
 
-    @FXML public void handleDecodeBase64Url() { manualConversion().handleDecodeBase64Url(); }
+    @FXML public void handleDecodeBase64Url() { recordContextualAction("op_gen_manual", "base64url_decode"); manualConversion().handleDecodeBase64Url(); }
 
-    @FXML public void handleEncodeBase32() { manualConversion().handleEncodeBase32(); }
+    @FXML public void handleEncodeBase32() { recordContextualAction("op_gen_manual", "base32_encode"); manualConversion().handleEncodeBase32(); }
 
-    @FXML public void handleDecodeBase32() { manualConversion().handleDecodeBase32(); }
+    @FXML public void handleDecodeBase32() { recordContextualAction("op_gen_manual", "base32_decode"); manualConversion().handleDecodeBase32(); }
 
-    @FXML public void handleConvertEndian() { manualConversion().handleConvertEndian(); }
+    @FXML public void handleConvertEndian() { recordContextualAction("op_gen_manual", "endian"); manualConversion().handleConvertEndian(); }
 
-    @FXML public void handleEncodeUrl() { manualConversion().handleEncodeUrl(); }
+    @FXML public void handleEncodeUrl() { recordContextualAction("op_gen_manual", "url_encode"); manualConversion().handleEncodeUrl(); }
 
-    @FXML public void handleDecodeUrl() { manualConversion().handleDecodeUrl(); }
+    @FXML public void handleDecodeUrl() { recordContextualAction("op_gen_manual", "url_decode"); manualConversion().handleDecodeUrl(); }
 
-    @FXML public void handleCompressData() { manualConversion().handleCompressData(); }
+    @FXML public void handleCompressData() { recordContextualAction("op_gen_manual", "compress"); manualConversion().handleCompressData(); }
 
-    @FXML public void handleDecompressData() { manualConversion().handleDecompressData(); }
+    @FXML public void handleDecompressData() { recordContextualAction("op_gen_manual", "decompress"); manualConversion().handleDecompressData(); }
 
-    @FXML public void handleEncodeBcd() { manualConversion().handleEncodeBcd(); }
+    @FXML public void handleEncodeBcd() { recordContextualAction("op_gen_manual", "bcd_encode"); manualConversion().handleEncodeBcd(); }
 
-    @FXML public void handleDecodeBcd() { manualConversion().handleDecodeBcd(); }
+    @FXML public void handleDecodeBcd() { recordContextualAction("op_gen_manual", "bcd_decode"); manualConversion().handleDecodeBcd(); }
 
-    @FXML public void handleEncodeComp3() { manualConversion().handleEncodeComp3(); }
+    @FXML public void handleEncodeComp3() { recordContextualAction("op_gen_manual", "comp3_encode"); manualConversion().handleEncodeComp3(); }
 
-    @FXML public void handleDecodeComp3() { manualConversion().handleDecodeComp3(); }
+    @FXML public void handleDecodeComp3() { recordContextualAction("op_gen_manual", "comp3_decode"); manualConversion().handleDecodeComp3(); }
 
-    @FXML public void handleShiftLeft() { manualConversion().handleShiftLeft(); }
+    @FXML public void handleShiftLeft() { recordContextualAction("op_gen_manual", "shift_left"); manualConversion().handleShiftLeft(); }
 
-    @FXML public void handleShiftRight() { manualConversion().handleShiftRight(); }
+    @FXML public void handleShiftRight() { recordContextualAction("op_gen_manual", "shift_right"); manualConversion().handleShiftRight(); }
 
-    @FXML public void handleExtractTraceHex() { manualConversion().handleExtractTraceHex(); }
+    @FXML public void handleExtractTraceHex() { recordContextualAction("op_gen_manual", "extract_trace_hex"); manualConversion().handleExtractTraceHex(); }
     @FXML public void handleLaunchProcessDesigner() {
         if (statusReporter instanceof ModernMainController modern) {
             modern.navigateTo("Process Designer");
@@ -353,13 +669,15 @@ public class GenericController {
         }
         batchRunner().configure();
         if (manualInputFormatCombo != null) {
-            manualInputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Base94", "Binary", "Decimal");
+            manualInputFormatCombo.getItems().setAll(com.cryptocarver.model.OperationFormatRegistry.getInstance()
+                    .getProfile("Manual Conversion").allowedInputFormats());
             manualInputFormatCombo.setValue("Text (UTF-8)");
             manualInputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
                     synchronizeToolbarFromManualFormats());
         }
         if (manualOutputFormatCombo != null) {
-            manualOutputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Base94", "Binary", "Decimal");
+            manualOutputFormatCombo.getItems().setAll(com.cryptocarver.model.OperationFormatRegistry.getInstance()
+                    .getProfile("Manual Conversion").allowedOutputFormats());
             manualOutputFormatCombo.setValue("Text (UTF-8)");
             manualOutputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
                     synchronizeToolbarFromManualFormats());
@@ -367,7 +685,8 @@ public class GenericController {
         hashing().configure();
         checkDigits().configure();
         if (randomFormatCombo != null) {
-            randomFormatCombo.getItems().addAll("Hexadecimal", "Decimal", "Base64", "Binary");
+            randomFormatCombo.getItems().addAll(com.cryptocarver.model.OperationFormatRegistry.getInstance()
+                    .getProfile("Random Number Generator").allowedOutputFormats());
             randomFormatCombo.setValue("Hexadecimal");
             setupRandomFormatComboListener();
         }
@@ -561,10 +880,10 @@ public class GenericController {
     }
 
     @FXML
-    public void handleCalculateCheckDigit() { checkDigits().handleCalculateCheckDigit(); }
+    public void handleCalculateCheckDigit() { recordContextualAction("op_gen_check_digits", "calculate"); checkDigits().handleCalculateCheckDigit(); }
 
     @FXML
-    public void handleValidateCheckDigit() { checkDigits().handleValidateCheckDigit(); }
+    public void handleValidateCheckDigit() { recordContextualAction("op_gen_check_digits", "validate"); checkDigits().handleValidateCheckDigit(); }
 
     /** Parse input string based on format. */
     public static byte[] parseInput(String input, String format) {
@@ -678,6 +997,13 @@ public class GenericController {
         } catch (Exception e) {
             statusReporter.showError("UUID Error", "Error generating UUID: " + e.getMessage());
         }
+    }
+
+    @FXML public void handleCopyUUID() {
+        if (uuidOutputField == null || uuidOutputField.getText() == null || uuidOutputField.getText().isBlank()) return;
+        javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+        content.putString(uuidOutputField.getText());
+        javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
     }
     // --- Global Helper Methods ---
 

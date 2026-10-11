@@ -12,7 +12,6 @@ import java.util.Map;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.JoseNoneJws;
-import com.cryptocarver.crypto.JWEManualCekRecovery;
 import com.cryptocarver.crypto.JoseKeyMaterial;
 import com.cryptocarver.crypto.JoseJwkPolicy;
 import com.cryptocarver.crypto.JweComposer;
@@ -204,7 +203,7 @@ final class JoseJweCoordinator extends JoseCoordinatorSupport {
                 payloadOut.setText(result.payload());
                 jweHeaderArea.setText(header);
                 jweEncryptedKeyArea.setText(result.encryptedKey() == null ? "" : result.encryptedKey().toString());
-                jweDecryptedKeyArea.setText("Manual CEK preview is only available for compact serialization.");
+                jweDecryptedKeyArea.setText(t("module.jose.jwe.cekNotDisplayed"));
                 jweIVArea.setText(result.iv() == null ? "" : result.iv() + " \n[Hex: "
                         + DataConverter.bytesToHex(result.iv().decode()) + "]");
                 jweCiphertextArea.setText(result.cipherText().toString());
@@ -269,21 +268,9 @@ final class JoseJweCoordinator extends JoseCoordinatorSupport {
             Base64URL encryptedKey = jweObject.getEncryptedKey();
             jweEncryptedKeyArea.setText(encryptedKey != null ? encryptedKey.toString() : "");
 
-            if (JWEAlgorithm.DIR.equals(alg)) {
-                // The direct key is the CEK. Keep it out of automatic preview,
-                // OperationResult, history, reports, clipboard and logs.
-                jweDecryptedKeyArea.setText(directCekPreviewMessage());
-            } else if (!JWEManualCekRecovery.isSupported(alg)) {
-                jweDecryptedKeyArea.setText("Manual CEK preview is not available for " + algorithmName + ".");
-            } else {
-                try {
-                    byte[] cek = JWEManualCekRecovery.recover(jweObject, privateKey, secret);
-                    jweDecryptedKeyArea.setText(DataConverter.bytesToHex(cek));
-                    java.util.Arrays.fill(cek, (byte) 0);
-                } catch (JWEManualCekRecovery.ManualCekRecoveryException ex) {
-                    jweDecryptedKeyArea.setText("Manual CEK preview error: " + ex.getMessage());
-                }
-            }
+            // CEK is sensitive key material. Never reconstruct or display it as
+            // a side effect of decrypting a token.
+            jweDecryptedKeyArea.setText(t("module.jose.jwe.cekNotDisplayed"));
 
             jweIVArea.setText(jweObject.getIV() != null
                     ? jweObject.getIV().toString() + " \n[Hex: "
@@ -336,8 +323,8 @@ final class JoseJweCoordinator extends JoseCoordinatorSupport {
         return result.status(t("module.jose.feedback.statusJweDecrypted")).build();
     }
 
-    static String directCekPreviewMessage() {
-        return "Direct encryption: the CEK is the supplied direct key and is not displayed automatically.";
+    static String cekNotDisplayedMessage() {
+        return "CEK is sensitive key material and is not displayed automatically.";
     }
 
 }

@@ -14,17 +14,17 @@
             <Separator orientation="VERTICAL"/>
             <HBox spacing="6" alignment="CENTER_LEFT">
                 <Button fx:id="runProcessButton" text="Run" onAction="#handleRunProcess" styleClass="action-button"/>
-                <Button text="Dry Run" onAction="#handleDryRunProcess" styleClass="secondary-button"/>
+                <Button fx:id="dryRunProcessButton" text="Dry Run" onAction="#handleDryRunProcess" styleClass="secondary-button"/>
                 <Button fx:id="cancelProcessButton" text="Cancel" onAction="#handleCancelProcess" styleClass="secondary-button" disable="true"/>
             </HBox>
             <Separator orientation="VERTICAL"/>
             <HBox spacing="6" alignment="CENTER_LEFT">
-                <Button text="Open…" onAction="#handleLoadProcess" styleClass="secondary-button"/>
-                <Button text="Save…" onAction="#handleSaveProcess" styleClass="secondary-button"/>
+                <Button fx:id="openProcessButton" text="Open…" onAction="#handleLoadProcess" styleClass="secondary-button"/>
+                <Button fx:id="saveProcessButton" text="Save…" onAction="#handleSaveProcess" styleClass="secondary-button"/>
             </HBox>
             <Separator orientation="VERTICAL"/>
             <HBox spacing="6" alignment="CENTER_LEFT">
-                <MenuButton text="Edición" styleClass="secondary-button">
+                <MenuButton fx:id="editMenuButton" text="Edición" styleClass="secondary-button">
                     <items>
                         <MenuItem text="Undo" onAction="#handleUndo"/>
                         <MenuItem text="Redo" onAction="#handleRedo"/>
@@ -36,7 +36,7 @@
                         <MenuItem text="Reset Defaults" onAction="#handleResetDefaults"/>
                     </items>
                 </MenuButton>
-                <MenuButton text="Presets" styleClass="secondary-button">
+                <MenuButton fx:id="presetsMenuButton" text="Presets" styleClass="secondary-button">
                     <items>
                         <MenuItem text="SHA-256 text digest" onAction="#handleLoadSha256Preset"/>
                         <MenuItem text="Base64 text encode" onAction="#handleLoadBase64Preset"/>
@@ -49,7 +49,7 @@
             <Separator orientation="VERTICAL"/>
             <HBox spacing="6" alignment="CENTER_LEFT">
                 <Button fx:id="reverseConnectionToolbarButton" text="Reverse connection" onAction="#handleReverseSelectedConnection" styleClass="secondary-button" disable="true"/>
-                <Button text="Clear canvas" onAction="#handleClearCanvas" styleClass="secondary-button"/>
+                <Button fx:id="clearCanvasToolbarButton" text="Clear canvas" onAction="#handleClearCanvas" styleClass="secondary-button"/>
             </HBox>
             <Separator orientation="VERTICAL"/>
             <HBox spacing="6" alignment="CENTER_LEFT">
@@ -58,8 +58,8 @@
             </HBox>
             <Separator orientation="VERTICAL"/>
             <HBox spacing="6" alignment="CENTER_LEFT">
-                <Button text="Expand results" onAction="#handleOpenExpandedExecutionResult" styleClass="secondary-button"/>
-                <Button text="Open in window" onAction="#handleOpenWindow" styleClass="secondary-button"/>
+                <Button fx:id="expandResultsButton" text="Expand results" onAction="#handleOpenExpandedExecutionResult" styleClass="secondary-button"/>
+                <Button fx:id="openWindowButton" text="Open in window" onAction="#handleOpenWindow" styleClass="secondary-button"/>
             </HBox>
         </FlowPane>
         <HBox styleClass="ux-inline-8a935d4e82" spacing="8" alignment="CENTER_LEFT">
@@ -67,10 +67,10 @@
             <Label styleClass="ux-inline-601a4c676b" fx:id="processStatusLabel" text="Ready"/>
         </HBox>
         <FlowPane prefWrapLength="980" styleClass="responsive-action-bar" hgap="6" vgap="6">
-            <Button text="Zoom in" onAction="#handleZoomIn" styleClass="secondary-button,ux-inline-ab4da656fa"/>
-            <Button text="Zoom out" onAction="#handleZoomOut" styleClass="secondary-button,ux-inline-ab4da656fa"/>
-            <Button text="Reset zoom" onAction="#handleResetZoom" styleClass="secondary-button,ux-inline-ab4da656fa"/>
-            <Button text="Fit to content" onAction="#handleZoomFit" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+            <Button fx:id="zoomInButton" text="Zoom in" onAction="#handleZoomIn" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+            <Button fx:id="zoomOutButton" text="Zoom out" onAction="#handleZoomOut" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+            <Button fx:id="resetZoomButton" text="Reset zoom" onAction="#handleResetZoom" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+            <Button fx:id="zoomFitButton" text="Fit to content" onAction="#handleZoomFit" styleClass="secondary-button,ux-inline-ab4da656fa"/>
             <Label styleClass="ux-inline-7f1f518806" fx:id="zoomLevelLabel" text="100%"/>
             <CheckBox styleClass="ux-inline-ab4da656fa" fx:id="snapToGridCheck" text="Snap to grid" onAction="#handleSnapToGridToggled" selected="true"/>
         </FlowPane>
@@ -112,14 +112,14 @@
                     </ScrollPane>
 
                     <!-- Fixed footer buttons -->
-                    <Button text="Save block settings" onAction="#handleSaveNodeSettings" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
+                    <Button fx:id="saveNodeSettingsButton" text="Save block settings" onAction="#handleSaveNodeSettings" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
                     <VBox spacing="4" maxWidth="1.7976931348623157E308">
                         <Button fx:id="connectSelectedButton" text="Select 2 blocks to connect" onAction="#handleConnectSelected" styleClass="action-button" maxWidth="1.7976931348623157E308"/>
                         <MenuButton fx:id="connectMenuButton" text="Connect to..." styleClass="action-button" maxWidth="1.7976931348623157E308" managed="false" visible="false"/>
                     </VBox>
                     <Button fx:id="reverseConnectionButton" text="Reverse selected connection" onAction="#handleReverseSelectedConnection" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
                     <Button fx:id="deleteSelectedButton" text="Delete selected" onAction="#handleDeleteSelected" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
-                    <Button text="Clear canvas" onAction="#handleClearCanvas" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
+                    <Button fx:id="clearCanvasInspectorButton" text="Clear canvas" onAction="#handleClearCanvas" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
                 </VBox>
             </items>
         </SplitPane>

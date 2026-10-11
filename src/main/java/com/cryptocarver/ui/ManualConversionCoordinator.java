@@ -91,18 +91,18 @@ final class ManualConversionCoordinator {
                     ? savedCodePage : "IBM037 — US/Canada");
         }
         if (ebcdicDirectionCombo != null) {
-            ebcdicDirectionCombo.getItems().setAll("Decode EBCDIC → UTF-8", "Encode UTF-8 → EBCDIC");
+            ebcdicDirectionCombo.getItems().setAll(com.cryptocarver.model.GenericOperationOptions.EBCDIC_DIRECTIONS);
             AppSettings settings = AppSettings.getInstance();
             String savedDirection = settings.getEBCDICDirection();
             ebcdicDirectionCombo.setValue(ebcdicDirectionCombo.getItems().contains(savedDirection)
                     ? savedDirection : "Decode EBCDIC → UTF-8");
         }
         if (endianWordSizeCombo != null) {
-            endianWordSizeCombo.getItems().setAll("16 bits (2 bytes)", "32 bits (4 bytes)", "64 bits (8 bytes)", "128 bits (16 bytes)");
+            endianWordSizeCombo.getItems().setAll(com.cryptocarver.model.GenericOperationOptions.ENDIAN_WORD_SIZES);
             endianWordSizeCombo.setValue("32 bits (4 bytes)");
         }
         if (compressionFormatCombo != null) {
-            compressionFormatCombo.getItems().setAll("gzip", "zlib", "deflate");
+            compressionFormatCombo.getItems().setAll(CompressionCodec.supportedFormats());
             compressionFormatCombo.setValue("gzip");
         }
         refreshManualTemplateCombo();
@@ -278,7 +278,7 @@ final class ManualConversionCoordinator {
             String savedCodePage = settings.getEBCDICCodePage();
             ebcdicCodePageCombo.setValue(EBCDICConverter.supportedCodePages().containsKey(savedCodePage)
                     ? savedCodePage : "IBM037 — US/Canada");
-            ebcdicDirectionCombo.getItems().setAll("Decode EBCDIC → UTF-8", "Encode UTF-8 → EBCDIC");
+            ebcdicDirectionCombo.getItems().setAll(com.cryptocarver.model.GenericOperationOptions.EBCDIC_DIRECTIONS);
             String savedDirection = settings.getEBCDICDirection();
             ebcdicDirectionCombo.setValue(ebcdicDirectionCombo.getItems().contains(savedDirection)
                     ? savedDirection : "Decode EBCDIC → UTF-8");

@@ -52,15 +52,15 @@ final class FileConversionCoordinator {
     /** Fills the pane's choices. */
     void configure() {
         if (fileInputFormatCombo != null) {
-            fileInputFormatCombo.getItems().setAll("Binary", "Text", "Hex", "Base64");
+            fileInputFormatCombo.getItems().setAll(com.cryptocarver.model.GenericOperationOptions.FILE_FORMATS);
             fileInputFormatCombo.getSelectionModel().select("Binary");
         }
         if (fileOutputFormatCombo != null) {
-            fileOutputFormatCombo.getItems().setAll("Binary", "Text", "Hex", "Base64");
+            fileOutputFormatCombo.getItems().setAll(com.cryptocarver.model.GenericOperationOptions.FILE_FORMATS);
             fileOutputFormatCombo.getSelectionModel().select("Binary");
         }
         if (fileEncodingCombo != null) {
-            fileEncodingCombo.getItems().setAll("UTF-8", "ASCII", "ISO-8859-1");
+            fileEncodingCombo.getItems().setAll(com.cryptocarver.model.GenericOperationOptions.FILE_ENCODINGS);
             fileEncodingCombo.getSelectionModel().select("UTF-8");
         }
 

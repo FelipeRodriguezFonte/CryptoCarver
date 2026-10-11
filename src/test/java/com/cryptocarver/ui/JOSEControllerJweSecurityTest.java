@@ -40,8 +40,8 @@ class JOSEControllerJweSecurityTest {
         assertNotNull(reporter.historyText);
         assertFalse(reporter.inspectorText.contains(directSecret));
         assertFalse(reporter.historyText.contains(directSecret));
-        assertEquals("Direct encryption: the CEK is the supplied direct key and is not displayed automatically.",
-                JOSEController.directCekPreviewMessage());
+        assertEquals("CEK is sensitive key material and is not displayed automatically.",
+                JOSEController.cekNotDisplayedMessage());
     }
 
     private static String resultText(OperationResult result) {

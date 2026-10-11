@@ -3,6 +3,7 @@ package com.cryptocarver.ui;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +53,13 @@ public class PaymentsController {
     @FXML private javafx.scene.control.Label pinBlockPaddingLabel;
     @FXML private TextArea pinBlockResultArea;
     @FXML private ResultPanel paymentsResultPanel;
+    @FXML private Accordion paymentsAccordion;
+    @FXML private TitledPane clearPinBlockPane;
+    @FXML private TitledPane encryptedPinBlockPane;
+    private ContextualHelpButtonBinder pinHelpBinder;
+    private boolean pinHelpActive;
+    private String pinHelpOperation = "";
+    private java.util.function.Consumer<String> pinHelpActionTracker = action -> { };
 
     // payShield host command bank: local framing and capture analysis only.
     @FXML private TextField hsmHostHeaderField;
@@ -178,6 +186,79 @@ public class PaymentsController {
             bindResult(paymentsResultPanel, ibm3624ResultArea, "IBM 3624 PIN", null);
         }
     }
+
+    void setPinBlockHelpActionTracker(java.util.function.Consumer<String> tracker) {
+        pinHelpActionTracker = tracker == null ? action -> { } : tracker;
+    }
+
+    /** Route-active while a PIN block route is shown (Shift+F1); {@code active} adds focus-following. */
+    void setPinBlockContextHelpActive(String operationId, boolean active) {
+        pinHelpActive = active;
+        pinHelpOperation = operationId == null ? "" : operationId;
+        if (pinHelpBinder == null) return;
+        pinHelpBinder.setActiveRoute(pinHelpOperation);
+        pinHelpBinder.setEnabled(active);
+    }
+
+    void closePinBlockHelpBindings() {
+        if (pinHelpBinder != null) { pinHelpBinder.close(); pinHelpBinder = null; }
+    }
+
+    ComboBox<String> getPinBlockFormatCombo() { return pinBlockFormatCombo; }
+    ComboBox<String> getPinBlockFormatDecodeCombo() { return pinBlockFormatDecodeCombo; }
+    ComboBox<String> getPinBlockPaddingCombo() { return pinBlockPaddingCombo; }
+    ComboBox<String> getEncryptedPinBlockFormatCombo() { return encPinBlockFormatCombo; }
+    TextField getEncryptPinKeyField() { return encPinBlockKeyField; }
+    TextField getDecryptPinKeyField() { return encPinBlockKeyFieldDecode; }
+
+    void refreshPinBlockContextHelpLocalization() {
+        if (pinHelpBinder != null) pinHelpBinder.refreshLocalization();
+    }
+
+    /** Binds each PIN block control so help follows its focus; {@code opener} runs on Shift+F1 only. */
+    void configurePinBlockHelp(com.cryptocarver.model.help.HelpContextSource source,
+                               java.util.function.Consumer<com.cryptocarver.model.help.HelpContext> opener,
+                               java.util.function.Consumer<com.cryptocarver.model.help.HelpContext> onPublished) {
+        if (source == null || pinHelpBinder != null) return;
+        pinHelpBinder = new ContextualHelpButtonBinder(source, opener, onPublished);
+        bindPinHelp(pinField, "encode", "pin", "op_pay_clear_pin");
+        bindPinHelp(panFieldEncode, "encode", "pan_encode", "op_pay_clear_pin");
+        bindPinHelp(pinBlockFormatCombo, "select_format", "format_encode", "op_pay_clear_pin");
+        bindPinHelp(pinBlockPaddingCombo, "select_format", "padding", "op_pay_clear_pin");
+        bindPinHelp(pinBlockField, "decode", "clear_block", "op_pay_clear_pin");
+        bindPinHelp(panFieldDecode, "decode", "pan_decode", "op_pay_clear_pin");
+        bindPinHelp(pinBlockFormatDecodeCombo, "decode", "format_decode", "op_pay_clear_pin");
+        bindPinHelp(pinBlockResultArea, "decode", "result", "op_pay_clear_pin");
+        bindPinHelp(encPinBlockFormatCombo, "select_format", "format", "op_pay_enc_pin");
+        bindPinHelp(encPinField, "protect", "pin", "op_pay_enc_pin");
+        bindPinHelp(encPanFieldEncode, "protect", "pan_encode", "op_pay_enc_pin");
+        bindPinHelp(encPinBlockKeyField, "protect", "encrypt_key", "op_pay_enc_pin");
+        bindPinHelp(encPinBlockFieldDecode, "decode", "encrypted_block", "op_pay_enc_pin");
+        bindPinHelp(encPanFieldDecode, "decode", "pan_decode", "op_pay_enc_pin");
+        bindPinHelp(encPinBlockKeyFieldDecode, "decode", "decrypt_key", "op_pay_enc_pin");
+        bindPinHelp(encResultArea, "decode", "result", "op_pay_enc_pin");
+        bindPinHelp(encodePinBlockButton, "encode", "", "op_pay_clear_pin");
+        bindPinHelp(decodePinBlockButton, "decode", "", "op_pay_clear_pin");
+        bindPinHelp(encodeEncryptedPinBlockButton, "protect", "", "op_pay_enc_pin");
+        bindPinHelp(decodeEncryptedPinBlockButton, "decode", "", "op_pay_enc_pin");
+        if (paymentsAccordion != null) paymentsAccordion.expandedPaneProperty().addListener((obs, previous, expanded) -> {
+            if (!pinHelpActive) return;
+            if (expanded == clearPinBlockPane && "op_pay_clear_pin".equals(pinHelpOperation))
+                pinHelpActionTracker.accept("encode");
+            else if (expanded == encryptedPinBlockPane && "op_pay_enc_pin".equals(pinHelpOperation))
+                pinHelpActionTracker.accept("protect");
+        });
+        setPinBlockContextHelpActive(pinHelpOperation, pinHelpActive);
+    }
+
+    private void bindPinHelp(javafx.scene.Node target, String action, String field, String operation) {
+        if (target != null) pinHelpBinder.bind(operation, operation, action, field, target);
+    }
+
+    @FXML private Button encodePinBlockButton;
+    @FXML private Button decodePinBlockButton;
+    @FXML private Button encodeEncryptedPinBlockButton;
+    @FXML private Button decodeEncryptedPinBlockButton;
 
     @FXML
     public void handleParseIso8583() { iso8583().handleParseIso8583(); }

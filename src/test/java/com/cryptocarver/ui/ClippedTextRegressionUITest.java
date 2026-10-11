@@ -37,7 +37,7 @@ class ClippedTextRegressionUITest {
                 }
                 var dialog = ClippedTextAuditTool.infoDialog("light");
                 findings.addAll(dialog.findings());
-                assertEquals(4, counts.size(), "Two designer and two workbench states must be audited");
+                assertEquals(5, counts.size(), "Two designer and three workbench states must be audited: " + counts);
                 assertTrue(findings.isEmpty(), () -> findings.stream().map(ClippedTextAuditTool.Finding::line)
                         .reduce("Clipped UI captions:\n", (a,b) -> a + b + "\n"));
             } finally {

@@ -2,6 +2,9 @@ package com.cryptocarver.ui;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.GridPane;
 import javafx.scene.text.TextFlow;
 import java.io.File;
 import java.nio.file.Files;
@@ -12,7 +15,6 @@ import java.util.Map;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.JoseNoneJws;
-import com.cryptocarver.crypto.JWEManualCekRecovery;
 import com.cryptocarver.crypto.JoseKeyMaterial;
 import com.cryptocarver.crypto.JoseJwkPolicy;
 import com.cryptocarver.crypto.JweComposer;
@@ -52,6 +54,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.function.BiConsumer;
+import com.cryptocarver.model.help.HelpContextSource;
 
 import javafx.fxml.Initializable;
 import java.net.URL;
@@ -151,6 +155,97 @@ public class JOSEController implements Initializable {
         initializer.initializeIngestionBindings();
         initializeJwaTableIfNeeded();
         initializer.initializeTemplates();
+        installJweAccordionHelpTracking();
+    }
+
+    private java.util.function.Consumer<String> jweHelpActionTracker = action -> { };
+    private ContextualHelpButtonBinder jweHelpBinder;
+
+    JoseJweHelpContextAdapter createJweHelpContextAdapter(HelpContextSource source) {
+        return new JoseJweHelpContextAdapter(source, jweKeyAlgoCombo, jweContentAlgoCombo,
+                jweSerializationCombo, jweKeyFormatCombo, jweDecryptKeyFormatCombo,
+                jweCompressCheck, jweAadField, jwePublicKeyArea, jwePrivateKeyArea, jwePayloadArea);
+    }
+
+    /** Binds each JWE control so help follows its focus; {@code opener} runs on Shift+F1 only. */
+    void configureJweHelp(com.cryptocarver.model.help.HelpContextSource source,
+                          java.util.function.Consumer<com.cryptocarver.model.help.HelpContext> opener,
+                          java.util.function.Consumer<com.cryptocarver.model.help.HelpContext> onPublished) {
+        if (jweSection == null || source == null || jweHelpBinder != null) return;
+        jweHelpBinder = new ContextualHelpButtonBinder(source, opener, onPublished);
+        bindJweHelp(jweKeyAlgoCombo, "encrypt", "key_algorithm");
+        bindJweHelp(jweContentAlgoCombo, "encrypt", "content_encryption");
+        bindJweHelp(jweCompressCheck, "encrypt", "compression");
+        bindJweHelp(jweKeyFormatCombo, "encrypt", "secret_format");
+        bindJweHelp(jwePbes2IterField, "encrypt", "pbes2_iterations");
+        bindJweHelp(jwePublicKeyArea, "encrypt", "public_key");
+        bindJweHelp(jwePubKeyShelfMenu, "use_public_key_shelf", "public_key");
+        bindJweHelp(jwePayloadArea, "encrypt", "payload");
+        bindJweHelp(jweSerializationCombo, "choose_serialization", "serialization");
+        bindJweHelp(jweAadField, "choose_serialization", "aad");
+        bindJweHelp(jweKidField, "select_recipients", "kid");
+        bindJweHelp(jweTypField, "encrypt", "typ");
+        bindJweHelp(jweCtyField, "encrypt", "cty");
+        bindJweHelp(jweApuField, "select_recipients", "apu");
+        bindJweHelp(jweApvField, "select_recipients", "apv");
+        bindJweHelp(jweCustomHeaderArea, "encrypt", "custom_header");
+        bindJweHelp(jwePublicKeyImportBtn, "import_public_key", "public_key");
+        bindJweHelp(jweEncryptActionBtn, "encrypt", "");
+        bindJweHelp(jweOutputArea, "copy_result", "output");
+        bindJweHelp(jweInputArea, "decrypt", "input");
+        bindJweHelp(jwePrivateKeyArea, "decrypt", "private_key");
+        bindJweHelp(jwePrivKeyShelfMenu, "use_private_key_shelf", "private_key");
+        bindJweHelp(jweDecryptKeyFormatCombo, "decrypt", "decrypt_key_format");
+        bindJweHelp(jwePrivateKeyImportBtn, "import_private_key", "private_key");
+        bindJweHelp(jweDecryptActionBtn, "decrypt", "");
+        bindJweHelp(jweDecodedHeaderArea, "inspect_breakdown", "decoded_header");
+        bindJweHelp(jweDecodedPayloadArea, "inspect_breakdown", "decoded_payload");
+        bindJweHelp(jweHeaderArea, "inspect_breakdown", "breakdown_header");
+        bindJweHelp(jweEncryptedKeyArea, "inspect_breakdown", "breakdown_encrypted_key");
+        bindJweHelp(jweDecryptedKeyArea, "inspect_breakdown", "breakdown_decrypted_cek");
+        bindJweHelp(jweIVArea, "inspect_breakdown", "breakdown_content_iv");
+        bindJweHelp(jweCiphertextArea, "inspect_breakdown", "breakdown_ciphertext");
+        bindJweHelp(jweAuthTagArea, "inspect_breakdown", "breakdown_content_tag");
+    }
+
+    private void bindJweHelp(javafx.scene.Node target, String action, String field) {
+        if (target != null) jweHelpBinder.bind("op_jose_jwe", "op_jose_jwe", action, field, target);
+    }
+
+    void setJweHelpActionTracker(java.util.function.Consumer<String> tracker) {
+        jweHelpActionTracker = tracker == null ? action -> { } : tracker;
+    }
+
+    /** The route is active while JWE is shown (Shift+F1); {@code enabled} adds focus-following. */
+    void setJweContextHelp(boolean routeActive, boolean enabled) {
+        if (jweHelpBinder == null) return;
+        jweHelpBinder.setActiveRoute(routeActive ? "op_jose_jwe" : "");
+        jweHelpBinder.setEnabled(enabled);
+    }
+
+    void refreshJweContextHelpLocalization() {
+        if (jweHelpBinder != null) jweHelpBinder.refreshLocalization();
+    }
+
+    void closeJweHelpBindings() {
+        if (jweHelpBinder != null) { jweHelpBinder.close(); jweHelpBinder = null; }
+    }
+
+    private void installJweAccordionHelpTracking() {
+        if (jweSection == null) return;
+        if (jweAccordion != null) jweAccordion.expandedPaneProperty().addListener((obs, previous, expanded) -> {
+            if (expanded == jweEncryptPane) jweHelpActionTracker.accept("encrypt");
+            else if (expanded == jweDecryptPane) jweHelpActionTracker.accept("decrypt");
+        });
+    }
+
+    private static List<javafx.scene.Node> descendants(javafx.scene.Parent root) {
+        List<javafx.scene.Node> nodes = new ArrayList<>();
+        for (javafx.scene.Node child : root.getChildrenUnmodifiable()) {
+            nodes.add(child);
+            if (child instanceof javafx.scene.Parent nested) nodes.addAll(descendants(nested));
+        }
+        return nodes;
     }
 
     private void initializeJwaTableIfNeeded() {
@@ -252,6 +347,9 @@ public class JOSEController implements Initializable {
 @FXML private MenuButton jwtValidateKeyShelfMenu;
 @FXML private MenuButton jwePubKeyShelfMenu;
 @FXML private MenuButton jwePrivKeyShelfMenu;
+    @FXML private Button jwePublicKeyImportBtn, jwePrivateKeyImportBtn, jweEncryptActionBtn, jweDecryptActionBtn;
+    @FXML private javafx.scene.control.Accordion jweAccordion;
+    @FXML private TitledPane jweEncryptPane, jweDecryptPane;
 @FXML
     private Label jwkInputLabel;
 @FXML
@@ -735,7 +833,7 @@ public class JOSEController implements Initializable {
 
     OperationResult buildJweDecryptionResult(String jweString, String payload, JWEObject jweObject, String keyMaterial) { return jweCoordinator().buildJweDecryptionResult(jweString, payload, jweObject, keyMaterial); }
 
-    static String directCekPreviewMessage() { return JoseJweCoordinator.directCekPreviewMessage(); }
+    static String cekNotDisplayedMessage() { return JoseJweCoordinator.cekNotDisplayedMessage(); }
 
     // --- Enterprise Features (level 4 & 5) ---
 

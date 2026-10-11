@@ -10,7 +10,7 @@
             <VBox spacing="12" styleClass="module-pane-content">
                 <Label text="Compose and execute safe data workflows visually by connecting processing nodes." wrapText="true" styleClass="helper-text"/>
                 <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Button text="Open Process Designer" onAction="#handleLaunchProcessDesigner" styleClass="action-button-primary"/>
+                    <Button text="Open Process Designer" id="help_handleLaunchProcessDesigner" onAction="#handleLaunchProcessDesigner" styleClass="action-button-primary"/>
                 </HBox>
             </VBox>
         </TitledPane>
@@ -28,16 +28,16 @@
                 <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                     <Label text="Apply Template:" styleClass="form-label"/>
                     <ComboBox fx:id="hashTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
-                    <Button text="Apply" onAction="#handleApplyHashTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
-                    <MenuButton text="Manage Template" styleClass="secondary-button,ux-inline-401c00305b">
+                    <Button text="Apply" fx:id="help_handleApplyHashTemplate" onAction="#handleApplyHashTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
+                    <MenuButton fx:id="hashManageTemplateButton" text="Manage Template" styleClass="secondary-button,ux-inline-401c00305b">
                         <items>
-                            <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveHashTemplate"/>
-                            <MenuItem text="Export Selected Template..." onAction="#handleExportHashTemplate"/>
-                            <MenuItem text="Import Template File..." onAction="#handleImportHashTemplate"/>
-                            <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteHashTemplate"/>
+                            <MenuItem text="Save Current as Personal Template..." id="help_handleSaveHashTemplate" onAction="#handleSaveHashTemplate"/>
+                            <MenuItem text="Export Selected Template..." id="help_handleExportHashTemplate" onAction="#handleExportHashTemplate"/>
+                            <MenuItem text="Import Template File..." id="help_handleImportHashTemplate" onAction="#handleImportHashTemplate"/>
+                            <MenuItem text="Delete Selected Personal Template" id="help_handleDeleteHashTemplate" onAction="#handleDeleteHashTemplate"/>
                         </items>
                     </MenuButton>
-                    <Button text="Reset Defaults" onAction="#handleResetHashDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
+                    <Button text="Reset Defaults" fx:id="help_handleResetHashDefaults" onAction="#handleResetHashDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
                 </FlowPane>
 
                 <HBox spacing="8" alignment="CENTER_LEFT">
@@ -48,7 +48,7 @@
                 <Label text="Input:" styleClass="form-label" minWidth="-Infinity"/>
                 <TextArea fx:id="hashInputArea" prefRowCount="3" wrapText="true" styleClass="monospace-field"/>
 
-                <Button text="Calculate Hash" onAction="#handleCalculateHash"
+                <Button text="Calculate Hash" fx:id="help_handleCalculateHash" onAction="#handleCalculateHash"
                         styleClass="action-button,primary-action" maxWidth="180"/>
 
                 <Label text="Output:" styleClass="form-label"/>
@@ -105,13 +105,13 @@
                 <TextArea fx:id="batchInputArea" prefRowCount="5" wrapText="false" styleClass="monospace-field" promptText="CSV: input&#10;hello&#10;or JSON Lines (.jsonl): {&quot;input&quot;:&quot;hello&quot;}&#10;{&quot;input&quot;:&quot;world&quot;}"/>
                 <Label text="JSON Lines (.jsonl) uses one JSON object per line; it is not a single JSON array/document." wrapText="true" styleClass="helper-text"/>
                 <FlowPane prefWrapLength="900" styleClass="responsive-action-bar" hgap="8" vgap="8">
-                    <Button text="Load CSV / JSON Lines…" onAction="#handleBrowseBatchInput" styleClass="secondary-button"/>
-                    <Button text="Run Batch" onAction="#handleRunBatch" styleClass="action-button,primary-action"/>
-                    <Button text="Dry Run" onAction="#handleDryRunBatch" styleClass="secondary-button"/>
-                    <Button text="Cancel" onAction="#handleCancelBatch" styleClass="secondary-button"/>
-                    <Button text="Reset" onAction="#handleResetBatch" styleClass="secondary-button"/>
+                    <Button text="Load CSV / JSON Lines…" fx:id="help_handleBrowseBatchInput" onAction="#handleBrowseBatchInput" styleClass="secondary-button"/>
+                    <Button text="Run Batch" fx:id="help_handleRunBatch" onAction="#handleRunBatch" styleClass="action-button,primary-action"/>
+                    <Button text="Dry Run" fx:id="help_handleDryRunBatch" onAction="#handleDryRunBatch" styleClass="secondary-button"/>
+                    <Button text="Cancel" fx:id="help_handleCancelBatch" onAction="#handleCancelBatch" styleClass="secondary-button"/>
+                    <Button text="Reset" fx:id="help_handleResetBatch" onAction="#handleResetBatch" styleClass="secondary-button"/>
                     <ComboBox fx:id="batchExportFormatCombo" prefWidth="80" styleClass="form-field"/>
-                    <Button text="Export Results…" onAction="#handleExportBatchResults" styleClass="secondary-button"/>
+                    <Button text="Export Results…" fx:id="help_handleExportBatchResults" onAction="#handleExportBatchResults" styleClass="secondary-button"/>
                 </FlowPane>
                 <ProgressBar fx:id="batchProgressBar" prefWidth="420" maxWidth="1.7976931348623157E308"/>
                 <Label fx:id="batchStatusLabel" text="Ready" wrapText="true" styleClass="form-label"/>
@@ -130,19 +130,19 @@
                     <Label text="Source:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="form-label"/>
                     <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="0" HBox.hgrow="ALWAYS">
                         <TextField fx:id="fileInputPathField" promptText="Input File Path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose input file" onAction="#handleBrowseInputFile"/>
+                        <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose input file" fx:id="help_handleBrowseInputFile" onAction="#handleBrowseInputFile"/>
                     </HBox>
 
                     <Label text="Target:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="form-label"/>
                     <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="1" HBox.hgrow="ALWAYS">
                         <TextField fx:id="fileOutputPathField" promptText="Output File Path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose output file" onAction="#handleBrowseOutputFile"/>
+                        <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose output file" fx:id="help_handleBrowseOutputFile" onAction="#handleBrowseOutputFile"/>
                     </HBox>
 
                     <Label text="Compare:" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="form-label"/>
                     <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="2" HBox.hgrow="ALWAYS">
                         <TextField fx:id="fileComparePathField" promptText="Second File Path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose comparison file" onAction="#handleBrowseCompareFile"/>
+                        <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose comparison file" fx:id="help_handleBrowseCompareFile" onAction="#handleBrowseCompareFile"/>
                     </HBox>
 
                     <Label text="Format:" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="form-label"/>
@@ -158,13 +158,13 @@
                 </GridPane>
 
                 <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                    <Button text="Convert File" onAction="#handleConvertFile"
+                    <Button text="Convert File" fx:id="help_handleConvertFile" onAction="#handleConvertFile"
                             maxWidth="180" styleClass="action-button,primary-action"/>
-                    <Button text="Compare Files (streaming)" onAction="#handleCompareFiles"
+                    <Button text="Compare Files (streaming)" fx:id="help_handleCompareFiles" onAction="#handleCompareFiles"
                             maxWidth="180" styleClass="secondary-button" minWidth="-Infinity"/>
-                    <Button text="Hash File SHA-256 (streaming)" onAction="#handleHashFileStreaming"
+                    <Button text="Hash File SHA-256 (streaming)" fx:id="help_handleHashFileStreaming" onAction="#handleHashFileStreaming"
                             maxWidth="200" styleClass="secondary-button"/>
-                    <Button text="Preview First 4 KiB" onAction="#handlePreviewFileStreaming"
+                    <Button text="Preview First 4 KiB" fx:id="help_handlePreviewFileStreaming" onAction="#handlePreviewFileStreaming"
                             maxWidth="180" styleClass="secondary-button" minWidth="-Infinity"/>
                 </FlowPane>
 
@@ -179,16 +179,16 @@
                  <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                      <Label text="Apply Template:" styleClass="form-label"/>
                      <ComboBox fx:id="manualTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
-                     <Button text="Apply" onAction="#handleApplyManualTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
-                     <MenuButton text="Manage Template" styleClass="secondary-button,ux-inline-401c00305b">
+                     <Button text="Apply" fx:id="help_handleApplyManualTemplate" onAction="#handleApplyManualTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
+                     <MenuButton fx:id="manualManageTemplateButton" text="Manage Template" styleClass="secondary-button,ux-inline-401c00305b">
                          <items>
-                             <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveManualTemplate"/>
-                             <MenuItem text="Export Selected Template..." onAction="#handleExportManualTemplate"/>
-                             <MenuItem text="Import Template File..." onAction="#handleImportManualTemplate"/>
-                             <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteManualTemplate"/>
+                             <MenuItem text="Save Current as Personal Template..." id="help_handleSaveManualTemplate" onAction="#handleSaveManualTemplate"/>
+                             <MenuItem text="Export Selected Template..." id="help_handleExportManualTemplate" onAction="#handleExportManualTemplate"/>
+                             <MenuItem text="Import Template File..." id="help_handleImportManualTemplate" onAction="#handleImportManualTemplate"/>
+                             <MenuItem text="Delete Selected Personal Template" id="help_handleDeleteManualTemplate" onAction="#handleDeleteManualTemplate"/>
                          </items>
                      </MenuButton>
-                     <Button text="Reset Defaults" onAction="#handleResetManualDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
+                     <Button text="Reset Defaults" fx:id="help_handleResetManualDefaults" onAction="#handleResetManualDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
                  </FlowPane>
 
                  <HBox spacing="8" alignment="CENTER_LEFT">
@@ -210,40 +210,40 @@
                  </HBox>
 
                  <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                     <Button text="Convert Data" onAction="#handleManualConvert"
+                     <Button text="Convert Data" fx:id="help_handleManualConvert" onAction="#handleManualConvert"
                              maxWidth="180" styleClass="action-button,primary-action"/>
-                     <Button text="UTF-8 → Base64URL" onAction="#handleEncodeBase64Url" styleClass="secondary-button"/>
-                     <Button text="Base64URL → UTF-8" onAction="#handleDecodeBase64Url" styleClass="secondary-button"/>
-                     <Button text="UTF-8 → Base32" onAction="#handleEncodeBase32" styleClass="secondary-button"/>
-                     <Button text="Base32 → UTF-8" onAction="#handleDecodeBase32" styleClass="secondary-button"/>
+                     <Button text="UTF-8 → Base64URL" fx:id="help_handleEncodeBase64Url" onAction="#handleEncodeBase64Url" styleClass="secondary-button"/>
+                     <Button text="Base64URL → UTF-8" fx:id="help_handleDecodeBase64Url" onAction="#handleDecodeBase64Url" styleClass="secondary-button"/>
+                     <Button text="UTF-8 → Base32" fx:id="help_handleEncodeBase32" onAction="#handleEncodeBase32" styleClass="secondary-button"/>
+                     <Button text="Base32 → UTF-8" fx:id="help_handleDecodeBase32" onAction="#handleDecodeBase32" styleClass="secondary-button"/>
                  </FlowPane>
                  <HBox spacing="8" alignment="CENTER_LEFT">
                      <Label text="Endian word:" styleClass="form-label"/>
                      <ComboBox fx:id="endianWordSizeCombo" prefWidth="150" styleClass="form-field"/>
-                     <Button text="Reverse byte order" onAction="#handleConvertEndian" styleClass="secondary-button"/>
+                     <Button text="Reverse byte order" fx:id="help_handleConvertEndian" onAction="#handleConvertEndian" styleClass="secondary-button"/>
                  </HBox>
                  <HBox spacing="8">
-                     <Button text="UTF-8 → URL" onAction="#handleEncodeUrl" styleClass="secondary-button"/>
-                     <Button text="URL → UTF-8" onAction="#handleDecodeUrl" styleClass="secondary-button"/>
+                     <Button text="UTF-8 → URL" fx:id="help_handleEncodeUrl" onAction="#handleEncodeUrl" styleClass="secondary-button"/>
+                     <Button text="URL → UTF-8" fx:id="help_handleDecodeUrl" onAction="#handleDecodeUrl" styleClass="secondary-button"/>
                  </HBox>
                  <HBox spacing="8" alignment="CENTER_LEFT">
                      <Label text="Compression:" styleClass="form-label"/>
                      <ComboBox fx:id="compressionFormatCombo" prefWidth="120" styleClass="form-field"/>
-                     <Button text="Compress" onAction="#handleCompressData" styleClass="secondary-button"/>
-                     <Button text="Decompress" onAction="#handleDecompressData" styleClass="secondary-button"/>
+                     <Button text="Compress" fx:id="help_handleCompressData" onAction="#handleCompressData" styleClass="secondary-button"/>
+                     <Button text="Decompress" fx:id="help_handleDecompressData" onAction="#handleDecompressData" styleClass="secondary-button"/>
                  </HBox>
                  <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                     <Button text="Decimal → BCD" onAction="#handleEncodeBcd" styleClass="secondary-button"/>
-                     <Button text="BCD → Decimal" onAction="#handleDecodeBcd" styleClass="secondary-button"/>
-                     <Button text="Decimal → COMP-3" onAction="#handleEncodeComp3" styleClass="secondary-button"/>
-                     <Button text="COMP-3 → Decimal" onAction="#handleDecodeComp3" styleClass="secondary-button"/>
+                     <Button text="Decimal → BCD" fx:id="help_handleEncodeBcd" onAction="#handleEncodeBcd" styleClass="secondary-button"/>
+                     <Button text="BCD → Decimal" fx:id="help_handleDecodeBcd" onAction="#handleDecodeBcd" styleClass="secondary-button"/>
+                     <Button text="Decimal → COMP-3" fx:id="help_handleEncodeComp3" onAction="#handleEncodeComp3" styleClass="secondary-button"/>
+                     <Button text="COMP-3 → Decimal" fx:id="help_handleDecodeComp3" onAction="#handleDecodeComp3" styleClass="secondary-button"/>
                  </FlowPane>
                  <HBox spacing="8" alignment="CENTER_LEFT">
                      <Label text="Bit shift:" styleClass="form-label"/>
                      <TextField fx:id="bitShiftBitsField" text="1" prefWidth="60" styleClass="form-field"/>
-                     <Button text="Shift left" onAction="#handleShiftLeft" styleClass="secondary-button"/>
-                     <Button text="Shift right" onAction="#handleShiftRight" styleClass="secondary-button"/>
-                     <Button text="Extract trace hex" onAction="#handleExtractTraceHex" styleClass="secondary-button"/>
+                     <Button text="Shift left" fx:id="help_handleShiftLeft" onAction="#handleShiftLeft" styleClass="secondary-button"/>
+                     <Button text="Shift right" fx:id="help_handleShiftRight" onAction="#handleShiftRight" styleClass="secondary-button"/>
+                     <Button text="Extract trace hex" fx:id="help_handleExtractTraceHex" onAction="#handleExtractTraceHex" styleClass="secondary-button"/>
                  </HBox>
 
                  <TextArea fx:id="manualOutputArea" prefRowCount="3" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
@@ -254,13 +254,14 @@
         <fx:include fx:id="compressedHexPane" source="compressed_hex.fxml"/>
 
         <!-- UUID GENERATOR -->
-        <TitledPane text="🆔 UUID Generator" expanded="false">
+        <TitledPane fx:id="uuidPane" text="🆔 UUID Generator" expanded="false">
             <VBox spacing="12" styleClass="module-pane-content">
                 <HBox spacing="8" alignment="CENTER_LEFT">
                     <Label text="Generate random UUID (v4):" styleClass="form-label"/>
                     <TextField fx:id="uuidOutputField" editable="false" styleClass="monospace-field,form-field" prefWidth="350"/>
-                    <Button text="Generate UUID" onAction="#handleGenerateUUID"
+                    <Button text="Generate UUID" fx:id="help_handleGenerateUUID" onAction="#handleGenerateUUID"
                             maxWidth="180" styleClass="action-button,primary-action"/>
+                    <Button text="Copy UUID" fx:id="help_handleCopyUUID" onAction="#handleCopyUUID" styleClass="secondary-button"/>
                 </HBox>
             </VBox>
         </TitledPane>
@@ -282,7 +283,7 @@
                               GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="form-field"/>
                 </GridPane>
 
-                <Button text="Generate Random" onAction="#handleGenerateRandom"
+                <Button text="Generate Random" fx:id="help_handleGenerateRandom" onAction="#handleGenerateRandom"
                         styleClass="action-button,primary-action" maxWidth="180"/>
 
                 <Label text="Output:" styleClass="form-label"/>
@@ -304,9 +305,9 @@
                 </HBox>
 
                 <HBox spacing="8">
-                    <Button text="Calculate" onAction="#handleCalculateCheckDigit"
+                    <Button text="Calculate" fx:id="help_handleCalculateCheckDigit" onAction="#handleCalculateCheckDigit"
                             styleClass="action-button,primary-action"/>
-                    <Button text="Validate" onAction="#handleValidateCheckDigit"
+                    <Button text="Validate" fx:id="help_handleValidateCheckDigit" onAction="#handleValidateCheckDigit"
                             styleClass="secondary-button"/>
                 </HBox>
 
@@ -337,7 +338,7 @@
                     <TextField fx:id="modModulusField" GridPane.rowIndex="3" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="monospace-field,form-field"/>
                 </GridPane>
 
-                <Button text="Calculate" onAction="#handleModularCalculate"
+                <Button text="Calculate" fx:id="help_handleModularCalculate" onAction="#handleModularCalculate"
                         maxWidth="180" styleClass="action-button,primary-action"/>
 
                 <Label text="Result:" styleClass="form-label"/>

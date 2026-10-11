@@ -13,9 +13,9 @@
             <TextArea styleClass="ux-inline-f94e00865e" fx:id="compressedHexInputArea" prefRowCount="3" wrapText="false"
                       promptText="Two rows:&#10;AFD12&#10;CA123&#10;&#10;or a normal hexadecimal value: ACFAD11223"/>
             <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                <Button text="Two rows → Hex" onAction="#handleExpandCompressedHex" styleClass="action-button"/>
-                <Button text="Hex → Two rows" onAction="#handleCompressHex" styleClass="secondary-button"/>
-                <Button text="Clear" onAction="#handleClearCompressedHex" styleClass="secondary-button"/>
+                <Button fx:id="expandButton" text="Two rows → Hex" onAction="#handleExpandCompressedHex" styleClass="action-button"/>
+                <Button fx:id="compressButton" text="Hex → Two rows" onAction="#handleCompressHex" styleClass="secondary-button"/>
+                <Button fx:id="clearButton" text="Clear" onAction="#handleClearCompressedHex" styleClass="secondary-button"/>
             </FlowPane>
             <Label styleClass="ux-inline-ba9ea6419e" text="Output:"/>
             <TextArea styleClass="ux-inline-f94e00865e" fx:id="compressedHexOutputArea" prefRowCount="3" editable="false" wrapText="false"/>

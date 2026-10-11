@@ -1,0 +1,7 @@
+# Cifrado RSA
+
+El panel asimétrico cifra con una clave pública RSA y descifra con su clave privada correspondiente. El parser público prueba PEM SubjectPublicKeyInfo, DER X.509 en Hex y DER X.509 en Base64, en ese orden. El privado prueba PEM PKCS#8, DER PKCS#8 en Hex y DER PKCS#8 en Base64. Estos handlers no aceptan PEM de certificado ni PEM `RSA PRIVATE KEY` PKCS#1. Los selectores de entrada/salida son exactamente Text (UTF-8), Hexadecimal, Base64 y Binary; no se ofrece Base64URL. Puede usar material de la Shelf local. La transformación mostrada como `RSA/ECB/...` es una convención de nombres de JCE; RSA no es el modo ECB simétrico.
+
+Para un módulo de *k* bytes, los límites de entrada en bytes de la implementación son *k − 11* para PKCS#1 v1.5, *k − 42* para OAEP-SHA-1 y *k − 66* para OAEP-SHA-256. Las transformaciones actuales de Bouncy Castle usan los pares de digest/MGF1 SHA-1/SHA-1 y SHA-256/SHA-256, respectivamente. El panel deriva el límite solo de metadatos RSA públicos ya cargados. Si se reemplaza el texto de la clave visible pero aún no se carga, la ayuda borra el máximo anterior; no analiza ese texto ni inspecciona claves privadas. `NoPadding` tiene una regla RSA directa distinta y no muestra un máximo con relleno.
+
+Para una prueba positiva, usa una entrada breve y el par de claves correspondiente. Se rechazan entradas superiores al límite seleccionado y textos cifrados de otra familia de claves. Cambiar el padding modifica el límite aplicable sin ejecutar RSA.

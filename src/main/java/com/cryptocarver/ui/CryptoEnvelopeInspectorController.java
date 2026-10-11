@@ -34,10 +34,30 @@ public class CryptoEnvelopeInspectorController {
     @FXML private TextArea envelopeUnwrappedKeyArea;
 
     private StatusReporter statusReporter;
+    private ContextualHelpButtonBinder contextualHelpButtons;
+
+    public void configureContextualHelp(com.cryptocarver.model.help.HelpContextState state,
+            java.util.function.Consumer<com.cryptocarver.model.help.HelpContext> opener) {
+        if (state == null || contextualHelpButtons != null) return;
+        contextualHelpButtons = new ContextualHelpButtonBinder(state, opener);
+        contextualHelpButtons.bind("op_gen_envelope_inspector", "op_gen_envelope_inspector", "inspect", "envelope", envelopeInputArea);
+        contextualHelpButtons.bind("op_gen_envelope_inspector", "op_gen_envelope_inspector", "select_profile", "profile", envelopeUnwrapProfileCombo);
+        contextualHelpButtons.bind("op_gen_envelope_inspector", "op_gen_envelope_inspector", "unwrap", "private_key", envelopePrivateKeyArea);
+        contextualHelpButtons.bind("op_gen_envelope_inspector", "op_gen_envelope_inspector", "inspect", "report", envelopeReportArea);
+        setActiveContextualHelpOperation("", false);
+    }
+
+    public void setActiveContextualHelpOperation(String operationId, boolean enabled) {
+        if (contextualHelpButtons == null) return;
+        contextualHelpButtons.setActiveRoute(operationId);
+        contextualHelpButtons.setEnabled(enabled && com.cryptocarver.model.AppSettings.getInstance().isContextualHelpEnabled());
+    }
 
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
     }
+
+    public ComboBox<String> getUnwrapProfileCombo() { return envelopeUnwrapProfileCombo; }
 
     @FXML
     public void initialize() {
