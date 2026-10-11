@@ -20,7 +20,14 @@ class ProcessDesignerWorkspaceLayoutUITest {
                 assertTrue(content > split.getWidth() - rail - 20, "the designer fills the workspace: " + content);
                 Region canvas = (Region) root.lookup("#designerWorkspace");
                 assertTrue(canvas.getWidth() > split.getWidth() * 0.45, "the canvas is the widest column: " + canvas.getWidth());
-                assertTrue(canvas.getHeight() > 300, "the canvas grows with the window height: " + canvas.getHeight());
+                // Font metrics differ between platforms, so the height is checked against the viewport, not in pixels.
+                javafx.scene.control.ScrollPane page = (javafx.scene.control.ScrollPane) root.lookup("#mainScrollPane");
+                Region workArea = (Region) root.lookup("#designerVerticalSplit");
+                double viewport = page.getViewportBounds().getHeight();
+                assertTrue(workArea.getHeight() > viewport * 0.6, "the designer fills the viewport height: "
+                        + workArea.getHeight() + " of " + viewport);
+                assertTrue(canvas.getHeight() > workArea.getHeight() * 0.4, "the canvas takes most of the work area: "
+                        + canvas.getHeight() + " of " + workArea.getHeight());
             });
             ClippedTextAuditTool.withScreen("Key & Certificate Format Workbench", "light", root -> {
                 SplitPane split = (SplitPane) root.lookup("#workspaceSplitPane");
