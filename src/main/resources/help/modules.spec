@@ -649,3 +649,246 @@ verify: help_handlePQCVerify, help_handlePastePqcVerifySignature, pqcVerifyShelf
 .signature: pqcSignOutputArea
 .verify_signature: pqcVerifySignatureField
 # module-help:op_pqc_sign end
+# module-help:op_xml_sign begin
+@op_xml_sign xml_security.fxml
+sign: help_handleSignXML, help_handleSaveSignedXML -> input, source, keystore, alias, level, packaging, tsa, output
+load_keys: help_handleLoadXMLKeys, help_handleBrowseXMLKey, help_handleBrowseXMLSignInput -> input, keystore, alias
+tsa: help_handleSaveTSA, help_handleTestTSA, help_handleLoadTSASavedProfile, help_handleDeleteTSASavedProfile, help_handleSaveTSASavedProfile -> tsa, tsa_auth, tsa_profile
+clear_reset: help_handleClear, help_handleReset -> input
+.input: xmlSignInputPathField
+.source: xmlSignSourceLocalRadio, xmlSignSourcePkcs11Radio
+.keystore: xmlSignKeyPathField, xmlSignKeyPasswordField
+.alias: xmlSignKeyAliasCombo
+.level: xmlSignLevelCombo
+.packaging: xmlSignPackagingCombo
+.tsa: xmlSignTsaUrlText
+.tsa_auth: xmlSignTsaAuthTypeCombo, xmlSignTsaUserField, xmlSignTsaPasswordField
+.tsa_profile: xmlSignTsaProfileCombo, xmlSignTsaProfileNameField
+.output: xmlSignOutputArea
+# module-help:op_xml_sign end
+# module-help:op_xml_inspect begin
+@op_xml_inspect xml_security.fxml
+inspect: help_handleInspectSignedXML, help_handleBrowseXMLInspectorInput -> input, report
+.input: xmlInspectInputArea
+.report: xmlInspectReportArea
+# module-help:op_xml_inspect end
+# module-help:op_xml_tsa begin
+@op_xml_tsa xml_security.fxml
+request: help_handleRequestTimestamp, help_handleSaveTimestampToken, help_handleBrowseTimestampFile -> file, hash, url, report
+inspect: help_handleInspectTimestampToken, help_handleBrowseTimestampToken -> token, report
+validate: help_handleValidateTimestampToken, help_handleBrowseTimestampTrustStore -> token, file, truststore, report
+.file: xmlTimestampFileField
+.hash: xmlTimestampHashCombo
+.url: xmlTimestampUrlField
+.token: xmlTimestampTokenField
+.truststore: xmlTimestampTrustStoreField, xmlTimestampTrustStorePasswordField
+.report: xmlTimestampReportArea
+# module-help:op_xml_tsa end
+# module-help:op_xml_verify begin
+@op_xml_verify xml_security.fxml
+verify: help_handleVerifyXML -> input, truststore_profile, truststore, report
+truststore: help_handleLoadXMLTrustStoreProfile, help_handleBrowseXMLTrustStore -> truststore_profile, truststore
+.input: xmlVerifyInputArea
+.truststore_profile: xmlVerifyTrustStoreProfileCombo
+.truststore: xmlVerifyTrustStorePathField, xmlVerifyTrustStorePasswordField
+.report: xmlVerifyReportArea
+# module-help:op_xml_verify end
+# module-help:op_wss_sign begin
+@op_wss_sign wss_security.fxml
+sign: help_handleSignWSS, help_handleSaveSignedWss -> input, algorithm, timestamp, keystore, alias, key_password, output
+load: help_handleBrowseWssSignInput, help_handleBrowseWssKey, help_handleLoadWssKeys -> input, keystore, alias
+clear_reset: help_handleClear, help_handleReset -> input
+.input: wssSignInputArea
+.algorithm: wssSignAlgorithmCombo
+.timestamp: wssIncludeTimestampCheck, wssTimestampValiditySpinner, wssSignTimestampCheck
+.keystore: wssSignKeyPathField, wssSignKeyPasswordField
+.alias: wssSignKeyAliasCombo
+.key_password: wssSignPrivateKeyPasswordField
+.output: wssSignOutputArea
+# module-help:op_wss_sign end
+# module-help:op_wss_verify begin
+@op_wss_verify wss_security.fxml
+verify: help_handleVerifyWSS, help_handleBrowseWssVerifyInput, help_handleBrowseWssTrustStore -> input, trusted_certificate, report
+.input: wssVerifyInputArea
+.trusted_certificate: wssVerifyTrustStorePathField
+.report: wssVerifyReportArea
+# module-help:op_wss_verify end
+# module-help:op_wss_username_add begin
+@op_wss_username_add wss_security.fxml
+add: help_handleAddUsernameToken, help_handleBrowseUsernameCreateInput, help_handleSaveUsernameTokenXml -> input, username, password, password_type, output
+.input: wssUsernameCreateInputArea
+.username: wssUsernameCreateNameField
+.password: wssUsernameCreatePasswordField
+.password_type: wssUsernamePasswordTypeCombo
+.output: wssUsernameCreateOutputArea
+# module-help:op_wss_username_add end
+# module-help:op_wss_username_verify begin
+@op_wss_username_verify wss_security.fxml
+verify: help_handleVerifyUsernameToken, help_handleBrowseUsernameVerifyInput -> input, expected_username, expected_password, max_age, report
+.input: wssUsernameVerifyInputArea
+.expected_username: wssUsernameExpectedNameField
+.expected_password: wssUsernameExpectedPasswordField
+.max_age: wssUsernameMaxAgeSpinner
+.report: wssUsernameVerifyReportArea
+# module-help:op_wss_username_verify end
+# module-help:op_wss_encrypt begin
+@op_wss_encrypt wss_security.fxml
+encrypt: help_handleEncryptSoapBody, help_handleBrowseWssEncryptInput, help_handleBrowseWssEncryptCertificate, help_handleSaveEncryptedSoap -> input, certificate, data_algorithm, key_transport, output, report
+.input: wssEncryptInputArea
+.certificate: wssEncryptCertificatePathField
+.data_algorithm: wssEncryptDataAlgorithmCombo
+.key_transport: wssEncryptKeyTransportCombo
+.output: wssEncryptOutputArea
+.report: wssEncryptReportArea
+# module-help:op_wss_encrypt end
+# module-help:op_wss_decrypt begin
+@op_wss_decrypt wss_security.fxml
+decrypt: help_handleDecryptSoapBody, help_handleBrowseWssDecryptInput, help_handleBrowseWssDecryptKeyStore, help_handleSaveDecryptedSoap -> input, keystore, key_password, output, report
+.input: wssDecryptInputArea
+.keystore: wssDecryptKeyStorePathField, wssDecryptKeyStorePasswordField
+.key_password: wssDecryptPrivateKeyPasswordField
+.output: wssDecryptOutputArea
+.report: wssDecryptReportArea
+# module-help:op_wss_decrypt end
+# module-help:op_pay_cvv begin
+@op_pay_cvv payments.fxml
+generate: help_handleGenerateCvv -> type, cvk, pan, expiry, service_code, atc, result
+verify: help_handleVerifyCvv -> type, cvk, pan, expiry, service_code, atc, result
+.type: cvvTypeCombo
+.cvk: cvkAField, cvkBField
+.pan: panFieldCvv
+.expiry: expiryDateField
+.service_code: serviceCodeField
+.atc: atcField
+.result: cvvResultArea
+# module-help:op_pay_cvv end
+# module-help:op_pay_pin_gen begin
+@op_pay_pin_gen payments.fxml
+generate_pin: help_handleGenerateIbm3624Pin -> pvk, decimalization, offset, pan, validation_data, ibm_result
+verify_pin: help_handleVerifyIbm3624Pin -> pvk, decimalization, offset, pan, pin_to_verify, ibm_result
+generate_offset: help_handleGenerateOffsetUtility -> offset_inputs, offset_result
+generate_pvv: help_handleGeneratePVVUtility -> pvv_inputs, pvv_result
+find_pin: help_handleDerivePinFromPvvUtility -> find_inputs, find_result
+.pvk: ibm3624PvkField
+.decimalization: ibm3624ConvTableField
+.offset: ibm3624OffsetField
+.pan: ibm3624PanField
+.validation_data: ibm3624StartField, ibm3624LengthField, ibm3624PadField
+.pin_to_verify: ibm3624PinVerifyField
+.ibm_result: ibm3624ResultArea
+.offset_inputs: genOffsetPvkField, genOffsetDecTableField, genOffsetPanField, genOffsetPinField, genOffsetStartField, genOffsetLengthField, genOffsetPadField
+.offset_result: genOffsetResultArea
+.pvv_inputs: genPvvPvkField, genPvvPanField, genPvvPinField, genPvvKeyIndexField
+.pvv_result: genPvvResultArea
+.find_inputs: derivePvvPvkField, derivePvvPanField, derivePvvTargetPvvField, derivePvvKeyIndexField
+.find_result: derivePvvResultArea
+# module-help:op_pay_pin_gen end
+# module-help:op_pay_dukpt begin
+@op_pay_dukpt payments.fxml
+inspect: help_handleInspectDukpt -> scheme, bdk, ksn, usage, result
+pin_block: help_handleAesDukptPinBlock -> bdk, ksn, aes_pin_block, result
+.scheme: dukptSchemeCombo
+.bdk: dukptBdkField
+.ksn: dukptKsnField
+.usage: dukptTdesUsageCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo
+.aes_pin_block: dukptAesPinBlockField, dukptAesPinOperationCombo
+.result: dukptResultArea
+# module-help:op_pay_dukpt end
+# module-help:op_pay_payshield_host_bank begin
+@op_pay_payshield_host_bank payments.fxml
+compose: help_handleHsmHostCompose -> header, command_code, body, trailer, tcp_prefix, result
+analyze: help_handleHsmHostAnalyzeCommand, help_handleHsmHostAnalyzeResponse -> captured_frame, header_length, tcp_prefix, result
+example: help_handleHsmHostLoadExample -> command_code
+.header: hsmHostHeaderField
+.command_code: hsmHostCommandCodeField
+.body: hsmHostBodyField
+.trailer: hsmHostTrailerField
+.header_length: hsmHostHeaderLengthField
+.tcp_prefix: hsmHostTcpPrefixCheck
+.captured_frame: hsmHostCapturedFrameArea
+.result: hsmHostResultArea
+# module-help:op_pay_payshield_host_bank end
+# module-help:op_pay_iso8583 begin
+@op_pay_iso8583 payments.fxml
+parse: help_handleParseIso8583 -> profile, bitmap_encoding, length_encoding, message, report
+build: help_handleBuildIso8583 -> profile, bitmap_encoding, length_encoding, message, report
+.profile: iso8583ProfileCombo
+.bitmap_encoding: iso8583BitmapEncodingCombo
+.length_encoding: iso8583LengthEncodingCombo
+.message: iso8583MessageArea
+.report: iso8583ReportArea
+# module-help:op_pay_iso8583 end
+# module-help:op_pay_emv_tlv begin
+@op_pay_emv_tlv emv.fxml
+inspect: help_handleInspectTlv -> tlv, tlv_result
+build_dol: help_handleBuildDol -> dol_template, dol_values, dol_result
+.tlv: emvTlvInputArea
+.tlv_result: emvTlvResultArea
+.dol_template: emvDolTemplateField
+.dol_values: emvDolValuesArea
+.dol_result: emvDolResultArea
+# module-help:op_pay_emv_tlv end
+# module-help:op_pay_emv_ops begin
+@op_pay_emv_ops emv.fxml
+derive_keys: help_handleDeriveSessionKey -> imk, card, icc_method, atc, session_result
+arqc: help_handleGenerateARQC -> arqc_session_key, terminal_data, transaction_fields, arqc_padding, arqc_result
+arpc: help_handleGenerateARPC, help_handleVerifyARQC -> arpc_session_key, arqc, arc, arpc_options, arpc_result
+secure_messaging: help_handleSmDeriveSessionKeys, help_handleSmEncipherPin, help_handleSmGenerateMac, help_handleSmLoadExample -> sm_scheme, sm_keys, sm_pin, sm_command, sm_result
+visa_hce: help_handleHceLuk, help_handleHceMsd, help_handleHceQvsdc, help_handleHceLoadExample -> hce_luk, hce_msd, hce_qvsdc, hce_result
+data_storage: help_handleDsDspk, help_handleDsDigest, help_handleDsSummary, help_handleDsLoadExample -> ds_inputs, ds_result
+dynamic_number: help_handleIccDnCalculate, help_handleIccDnLoadExample -> dn_inputs, dn_result
+cap_token: help_handleCapCalculate, help_handleCapLoadExample -> cap_inputs, cap_result
+track2: help_handleEncodeTrack2, help_handleDecodeTrack2 -> track2_encode, track2_decode, track2_result
+clear_reset: help_handleClear, help_handleReset -> imk
+.imk: imkField
+.card: panFieldSession, panSeqFieldSession
+.icc_method: iccMethodCombo
+.atc: emvAtcField
+.session_result: sessionKeyResultArea
+.arqc_session_key: skARQCField
+.terminal_data: arqcTerminalDataField
+.transaction_fields: amountField, amountOtherField, currencyField, countryField, atcARQCField, tvrField, txDateField, txTypeField, unField, iccDataField
+.arqc_padding: arqcPaddingMethodCombo
+.arqc_result: arqcResultArea
+.arpc_session_key: skARPCField
+.arqc: arqcField
+.arc: arcField
+.arpc_options: csuField, propAuthDataField, arpcMethodCombo
+.arpc_result: arpcResultArea
+.sm_scheme: smSchemeCombo
+.sm_keys: smMkSmiField, smMkSmcField, smPanSeqField, smUdkSmiField, smUdkSmcField, smAcField, smCommandNumberField, smAtcField, smSkMacField, smSkEncField
+.sm_pin: smPinField, smUdkAField
+.sm_command: smHeaderField, smDataField
+.sm_result: smResultArea
+.hce_luk: hceUdkField, hceYearField, hceHoursField, hceCounterField
+.hce_msd: hceMsdLukField, hceMsdAtcField, hceDeviceTypeField
+.hce_qvsdc: hceQvsdcLukField, hceAmountField, hceOtherAmountField, hceCountryField, hceTvrField, hceCurrencyField, hceDateField, hceTypeField, hceUnField, hceAipField, hceQvsdcAtcField, hceCvrField
+.hce_result: hceResultArea
+.ds_inputs: dsIdField, dsOperatorIdField, dsInputField, dsSummary1Field, dsAmountField, dsCurrencyField, dsRcpField, dsGacField, dsDsUnField, dsUnField
+.ds_result: dsResultArea
+.dn_inputs: dnMkField, dnPanField, dnAtcField, dnUnField
+.dn_result: dnResultArea
+.cap_inputs: capIpbField, capIafField, capPanSnField, capCidField, capAtcField, capAcField, capIadField
+.cap_result: capResultArea
+.track2_encode: panTrack2Field, expiryTrack2Field, serviceCodeFieldTrack2, track2DiscretionaryInputField
+.track2_decode: track2InputField
+.track2_result: track2ResultArea
+# module-help:op_pay_emv_ops end
+# module-help:op_pay_emv_oda begin
+@op_pay_emv_oda emv.fxml
+recover: help_handleOdaRecoverKeys -> ca_key, issuer_certificate, icc_certificate, static_data, pan, result
+verify_sda: help_handleOdaVerifySda -> ca_key, issuer_certificate, static_data, ssad, result
+verify_dda: help_handleOdaVerifyDda -> ca_key, issuer_certificate, icc_certificate, sdad, terminal_data, result
+verify_cda: help_handleOdaVerifyCda -> ca_key, issuer_certificate, icc_certificate, sdad, terminal_data, cda_data, result
+test_card: help_handleOdaIssueTestCard, help_handleOdaClear -> ca_key
+.ca_key: odaCaModulusArea, odaCaExponentField
+.issuer_certificate: odaIssuerCertificateArea, odaIssuerRemainderField, odaIssuerExponentField
+.icc_certificate: odaIccCertificateArea, odaIccRemainderField, odaIccExponentField
+.static_data: odaStaticDataArea
+.pan: odaPanField
+.ssad: odaSsadArea
+.sdad: odaSdadArea
+.terminal_data: odaTerminalDataField
+.cda_data: odaCidField, odaTransactionDataArea
+.result: odaResultArea
+# module-help:op_pay_emv_oda end

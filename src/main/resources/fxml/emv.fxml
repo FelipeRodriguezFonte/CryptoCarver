@@ -6,8 +6,8 @@
 <VBox fx:id="emvContainer" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.EMVController" spacing="14" styleClass="content-container-vbox,emv-module">
     <HBox alignment="CENTER_RIGHT">
-        <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
-        <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+        <Button id="help_handleClear" text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+        <Button id="help_handleReset" text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
     </HBox>
     <Accordion styleClass="module-accordion">
         <panes>
@@ -15,13 +15,13 @@
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="BER-TLV hexadecimal:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="emvTlvInputArea" prefHeight="100" promptText="9F02060000000001005F2A020978" styleClass="monospace-field"/>
-                    <Button text="Inspect EMV TLV" onAction="#handleInspectTlv" styleClass="action-button,primary-action" maxWidth="160"/>
+                    <Button id="help_handleInspectTlv" text="Inspect EMV TLV" onAction="#handleInspectTlv" styleClass="action-button,primary-action" maxWidth="160"/>
                     <TextArea fx:id="emvTlvResultArea" prefHeight="180" editable="false" styleClass="result-area,monospace-field"/>
                     <Separator/>
                     <Label text="CDOL/DDOL Builder" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <TextField fx:id="emvDolTemplateField" promptText="DOL template, e.g. 9F02069F1A02" styleClass="monospace-field,form-field" maxWidth="Infinity"/>
                     <TextArea fx:id="emvDolValuesArea" prefHeight="70" promptText="9F02=000000000100&#10;9F1A=0978" styleClass="monospace-field"/>
-                    <Button text="Build DOL Data" onAction="#handleBuildDol" styleClass="secondary-button" maxWidth="150"/>
+                    <Button id="help_handleBuildDol" text="Build DOL Data" onAction="#handleBuildDol" styleClass="secondary-button" maxWidth="150"/>
                     <TextArea fx:id="emvDolResultArea" prefHeight="145" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
@@ -66,7 +66,7 @@
                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
 
-                    <Button text="Derive Keys" onAction="#handleDeriveSessionKey"
+                    <Button id="help_handleDeriveSessionKey" text="Derive Keys" onAction="#handleDeriveSessionKey"
                             styleClass="action-button,primary-action" maxWidth="150"/>
 
                     <TextArea fx:id="sessionKeyResultArea" prefHeight="120" editable="false" wrapText="true"
@@ -144,7 +144,7 @@
                                   GridPane.rowIndex="10" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
-                    <Button text="Generate ARQC" onAction="#handleGenerateARQC"
+                    <Button id="help_handleGenerateARQC" text="Generate ARQC" onAction="#handleGenerateARQC"
                             styleClass="action-button,primary-action" maxWidth="150"/>
 
                     <TextArea fx:id="arqcResultArea" prefHeight="80" editable="false" wrapText="true"
@@ -187,9 +187,9 @@
                     </GridPane>
 
                     <HBox spacing="8">
-                        <Button text="Generate ARPC" onAction="#handleGenerateARPC"
+                        <Button id="help_handleGenerateARPC" text="Generate ARPC" onAction="#handleGenerateARPC"
                                 styleClass="action-button,primary-action" maxWidth="150"/>
-                        <Button text="Verify ARQC (Sim)" onAction="#handleVerifyARQC"
+                        <Button id="help_handleVerifyARQC" text="Verify ARQC (Sim)" onAction="#handleVerifyARQC"
                                 styleClass="secondary-button" maxWidth="150"/>
                     </HBox>
 
@@ -205,7 +205,7 @@
                     <HBox spacing="8" alignment="CENTER_LEFT">
                         <Label text="Scheme:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="smSchemeCombo" prefWidth="180" styleClass="form-field"/>
-                        <Button text="Load Example" onAction="#handleSmLoadExample" styleClass="secondary-button" maxWidth="140"/>
+                        <Button id="help_handleSmLoadExample" text="Load Example" onAction="#handleSmLoadExample" styleClass="secondary-button" maxWidth="140"/>
                     </HBox>
 
                     <Label text="1. Card and session keys" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
@@ -245,7 +245,7 @@
                         <TextField fx:id="smSkEncField" promptText="Filled by Derive Session Keys" maxWidth="Infinity"
                                    GridPane.rowIndex="9" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
-                    <Button text="Derive Session Keys" onAction="#handleSmDeriveSessionKeys" styleClass="action-button,primary-action" maxWidth="190"/>
+                    <Button id="help_handleSmDeriveSessionKeys" text="Derive Session Keys" onAction="#handleSmDeriveSessionKeys" styleClass="action-button,primary-action" maxWidth="190"/>
 
                     <Label text="2. PIN change data" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
@@ -260,7 +260,7 @@
                         <TextField fx:id="smUdkAField" promptText="Card key the Visa PIN block is bound to, 16 bytes" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
-                    <Button text="Encipher PIN" onAction="#handleSmEncipherPin" styleClass="action-button,primary-action" maxWidth="190"/>
+                    <Button id="help_handleSmEncipherPin" text="Encipher PIN" onAction="#handleSmEncipherPin" styleClass="action-button,primary-action" maxWidth="190"/>
 
                     <Label text="3. Command MAC" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
@@ -275,7 +275,7 @@
                         <TextField fx:id="smDataField" promptText="Filled by Encipher PIN" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
-                    <Button text="Generate MAC" onAction="#handleSmGenerateMac" styleClass="action-button,primary-action" maxWidth="190"/>
+                    <Button id="help_handleSmGenerateMac" text="Generate MAC" onAction="#handleSmGenerateMac" styleClass="action-button,primary-action" maxWidth="190"/>
 
                     <TextArea fx:id="smResultArea" prefHeight="150" editable="false" wrapText="true"
                               styleClass="result-area,monospace-field" managed="false" visible="false"/>
@@ -286,7 +286,7 @@
             <TitledPane text="📱 Visa HCE">
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="Derive a limited-use key, then calculate MSD and qVSDC values. Each result remains editable in the next step." wrapText="true" styleClass="form-label" minHeight="-Infinity"/>
-                    <Button text="Load Example" onAction="#handleHceLoadExample" styleClass="secondary-button" maxWidth="140"/>
+                    <Button id="help_handleHceLoadExample" text="Load Example" onAction="#handleHceLoadExample" styleClass="secondary-button" maxWidth="140"/>
                     <Label text="1. Limited-use key (LUK)" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
@@ -303,7 +303,7 @@
                         <TextField fx:id="hceCounterField" promptText="2 decimal digits" maxWidth="Infinity"
                                    GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
-                    <Button text="Derive LUK" onAction="#handleHceLuk" styleClass="action-button,primary-action"/>
+                    <Button id="help_handleHceLuk" text="Derive LUK" onAction="#handleHceLuk" styleClass="action-button,primary-action"/>
                     <Label text="2. MSD verification value" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
@@ -317,7 +317,7 @@
                         <TextField fx:id="hceDeviceTypeField" promptText="8 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
-                    <Button text="Calculate MSD" onAction="#handleHceMsd" styleClass="action-button,primary-action"/>
+                    <Button id="help_handleHceMsd" text="Calculate MSD" onAction="#handleHceMsd" styleClass="action-button,primary-action"/>
                     <Label text="3. qVSDC cryptogram" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <Label text="Terminal data" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
@@ -363,7 +363,7 @@
                         <TextField fx:id="hceCvrField" promptText="4 bytes in hex (CVR)" maxWidth="Infinity"
                                    GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
-                    <Button text="Calculate qVSDC" onAction="#handleHceQvsdc" styleClass="action-button,primary-action"/>
+                    <Button id="help_handleHceQvsdc" text="Calculate qVSDC" onAction="#handleHceQvsdc" styleClass="action-button,primary-action"/>
                     <TextArea fx:id="hceResultArea" prefHeight="100" editable="false" wrapText="true" styleClass="result-area,monospace-field" managed="false" visible="false"/>
                 </VBox>
             </TitledPane>
@@ -372,7 +372,7 @@
             <TitledPane text="💾 Mastercard Data Storage">
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="Derive the DS partial key, calculate its OWHF2 digest and the DS Summary (OWHF1)." wrapText="true" styleClass="form-label" minHeight="-Infinity"/>
-                    <Button text="Load Example" onAction="#handleDsLoadExample" styleClass="secondary-button" maxWidth="140"/>
+                    <Button id="help_handleDsLoadExample" text="Load Example" onAction="#handleDsLoadExample" styleClass="secondary-button" maxWidth="140"/>
                     <Label text="1. DS partial key (DSPK)" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
@@ -380,7 +380,7 @@
                         <TextField fx:id="dsIdField" promptText="At least 6 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
-                    <Button text="Derive DSPK" onAction="#handleDsDspk" styleClass="action-button,primary-action"/>
+                    <Button id="help_handleDsDspk" text="Derive DSPK" onAction="#handleDsDspk" styleClass="action-button,primary-action"/>
                     <Label text="2. Digest (OWHF2)" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
@@ -391,7 +391,7 @@
                         <TextField fx:id="dsInputField" promptText="8-byte DS input in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
-                    <Button text="Calculate digest" onAction="#handleDsDigest" styleClass="action-button,primary-action"/>
+                    <Button id="help_handleDsDigest" text="Calculate digest" onAction="#handleDsDigest" styleClass="action-button,primary-action"/>
                     <Label text="3. Summary (OWHF1)" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
@@ -417,7 +417,7 @@
                         <TextField fx:id="dsUnField" promptText="4 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
-                    <Button text="Calculate summary" onAction="#handleDsSummary" styleClass="action-button,primary-action"/>
+                    <Button id="help_handleDsSummary" text="Calculate summary" onAction="#handleDsSummary" styleClass="action-button,primary-action"/>
                     <TextArea fx:id="dsResultArea" prefHeight="100" editable="false" wrapText="true" styleClass="result-area,monospace-field" managed="false" visible="false"/>
                 </VBox>
             </TitledPane>
@@ -426,7 +426,7 @@
             <TitledPane text="ICC Dynamic Number">
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="Calculate the Mastercard ICC Dynamic Number from MK-DN, PAN/PSN, ATC and UN." wrapText="true" styleClass="form-label" minHeight="-Infinity"/>
-                    <Button text="Load Example" onAction="#handleIccDnLoadExample" styleClass="secondary-button" maxWidth="140"/>
+                    <Button id="help_handleIccDnLoadExample" text="Load Example" onAction="#handleIccDnLoadExample" styleClass="secondary-button" maxWidth="140"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
                         <Label text="MK-DN:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><PasswordField fx:id="dnMkField" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
@@ -434,7 +434,7 @@
                         <Label text="ATC:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="dnAtcField" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                         <Label text="UN:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="dnUnField" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
-                    <Button text="Calculate dynamic number" onAction="#handleIccDnCalculate" styleClass="action-button,primary-action"/>
+                    <Button id="help_handleIccDnCalculate" text="Calculate dynamic number" onAction="#handleIccDnCalculate" styleClass="action-button,primary-action"/>
                     <TextArea fx:id="dnResultArea" prefHeight="80" editable="false" wrapText="true" styleClass="result-area,monospace-field" managed="false" visible="false"/>
                 </VBox>
             </TitledPane>
@@ -443,7 +443,7 @@
             <TitledPane text="CAP Token">
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="Compresses token data with the IPB. The PAN sequence number is included only when IAF bit 40 is set." wrapText="true" styleClass="form-label" minHeight="-Infinity"/>
-                    <Button text="Load Example" onAction="#handleCapLoadExample" styleClass="secondary-button" maxWidth="140"/>
+                    <Button id="help_handleCapLoadExample" text="Load Example" onAction="#handleCapLoadExample" styleClass="secondary-button" maxWidth="140"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
                         <Label text="IPB:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="capIpbField" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
@@ -454,7 +454,7 @@
                         <Label text="AC:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="capAcField" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                         <Label text="IAD:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="capIadField" GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
-                    <Button text="Calculate CAP token" onAction="#handleCapCalculate" styleClass="action-button,primary-action"/>
+                    <Button id="help_handleCapCalculate" text="Calculate CAP token" onAction="#handleCapCalculate" styleClass="action-button,primary-action"/>
                     <TextArea fx:id="capResultArea" prefHeight="130" editable="false" wrapText="true" styleClass="result-area,monospace-field" managed="false" visible="false"/>
                 </VBox>
             </TitledPane>
@@ -487,7 +487,7 @@
                                               GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="form-field"/>
                                 </GridPane>
 
-                                <Button text="Encode Track 2" onAction="#handleEncodeTrack2"
+                                <Button id="help_handleEncodeTrack2" text="Encode Track 2" onAction="#handleEncodeTrack2"
                                         styleClass="action-button,primary-action" maxWidth="150"/>
                             </VBox>
                         </Tab>
@@ -496,7 +496,7 @@
                                 <Label text="Track 2 Hex / String:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                                 <TextField fx:id="track2InputField" promptText="Paste Track 2 data" maxWidth="Infinity" styleClass="monospace-field,form-field"/>
 
-                                <Button text="Decode Track 2" onAction="#handleDecodeTrack2"
+                                <Button id="help_handleDecodeTrack2" text="Decode Track 2" onAction="#handleDecodeTrack2"
                                         styleClass="action-button,primary-action" maxWidth="150"/>
                             </VBox>
                         </Tab>
@@ -513,9 +513,9 @@
                            wrapText="true" styleClass="form-label" minHeight="-Infinity"/>
 
                     <HBox spacing="8">
-                        <Button text="Issue Test Card" onAction="#handleOdaIssueTestCard"
+                        <Button id="help_handleOdaIssueTestCard" text="Issue Test Card" onAction="#handleOdaIssueTestCard"
                                 styleClass="secondary-button" maxWidth="160"/>
-                        <Button text="Clear ODA" onAction="#handleOdaClear" styleClass="secondary-button" maxWidth="120"/>
+                        <Button id="help_handleOdaClear" text="Clear ODA" onAction="#handleOdaClear" styleClass="secondary-button" maxWidth="120"/>
                     </HBox>
 
                     <Separator/>
@@ -597,11 +597,11 @@
                     </GridPane>
 
                     <FlowPane hgap="10.0" vgap="8.0" alignment="CENTER_LEFT" styleClass="responsive-action-bar">
-                        <Button text="Recover Keys" onAction="#handleOdaRecoverKeys"
+                        <Button id="help_handleOdaRecoverKeys" text="Recover Keys" onAction="#handleOdaRecoverKeys"
                                 styleClass="action-button,primary-action" maxWidth="150"/>
-                        <Button text="Verify SDA" onAction="#handleOdaVerifySda" styleClass="secondary-button" maxWidth="130"/>
-                        <Button text="Verify DDA" onAction="#handleOdaVerifyDda" styleClass="secondary-button" maxWidth="130"/>
-                        <Button text="Verify CDA" onAction="#handleOdaVerifyCda" styleClass="secondary-button" maxWidth="130"/>
+                        <Button id="help_handleOdaVerifySda" text="Verify SDA" onAction="#handleOdaVerifySda" styleClass="secondary-button" maxWidth="130"/>
+                        <Button id="help_handleOdaVerifyDda" text="Verify DDA" onAction="#handleOdaVerifyDda" styleClass="secondary-button" maxWidth="130"/>
+                        <Button id="help_handleOdaVerifyCda" text="Verify CDA" onAction="#handleOdaVerifyCda" styleClass="secondary-button" maxWidth="130"/>
                     </FlowPane>
 
                     <TextArea fx:id="odaResultArea" prefHeight="240" editable="false"

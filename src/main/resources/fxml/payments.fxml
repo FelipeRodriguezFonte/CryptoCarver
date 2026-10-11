@@ -11,8 +11,8 @@
         <Label text="Generate and verify payment credentials and PIN blocks using the selected payment standard." styleClass="helper-text,page-description" wrapText="true"/>
     </VBox>
     <HBox spacing="8" styleClass="page-actions" alignment="CENTER_RIGHT">
-        <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
-        <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+        <Button id="help_handleClear" text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+        <Button id="help_handleReset" text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
     </HBox>
     <ResultPanel fx:id="paymentsResultPanel"/>
     <Accordion fx:id="paymentsAccordion" styleClass="module-accordion">
@@ -44,8 +44,8 @@
                         <TextField fx:id="atcField" promptText="e.g. 0001 (for dCVV)" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="form-field" maxWidth="Infinity"/>
                     </GridPane>
                     <HBox spacing="8">
-                        <Button text="Generate CVV" onAction="#handleGenerateCvv" styleClass="action-button,primary-action"/>
-                        <Button text="Verify CVV" onAction="#handleVerifyCvv" styleClass="secondary-button"/>
+                        <Button id="help_handleGenerateCvv" text="Generate CVV" onAction="#handleGenerateCvv" styleClass="action-button,primary-action"/>
+                        <Button id="help_handleVerifyCvv" text="Verify CVV" onAction="#handleVerifyCvv" styleClass="secondary-button"/>
                     </HBox>
                     <TextArea fx:id="cvvResultArea" prefHeight="100" editable="false" wrapText="true" promptText="Result will appear here..." styleClass="result-area,monospace-field"/>
                 </VBox>
@@ -145,14 +145,14 @@
                             <Label text="Pad Char:" styleClass="form-label"/><TextField fx:id="ibm3624PadField" text="F" styleClass="form-field" prefWidth="50"/>
                         </HBox>
 
-                        <Button text="Generate PIN" onAction="#handleGenerateIbm3624Pin" styleClass="action-button,primary-action" maxWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
+                        <Button id="help_handleGenerateIbm3624Pin" text="Generate PIN" onAction="#handleGenerateIbm3624Pin" styleClass="action-button,primary-action" maxWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
 
                         <Separator GridPane.columnIndex="0" GridPane.rowIndex="8" GridPane.columnSpan="2"/>
 
                         <Label text="Verify PIN" styleClass="form-label,ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="9" GridPane.columnSpan="2"/>
                         <Label text="PIN to Verify:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="10"/>
                         <TextField fx:id="ibm3624PinVerifyField" promptText="4-12 digits" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="10"/>
-                        <Button text="Verify PIN" onAction="#handleVerifyIbm3624Pin" styleClass="action-button,primary-action" maxWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="11"/>
+                        <Button id="help_handleVerifyIbm3624Pin" text="Verify PIN" onAction="#handleVerifyIbm3624Pin" styleClass="action-button,primary-action" maxWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="11"/>
                     </GridPane>
                     <TextArea fx:id="ibm3624ResultArea" prefHeight="100" editable="false" wrapText="true" managed="false" visible="false" styleClass="result-area,monospace-field"/>
                 </VBox>
@@ -180,7 +180,7 @@
                             <Label text="Length:" styleClass="form-label"/><TextField fx:id="genOffsetLengthField" text="16" styleClass="form-field" prefWidth="50"/>
                             <Label text="Pad Char:" styleClass="form-label"/><TextField fx:id="genOffsetPadField" text="F" styleClass="form-field" prefWidth="50"/>
                         </HBox>
-                        <Button text="Generate Offset" onAction="#handleGenerateOffsetUtility" styleClass="action-button,primary-action" maxWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
+                        <Button id="help_handleGenerateOffsetUtility" text="Generate Offset" onAction="#handleGenerateOffsetUtility" styleClass="action-button,primary-action" maxWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
                         <TextArea fx:id="genOffsetResultArea" prefHeight="60" editable="false" wrapText="true" managed="false" visible="false" styleClass="result-area,monospace-field" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
 
                         <Separator GridPane.columnIndex="0" GridPane.rowIndex="8" GridPane.columnSpan="2"/>
@@ -194,7 +194,7 @@
                         <TextField fx:id="genPvvPinField" promptText="4 digits" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="12"/>
                         <Label text="PVK Index:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="13"/>
                         <TextField fx:id="genPvvKeyIndexField" promptText="0-9 (Optional)" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="13"/>
-                        <Button text="Generate PVV" onAction="#handleGeneratePVVUtility" styleClass="action-button,primary-action" maxWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="14"/>
+                        <Button id="help_handleGeneratePVVUtility" text="Generate PVV" onAction="#handleGeneratePVVUtility" styleClass="action-button,primary-action" maxWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="14"/>
                         <TextArea fx:id="genPvvResultArea" prefHeight="60" editable="false" wrapText="true" managed="false" visible="false" styleClass="result-area,monospace-field" GridPane.columnIndex="1" GridPane.rowIndex="15"/>
 
                         <Separator GridPane.columnIndex="0" GridPane.rowIndex="16" GridPane.columnSpan="2"/>
@@ -208,7 +208,7 @@
                         <TextField fx:id="derivePvvTargetPvvField" promptText="4 digits" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="20"/>
                         <Label text="PVK Index:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="21"/>
                         <TextField fx:id="derivePvvKeyIndexField" promptText="0-9 (Optional)" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="21"/>
-                        <Button text="Find PIN" onAction="#handleDerivePinFromPvvUtility" styleClass="action-button,primary-action" maxWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="22"/>
+                        <Button id="help_handleDerivePinFromPvvUtility" text="Find PIN" onAction="#handleDerivePinFromPvvUtility" styleClass="action-button,primary-action" maxWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="22"/>
                         <TextArea fx:id="derivePvvResultArea" prefHeight="60" editable="false" wrapText="true" managed="false" visible="false" styleClass="result-area,monospace-field" GridPane.columnIndex="1" GridPane.rowIndex="23"/>
                     </GridPane>
                 </VBox>
@@ -237,7 +237,7 @@
                         <ComboBox fx:id="dukptAesUsageCombo" prefWidth="205" styleClass="form-field"/>
                         <ComboBox fx:id="dukptAesKeyTypeCombo" prefWidth="100" styleClass="form-field"/>
                     </HBox>
-                    <Button text="Inspect KSN / Derive Key" onAction="#handleInspectDukpt" styleClass="action-button,primary-action" maxWidth="-Infinity" minWidth="-Infinity"/>
+                    <Button id="help_handleInspectDukpt" text="Inspect KSN / Derive Key" onAction="#handleInspectDukpt" styleClass="action-button,primary-action" maxWidth="-Infinity" minWidth="-Infinity"/>
 
                     <VBox fx:id="dukptAesPinBox" spacing="12" styleClass="module-pane-content">
                         <Separator/>
@@ -245,7 +245,7 @@
                         <TextField fx:id="dukptAesPinBlockField" promptText="04124389999AAAABAAAAAAAAAAAAAAAA" styleClass="monospace-field,form-field" maxWidth="Infinity"/>
                         <HBox spacing="8" alignment="CENTER_LEFT">
                             <ComboBox fx:id="dukptAesPinOperationCombo" prefWidth="205" styleClass="form-field"/>
-                            <Button text="Process AES PIN block" onAction="#handleAesDukptPinBlock" styleClass="action-button,primary-action"/>
+                            <Button id="help_handleAesDukptPinBlock" text="Process AES PIN block" onAction="#handleAesDukptPinBlock" styleClass="action-button,primary-action"/>
                         </HBox>
                     </VBox>
                     <TextArea fx:id="dukptResultArea" prefHeight="230" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
@@ -282,10 +282,10 @@
                     <TextArea fx:id="hsmHostCapturedFrameArea" prefHeight="90" wrapText="true"
                               promptText="0000ND007B44AC1DDEE2A94B0007-E000" styleClass="monospace-field"/>
                     <FlowPane hgap="10" vgap="8" alignment="CENTER_LEFT" styleClass="responsive-action-bar">
-                        <Button text="Compose Command" onAction="#handleHsmHostCompose" styleClass="action-button,primary-action"/>
-                        <Button text="Analyze Command" onAction="#handleHsmHostAnalyzeCommand" styleClass="secondary-button"/>
-                        <Button text="Analyze Response" onAction="#handleHsmHostAnalyzeResponse" styleClass="secondary-button"/>
-                        <Button text="Load NC Example" onAction="#handleHsmHostLoadExample" styleClass="secondary-button"/>
+                        <Button id="help_handleHsmHostCompose" text="Compose Command" onAction="#handleHsmHostCompose" styleClass="action-button,primary-action"/>
+                        <Button id="help_handleHsmHostAnalyzeCommand" text="Analyze Command" onAction="#handleHsmHostAnalyzeCommand" styleClass="secondary-button"/>
+                        <Button id="help_handleHsmHostAnalyzeResponse" text="Analyze Response" onAction="#handleHsmHostAnalyzeResponse" styleClass="secondary-button"/>
+                        <Button id="help_handleHsmHostLoadExample" text="Load NC Example" onAction="#handleHsmHostLoadExample" styleClass="secondary-button"/>
                     </FlowPane>
                     <TextArea fx:id="hsmHostResultArea" prefHeight="220" editable="false" wrapText="true"
                               styleClass="result-area,monospace-field"/>
@@ -311,8 +311,8 @@
                     <Label text="Message, or build definition (MTI then one field=value per line):" styleClass="form-label"/>
                     <TextArea fx:id="iso8583MessageArea" prefRowCount="5" wrapText="true" styleClass="result-area,monospace-field" promptText="0200&#10;3=000000&#10;11=123456"/>
                     <FlowPane hgap="8" vgap="8" styleClass="responsive-action-bar">
-                        <Button text="Parse message" onAction="#handleParseIso8583" styleClass="action-button,primary-action"/>
-                        <Button text="Build message" onAction="#handleBuildIso8583" styleClass="secondary-button"/>
+                        <Button id="help_handleParseIso8583" text="Parse message" onAction="#handleParseIso8583" styleClass="action-button,primary-action"/>
+                        <Button id="help_handleBuildIso8583" text="Build message" onAction="#handleBuildIso8583" styleClass="secondary-button"/>
                     </FlowPane>
                     <Label text="Report:" styleClass="form-label"/>
                     <TextArea fx:id="iso8583ReportArea" prefRowCount="12" editable="false" wrapText="true" styleClass="result-area,monospace-field" promptText="The field-by-field report will appear here..."/>
