@@ -892,3 +892,157 @@ test_card: help_handleOdaIssueTestCard, help_handleOdaClear -> ca_key
 .cda_data: odaCidField, odaTransactionDataArea
 .result: odaResultArea
 # module-help:op_pay_emv_oda end
+# module-help:op_wallet_sdjwt begin
+@op_wallet_sdjwt wallet.fxml
+issue: help_handleSdJwtIssue -> algorithm, issuer_key, claims, disclosable, vct, decoys, issue_output
+present: help_handleSdJwtPresent -> present_input, reveal, key_binding, holder_key, present_output
+verify: help_handleSdJwtVerify -> verify_input, verify_issuer_key, verify_holder_key, verify_expected, verify_output
+inspect: help_handleSdJwtInspect -> inspect_input, inspect_output
+clear_example: help_handleClear, help_handleLoadExample -> claims
+.algorithm: sdJwtAlgoCombo
+.issuer_key: sdJwtIssuerKeyArea
+.claims: sdJwtClaimsArea
+.disclosable: sdJwtDisclosableArea
+.vct: sdJwtVctField
+.decoys: sdJwtDecoyField
+.issue_output: sdJwtIssueOutputArea
+.present_input: sdJwtPresentInputArea
+.reveal: sdJwtRevealArea
+.key_binding: sdJwtAudienceField, sdJwtNonceField
+.holder_key: sdJwtHolderKeyArea
+.present_output: sdJwtPresentOutputArea
+.verify_input: sdJwtVerifyInputArea
+.verify_issuer_key: sdJwtVerifyIssuerKeyArea
+.verify_holder_key: sdJwtVerifyHolderKeyArea
+.verify_expected: sdJwtVerifyAudienceField, sdJwtVerifyNonceField
+.verify_output: sdJwtVerifyOutputArea
+.inspect_input: sdJwtInspectInputArea
+.inspect_output: sdJwtInspectOutputArea
+# module-help:op_wallet_sdjwt end
+# module-help:op_wallet_mdoc begin
+@op_wallet_mdoc wallet.fxml
+issue: help_handleMdocIssue -> doc_type, digest, issuer_key, signer_cert, device_key, elements, validity, issue_output
+verify: help_handleMdocVerify, help_handleMdocInspect -> verify_input, verify_issuer_key, verify_output
+clear_example: help_handleClear, help_handleLoadExample -> elements
+.doc_type: mdocDocTypeField
+.digest: mdocDigestCombo
+.issuer_key: mdocIssuerKeyArea
+.signer_cert: mdocSignerCertArea
+.device_key: mdocDeviceKeyArea
+.elements: mdocClaimsArea
+.validity: mdocValidityField
+.issue_output: mdocIssueOutputArea
+.verify_input: mdocVerifyInputArea
+.verify_issuer_key: mdocVerifyIssuerKeyArea
+.verify_output: mdocVerifyOutputArea
+# module-help:op_wallet_mdoc end
+# module-help:op_wallet_status_list begin
+@op_wallet_status_list wallet.fxml
+issue: help_handleStatusListIssue -> bits, statuses, uri, algorithm, key, output
+resolve: help_handleStatusListResolve, help_handleStatusListDescribe -> token, index, verify_key, resolve_output
+clear_example: help_handleClear, help_handleLoadExample -> statuses
+.bits: statusListBitsCombo
+.statuses: statusListStatusesArea
+.uri: statusListUriField
+.algorithm: statusListAlgoCombo
+.key: statusListKeyArea
+.output: statusListOutputArea
+.token: statusListTokenArea
+.index: statusListIndexField
+.verify_key: statusListVerifyKeyArea
+.resolve_output: statusListResolveOutputArea
+# module-help:op_wallet_status_list end
+# module-help:op_wallet_eidas_cert begin
+@op_wallet_eidas_cert wallet.fxml
+inspect: help_handleEidasCertInspect -> certificate, output
+clear_example: help_handleClear, help_handleLoadExample -> certificate
+.certificate: eidasCertArea
+.output: eidasCertOutputArea
+# module-help:op_wallet_eidas_cert end
+# module-help:op_wallet_trusted_list begin
+@op_wallet_trusted_list wallet.fxml
+inspect: help_handleTrustedListInspect -> xml, output
+verify: help_handleTrustedListVerify -> xml, output
+find: help_handleTrustedListFind -> xml, lookup_cert, output
+clear_example: help_handleClear, help_handleLoadExample -> xml
+.xml: trustedListXmlArea
+.lookup_cert: trustedListCertArea
+.output: trustedListOutputArea
+# module-help:op_wallet_trusted_list end
+# module-help:op_wallet_trusted_entity_list_json begin
+@op_wallet_trusted_entity_list_json wallet.fxml
+inspect: help_handleTrustedEntityListJsonInspect -> json, signer_cert, search_cert, output
+clear_example: help_handleClear, help_handleLoadExample -> json
+.json: trustedEntityListJsonArea
+.signer_cert: trustedEntityListSignerCertArea
+.search_cert: trustedEntityListSearchCertArea
+.output: trustedListOutputArea
+# module-help:op_wallet_trusted_entity_list_json end
+# module-help:op_wallet_cbor begin
+@op_wallet_cbor wallet.fxml
+inspect: help_handleCborInspect, help_handleCborToJson -> input, view, output
+from_json: help_handleCborFromJson -> json, from_json_output
+clear_example: help_handleClear, help_handleLoadExample -> input
+.input: cborInputArea
+.view: cborViewCombo
+.output: cborOutputArea
+.json: cborJsonArea
+.from_json_output: cborFromJsonOutputArea
+# module-help:op_wallet_cbor end
+# module-help:op_wallet_sca begin
+@op_wallet_sca wallet.fxml
+build: help_handleScaBuild -> type, credential_ids, payload, entry
+verify: help_handleScaVerify -> presentation, transaction_data, issuer_key, holder_key, expected, output
+inspect_request: help_handleOid4vpInspect -> request, request_key, request_output
+clear_example: help_handleClear, help_handleLoadExample -> payload
+.type: scaTypeCombo
+.credential_ids: scaCredentialIdsField
+.payload: scaPayloadArea
+.entry: scaEntryArea
+.presentation: scaPresentationArea
+.transaction_data: scaTransactionDataArea
+.issuer_key: scaIssuerKeyArea
+.holder_key: scaHolderKeyArea
+.expected: scaAudienceField, scaNonceField, scaResponseModeField
+.output: scaOutputArea
+.request: oid4vpRequestArea
+.request_key: oid4vpKeyArea
+.request_output: oid4vpOutputArea
+# module-help:op_wallet_sca end
+# module-help:op_wallet_ades begin
+@op_wallet_ades wallet.fxml
+validate: help_handleAdesValidate -> file_name, document, output
+etsi_report: help_handleAdesEtsiReport -> file_name, document, output
+clear_example: help_handleClear, help_handleLoadExample -> document
+.file_name: adesFileNameField
+.document: adesDocumentArea
+.output: adesOutputArea
+# module-help:op_wallet_ades end
+# module-help:op_hist_recent begin
+@op_hist_recent history.fxml
+find: help_handleClearHistoryFilter -> filter, module, visibility, table, details
+compare: compareBtn -> table
+use_value: openHistoryDetailBtn, copyHistoryDetailBtn, addHistoryToShelfBtn -> details
+clear: help_handleClearHistory -> table
+.visibility: visibilityCombo
+.filter: historyFilterField
+.module: historyModuleFilterCombo
+.table: historyTable
+.details: detailsTable
+# module-help:op_hist_recent end
+# module-help:op_hist_export begin
+@op_hist_export history.fxml
+export_record: exportJsonRecordBtn, exportVisibleJsonBtn -> table, visibility
+report: exportReportBtn, copyReportBtn -> table
+recipe: exportRecipeBtn, help_importOperationRecipe -> table
+.table: historyTable
+.visibility: visibilityCombo
+# module-help:op_hist_export end
+# module-help:op_hist_saved begin
+@op_hist_saved history.fxml
+load:  -> sessions, password
+delete:  -> sessions
+remove_plaintext:  -> sessions
+.sessions: 
+.password: 
+# module-help:op_hist_saved end
