@@ -6,6 +6,8 @@ Este tutorial amplía [JWT, JWS, JWE y JWK](09-jose.md). Aquel explica el modelo
 
 Las etiquetas se citan en inglés, igual que en el tutorial 09. Con la interfaz en español verás el equivalente traducido (por ejemplo **Key Management** → *Gestión de claves*, **Secret Format** → *Formato del secreto*).
 
+![Panel Encrypt de JWE (Encrypted) con RSA-OAEP-256 y A256GCM](imagenes/cryptocarver-25-jwe-a-parametros.jpeg)
+
 ## Mapa de la sección
 
 | Módulo del explorador | Paneles | Para qué |
@@ -241,6 +243,8 @@ No hay que elegir algoritmo: se lee de la cabecera. Con JSON de varios destinata
 | **Ciphertext** | Base64URL |
 | **Authentication Tag** | Base64URL y Hex |
 
+![Visual Breakdown: cabecera, clave cifrada, CEK en claro, IV, ciphertext y tag](imagenes/cryptocarver-25-jwe-a-desglose.jpeg)
+
 La CEK en claro permite comprobar a mano el cifrado de contenido en [Cifrado](03-cifrado.md): con `A256GCM`, la clave es la CEK, el nonce es el IV y el AAD son los bytes ASCII del primer segmento del token. No siempre se muestra:
 
 | Caso | Lo que verás |
@@ -273,6 +277,10 @@ Todos usan el payload `pedido=42;importe=125.00`. Como IV, CEK y claves efímera
 4. **Decrypt**: pega el token y [clave-privada-laboratorio-comparacion.pem](datos/clave-privada-laboratorio-comparacion.pem).
 5. Comprueba el payload y que **Decrypted CEK (Hex)** tiene 64 dígitos (32 bytes).
 
+![Encrypt & Generate JWE: token compacto de cinco segmentos](imagenes/cryptocarver-25-jwe-a-resultado.jpeg)
+
+![Decrypt: con la privada RSA se recuperan cabecera y payload](imagenes/cryptocarver-25-jwe-a-descifrado.jpeg)
+
 Repite con `Compress (DEF)`: la cabecera gana `"zip":"DEF"`. Con un payload tan corto el token crece (486 caracteres); la compresión compensa con textos largos y repetitivos.
 
 ### Laboratorio B — AES Key Wrap con secreto en hexadecimal
@@ -282,6 +290,8 @@ Repite con `Compress (DEF)`: la cabecera gana `"zip":"DEF"`. Con un payload tan 
 3. Cifra: 171 caracteres. El segundo segmento contiene la CEK envuelta (40 bytes).
 4. **Decrypt** con el mismo secreto y `Secret Format = Hex`.
 
+![Laboratorio B: A256KW con un secreto de 256 bits leído como Hex](imagenes/cryptocarver-25-jwe-b-a256kw.jpeg)
+
 Prueba negativa: cambia `Secret Format` a `UTF-8` en Decrypt. El secreto pasa a medir 64 bytes y se rechaza por tamaño.
 
 ### Laboratorio C — Cifrado directo (`dir`)
@@ -290,6 +300,8 @@ Prueba negativa: cambia `Secret Format` a `UTF-8` en Decrypt. El secreto pasa a 
 2. Cifra: 113 caracteres. El token contiene dos puntos seguidos (`..`): el segmento `encrypted_key` está vacío.
 3. Cambia `Content` a `A128CBC-HS256` sin tocar la clave: sigue funcionando, porque ese método también pide 32 bytes.
 4. Cambia a `A256CBC-HS512`: falla; necesita 64 bytes.
+
+![Laboratorio C: cifrado directo; el segmento encrypted_key queda vacío (..)](imagenes/cryptocarver-25-jwe-c-dir.jpeg)
 
 `dir` no tiene clave por mensaje: quien conoce el secreto descifra todos los tokens. Resérvalo para canales entre dos partes con rotación controlada.
 
@@ -304,6 +316,8 @@ Prueba negativa: cambia `Secret Format` a `UTF-8` en Decrypt. El secreto pasa a 
 ```
 
 4. Descifra con la misma contraseña. No hay que indicar las iteraciones: se leen de `p2c`.
+
+![Laboratorio D: PBES2 con contraseña y 600000 iteraciones PBKDF2](imagenes/cryptocarver-25-jwe-d-pbes2.jpeg)
 
 Las iteraciones encarecen cada intento de adivinar la contraseña. Menos de 1000 se rechaza en el formulario; por encima de 1 000 000 el descifrador rechaza el token para no prestarse a ataques de consumo de CPU.
 
@@ -323,6 +337,10 @@ Las iteraciones encarecen cada intento de adivinar la contraseña. Menos de 1000
 
 La clave generada lleva `use: sig`, así que el resultado anota el aviso *use=sig for enc operation* (sección 3.2): es informativo y no impide la operación.
 
+![Laboratorio E: ECDH-ES+A256KW con la clave EC generada; apu y apv en Header Parameters](imagenes/cryptocarver-25-jwe-e-cabeceras.jpeg)
+
+![El token lleva la clave efímera del emisor (epk) en la cabecera protegida](imagenes/cryptocarver-25-jwe-e-resultado.jpeg)
+
 Repite con `ECDH-ES` a secas: el segundo segmento queda vacío, porque la CEK se deriva directamente del acuerdo. Para X25519, genera la clave con `ECDH-ES` en la rotación de JWKS (crea una OKP X25519) y úsala igual; `epk` pasa a ser `{"kty":"OKP","crv":"X25519","x":"…"}`.
 
 ### Laboratorio F — AAD en Flattened JSON
@@ -332,12 +350,22 @@ Repite con `ECDH-ES` a secas: el segundo segmento queda vacío, porque la CEK se
 3. Descifra: correcto.
 4. Edita en el token un carácter del valor `aad` y descifra de nuevo: falla, aunque el ciphertext no ha cambiado.
 
-### Laboratorio G — Dos destinatarios
+![Laboratorio F: Flattened JSON con AAD; el miembro aad va autenticado](imagenes/cryptocarver-25-jwe-f-aad.jpeg)
 
-1. En **JWK Set (JWKS)**: **New JWKS**, añade una clave `RSA-OAEP` y otra `A256KW` (acepta el aviso de clave simétrica).
-2. Copia el JWKS completo a **Recipient Key**, con `Serialization = General JSON`.
-3. Cifra. El resultado tiene dos entradas en `recipients`.
-4. Descifra dos veces: una con la JWK RSA privada y otra con el secreto `oct` (pásalo antes por **JWK → Secret** y usa `Secret Format = Hex`). El estado indica *recipient 1/2* y *recipient 2/2*.
+### Laboratorio G — Tres destinatarios
+
+1. En **JWK Set (JWKS)**: **New JWKS** y añade tres claves: `RSA-OAEP`, `ECDH-ES+A256KW` (genera una X25519) y `A256KW` (acepta el aviso de clave simétrica).
+2. Copia el JWKS completo a **Recipient Key**, con `Serialization = General JSON`. Las claves generadas ya declaran su `alg`.
+3. Cifra. El resultado tiene tres entradas en `recipients`.
+4. Descifra con cada clave por separado: la JWK RSA privada, la JWK X25519 privada y el secreto `oct` (pásalo antes por **JWK → Secret** y usa `Secret Format = Hex`). El estado indica *recipient 1/3*, *2/3* y *3/3*.
+
+En la rotación elige `ECDH-ES+A256KW` y no `ECDH-ES` a secas: el acuerdo directo no puede compartir la CEK con otros destinatarios.
+
+![Laboratorio G: un JWKS con tres claves (RSA, X25519 y oct); cada una declara su alg](imagenes/cryptocarver-25-jwks-destinatarios.jpeg)
+
+![General JSON: una entrada por destinatario en recipients y un solo ciphertext](imagenes/cryptocarver-25-jwe-g-resultado.jpeg)
+
+![Cada destinatario descifra con su clave: el estado indica cuál encajó (recipient 2/3)](imagenes/cryptocarver-25-jwe-g-descifrado.jpeg)
 
 ## 2.9 Nested (Sign + Encrypt)
 
@@ -356,6 +384,10 @@ Firma primero y cifra después. El resultado es un JWE compacto con `cty: JWT` c
 - El orden de comprobación es fijo: primero descifrar, después verificar la firma interior. Si la firma falla: *Nested JWT decrypted, but inner signature verification failed.*
 
 Perfil reproducible: `HS256` con el secreto `0123456789abcdef0123456789abcdef` (UTF-8), `RSA-OAEP-256` + `A256GCM`, payload `{"sub":"cliente-42"}`.
+
+![Nested: se firma con HS256 y el JWS resultante se cifra con RSA-OAEP-256](imagenes/cryptocarver-25-nested-generar.jpeg)
+
+![Decrypt & Verify: primero se descifra y después se verifica la firma interior](imagenes/cryptocarver-25-nested-verificar.jpeg)
 
 ---
 
@@ -390,6 +422,8 @@ Metadatos comunes: `kid` (identificador), `use` (`sig` o `enc`), `key_ops` (oper
 
 Al elegir `OCT`, las etiquetas cambian: **Input** pasa a pedir un secreto y los botones se llaman **Secret → JWK** y **JWK → Secret**.
 
+![JWK Tools con una clave pública PEM y sus metadatos: kid, use y key_ops](imagenes/cryptocarver-25-jwk-pem-entrada.jpeg)
+
 ### PEM → JWK
 
 Acepta todos los formatos asimétricos de la Parte 1. El resultado depende de lo que pegues:
@@ -397,15 +431,17 @@ Acepta todos los formatos asimétricos de la Parte 1. El resultado depende de lo
 - Pública o certificado → JWK pública.
 - Privada → JWK **privada**, con `d` y, en RSA, los factores CRT.
 
-La salida añade siempre una línea de comentario con el thumbprint:
+La salida añade siempre una línea de comentario con el thumbprint. Con `kid = rsa-2026-01`, `use = enc` y `key_ops = wrapKey, unwrapKey`:
 
 ```
-{"kty":"RSA","e":"AQAB","use":"sig","kid":"rsa-2026-01","n":"…"}
+{"kty":"RSA","e":"AQAB","use":"enc","kid":"rsa-2026-01","key_ops":["wrapKey","unwrapKey"],"n":"…"}
 
 // Thumbprint (SHA-256): kTnWcRPLLePOgTMIlsajJGeJYiO_JpQJyStC7q_GMM8
 ```
 
 Ese valor es el de [clave-publica-laboratorio.pem](datos/clave-publica-laboratorio.pem); al copiar la JWK a otro sitio no incluyas la línea de comentario.
+
+![PEM → JWK: la JWK pública con sus metadatos y el thumbprint SHA-256](imagenes/cryptocarver-25-jwk-pem-a-jwk.jpeg)
 
 Si **Key Type** no coincide con la clave real, o `use` y `key_ops` se contradicen, la respuesta es deliberadamente genérica: *Material de clave no válido o no compatible.* Revisa esos tres selectores.
 
@@ -444,13 +480,15 @@ Recuerda la separación de funciones: las curvas Ed firman y las X acuerdan clav
 
 ### Secret → JWK (tipo OCT)
 
-Elige **Secret Format**, pega el secreto y pulsa **Secret → JWK**. Con el secreto de 256 bits del laboratorio —en `Hex` o en `Base64 / Base64URL`, cada uno con su formato seleccionado— y `kid` vacío:
+Elige **Secret Format**, pega el secreto y pulsa **Secret → JWK**. Con el secreto de 256 bits del laboratorio —en `Hex` o en `Base64 / Base64URL`, cada uno con su formato seleccionado—, `use = sig` y `kid` vacío:
 
 ```json
 {"kty":"oct","use":"sig","kid":"WqjPPRvAP8oYbAqCwMErhzTg-Quaz-vLx_cef07yhOs","k":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8"}
 ```
 
 El thumbprint `WqjPPRvAP8oYbAqCwMErhzTg-Quaz-vLx_cef07yhOs` es determinista: debe salirte exactamente ese.
+
+![Secret → JWK: clave simétrica oct; el thumbprint es determinista](imagenes/cryptocarver-25-jwk-oct-a-jwk.jpeg)
 
 El formato nunca se adivina: se aplica el seleccionado. Es la misma regla que en JWE, con una diferencia: aquí el valor por defecto es `Base64 / Base64URL`, la forma en que una JWK guarda su `k`. Prueba negativa: pega el valor hexadecimal dejando Base64 seleccionado. Se acepta sin error —los dígitos hexadecimales también son caracteres Base64 válidos— pero el thumbprint ya no coincide, porque es otra clave. Con `Hex` y un texto que no sea hexadecimal, la conversión se rechaza.
 
@@ -466,6 +504,10 @@ Toda JWK `oct` es material secreto: se trata como privada a efectos de visibilid
 
 Incluye `secp256k1` (ES256K) y las cuatro curvas OKP. La salida `oct` en Hex es la forma cómoda de llevar el secreto a un campo con `Secret Format = Hex`.
 
+![JWK → Secret: el mismo secreto en Hex, Base64 y Base64URL](imagenes/cryptocarver-25-jwk-oct-a-secreto.jpeg)
+
+![JWK → PEM: el par RSA generado, exportado como PUBLIC KEY y PRIVATE KEY](imagenes/cryptocarver-25-jwk-a-pem.jpeg)
+
 ### Calc Thumbprint
 
 Acepta una JWK o un PEM. El thumbprint RFC 7638 se calcula solo sobre los parámetros públicos obligatorios, en orden canónico, de modo que:
@@ -474,6 +516,8 @@ Acepta una JWK o un PEM. El thumbprint RFC 7638 se calcula solo sobre los parám
 - es el mismo para la pública y para su privada;
 - coincide con el valor `jkt` que usa DPoP en el claim `cnf`.
 
+![Calc Thumbprint: huella RFC 7638, independiente de kid, use y key_ops](imagenes/cryptocarver-25-jwk-thumbprint.jpeg)
+
 ### Inspect Metadata
 
 Solo con JWK en JSON. Devuelve un resumen sin material de clave, útil para revisar una clave antes de usarla:
@@ -481,6 +525,8 @@ Solo con JWK en JSON. Devuelve un resumen sin material de clave, útil para revi
 ```json
 {"kty":"RSA","kid":"rsa-2026-01","use":"enc","key_ops":["unwrapKey","wrapKey"],"alg":"RSA-OAEP-256"}
 ```
+
+![Inspect Metadata: resumen de kty, kid, use y key_ops sin material de clave](imagenes/cryptocarver-25-jwk-metadatos.jpeg)
 
 ## 3.3 Panel JWK Set (JWKS)
 
@@ -496,6 +542,8 @@ Solo con JWK en JSON. Devuelve un resumen sin material de clave, útil para revi
 ### Qué genera cada algoritmo
 
 Cada clave nueva recibe un `kid` UUID aleatorio, su `alg` y un `use` deducido del algoritmo. Si el campo **key_ops** de *JWK Tools* está relleno, también se aplica.
+
+![Add New Key to Set con RSA-OAEP: genera un par RSA-2048 con kid aleatorio y use=enc](imagenes/cryptocarver-25-jwks-rsa.jpeg)
 
 | Algoritmo elegido | Clave generada | `use` |
 |---|---|---|
@@ -515,6 +563,8 @@ Notas:
 
 - Las claves de `ECDH-ES` son **OKP**, no EC. Para un destinatario ECDH sobre P-256, genera una `ES256` y úsala en JWE: la curva es la misma. Si quieres publicarla con el propósito correcto, vuelve a pasarla por **PEM → JWK** con `use = enc`.
 - No hay entradas `RSA-OAEP-256/384/512`. Una clave `RSA-OAEP` sirve igual para ellas como destinatario único; en multi-destinatario se usará el `alg` que declare la JWK, así que edítalo a mano si quieres SHA-2.
+
+![Con ECDH-ES se genera un par OKP X25519; la curva y use=enc se ajustan solos](imagenes/cryptocarver-25-jwks-okp.jpeg)
 
 ### Claves simétricas en un JWKS
 
@@ -573,6 +623,8 @@ Reglas de la cabecera adicional: no puede fijar `alg`, `b64` ni `crit`, y una `j
 
 Avisos automáticos junto al algoritmo: `none` no firma nada, y un secreto HMAC más corto que la salida del hash (32 bytes para HS256) reduce la resistencia a fuerza bruta. Con ECDSA la curva de la clave debe ser la del algoritmo.
 
+![JWT (Signed): token HS256 de tres segmentos a partir de los claims](imagenes/cryptocarver-25-jwt-generar.jpeg)
+
 ## 4.2 Validate & Decode JWT
 
 **Verification Key** acepta secreto, PEM, certificado, JWK o un **JWKS de varias claves**: se busca por el `kid` del token; si no hay `kid`, por `alg`; y si no, se usa la primera.
@@ -613,6 +665,8 @@ Tres estados posibles, que conviene no confundir:
 
 Usar una pública RSA como secreto de un token `HS*` se detecta como confusión de algoritmos y se rechaza con aviso.
 
+![Validate & Decode: firma y claims se comprueban por separado](imagenes/cryptocarver-25-jwt-validar.jpeg)
+
 ## 4.3 JWS Detached
 
 Firma un payload que viaja aparte. La salida compacta tiene la forma `cabecera..firma`.
@@ -634,9 +688,13 @@ Pega cualquier token y pulsa **Analyze Token**. No pide clave y no valida nada.
 
 Si el payload de un JWS es a su vez un token, lo desglosa de forma recursiva. En un JWE con `cty: JWT` avisa de que dentro hay un token anidado: descífralo en **JWE** e inspecciona el resultado. **Expand Report** abre el informe en una ventana y **Copy Report** lo copia. Si la entrada contiene material privado, el informe se oculta fuera del perfil de laboratorio.
 
+![Token Inspector: desglose sin clave; se leen epk, apu y apv](imagenes/cryptocarver-25-inspector-jwe.jpeg)
+
 ## 4.5 JWA (Algorithms)
 
 Tabla de consulta con los algoritmos del módulo agrupados en *Signature*, *Key Management* y *Content Encryption*. No lista los marcados como inseguros (`RSA1_5`, `RSA-OAEP`, `none`) ni `ES256K`, aunque estén disponibles en los selectores.
+
+![JWA (Algorithms): registro de algoritmos de firma, gestión de clave y contenido](imagenes/cryptocarver-25-jwa.jpeg)
 
 ## 4.6 JOSE en el Diseñador de procesos
 
