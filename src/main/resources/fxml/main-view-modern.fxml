@@ -146,7 +146,6 @@
                 </HBox>
 
                 <Region HBox.hgrow="ALWAYS"/>
-                <Button fx:id="toolbarOperationHelpButton" text="?" minWidth="-Infinity" onAction="#handleShowOperationHelp" styleClass="ghost-button" accessibleText="Open local help for the current operation"/>
                 <Button text="Inspector" onAction="#handleToggleInspector" styleClass="ghost-button" accessibleText="Toggle inspector"/>
             </HBox>
         </VBox>
@@ -177,6 +176,7 @@
                     <Label fx:id="contentTitleLabel" text="Symmetric Keys" styleClass="content-title-label" managed="false" visible="false"/>
                     <Label fx:id="contentSubtitleLabel" text="Key Derivation (KDF)" styleClass="content-subtitle-label" managed="false" visible="false" wrapText="true" minHeight="-Infinity"/>
                     <Button fx:id="favoriteToggleBtn" text="☆" onAction="#handleToggleFavorite" styleClass="favorite-toggle-button" accessibleText="Toggle Favorite for current operation" minWidth="-Infinity"/>
+                    <Button fx:id="toolbarOperationHelpButton" text="?" minWidth="-Infinity" onAction="#handleShowOperationHelp" styleClass="ghost-button" accessibleText="Open local help for the current operation"/>
                 </HBox>
 
                 <!-- Result Summary Bar (Compact header) -->

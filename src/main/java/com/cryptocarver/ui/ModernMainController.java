@@ -791,7 +791,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             contextualHelpModeMenuItem.setSelected(AppSettings.getInstance().isContextualHelpEnabled());
         }
         if (toolbarOperationHelpButton != null) {
-            // Compact glyph: the caption lives in the tooltip so the Spanish toolbar does not clip.
+            // Compact glyph in the content header: the caption lives in the tooltip and the toolbar stays as narrow as before.
             toolbarOperationHelpButton.setAccessibleText(i18n.text("help.operation.open"));
             toolbarOperationHelpButton.setAccessibleHelp(i18n.text("help.control.shortcut"));
             toolbarOperationHelpButton.setTooltip(new Tooltip(i18n.text("help.operation.open") + "\n" + i18n.text("help.control.shortcut")));
