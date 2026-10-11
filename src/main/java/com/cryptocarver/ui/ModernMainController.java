@@ -199,6 +199,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Button resultCopyButton;
     private ContextualHelpButtonBinder resultActionHelp;
     private ModuleHelpInstaller moduleHelp;
+    private boolean processDesignerGrowthTracked;
     @FXML private Button resultSaveStepButton;
     @FXML private Button inspectorToggleButton;
 
@@ -2508,11 +2509,29 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             inspectorPanel.setVisible(false);
             inspectorPanel.setManaged(false);
         }
+        fillViewportWithProcessDesigner(true);
+    }
+
+    /** The designer is a workspace, not a form: it takes the whole viewport height instead of scrolling the page. */
+    private void fillViewportWithProcessDesigner(boolean fill) {
+        if (mainScrollPane != null) mainScrollPane.setFitToHeight(fill);
+        if (processDesignerContainer == null) return;
+        javafx.scene.layout.Priority grow = fill ? javafx.scene.layout.Priority.ALWAYS : javafx.scene.layout.Priority.NEVER;
+        VBox.setVgrow(processDesignerContainer, grow);
+        processDesignerContainer.getChildren().forEach(child -> VBox.setVgrow(child, grow));
+        if (!processDesignerGrowthTracked) {
+            // The module root may be loaded after the workspace is entered.
+            processDesignerGrowthTracked = true;
+            processDesignerContainer.getChildren().addListener((javafx.collections.ListChangeListener<javafx.scene.Node>) change ->
+                    processDesignerContainer.getChildren().forEach(child -> VBox.setVgrow(child, processDesignerWorkspace
+                            ? javafx.scene.layout.Priority.ALWAYS : javafx.scene.layout.Priority.NEVER)));
+        }
     }
 
     private void exitProcessDesignerWorkspace() {
         if (!processDesignerWorkspace) return;
         processDesignerWorkspace = false;
+        fillViewportWithProcessDesigner(false);
         if (sidePanel != null) {
             sidePanel.setVisible(sidePanelVisibleBeforeProcessDesigner);
             sidePanel.setManaged(sidePanelVisibleBeforeProcessDesigner);

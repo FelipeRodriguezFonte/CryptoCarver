@@ -39,11 +39,21 @@ public final class ResponsiveWorkspaceSplitPane extends SplitPane {
         minWidth(inspector, INSPECTOR_MIN_WIDTH);
 
         ChangeListener<Number> first = (observable, oldValue, newValue) -> {
-            if (!restoring && !treeCollapsed) AppSettings.getInstance().setWorkspaceTreeDividerPosition(newValue.doubleValue());
+            if (!restoring && !treeCollapsed && tree.isVisible() && !hasHiddenChild(tree))
+                AppSettings.getInstance().setWorkspaceTreeDividerPosition(newValue.doubleValue());
         };
         ChangeListener<Number> second = (observable, oldValue, newValue) -> {
-            if (!restoring && !inspectorCollapsed) AppSettings.getInstance().setWorkspaceInspectorDividerPosition(newValue.doubleValue());
+            if (!restoring && !inspectorCollapsed && inspector.isVisible())
+                AppSettings.getInstance().setWorkspaceInspectorDividerPosition(newValue.doubleValue());
         };
+        // A hidden side panel must give its width to the content, whoever hides it.
+        tree.visibleProperty().addListener((observable, before, visible) -> releaseOrRestore(tree, visible, TREE_MIN_WIDTH));
+        // The tree pane holds the rail and the section tree; hiding the tree alone leaves only the rail.
+        if (tree instanceof javafx.scene.Parent parent) for (Node child : parent.getChildrenUnmodifiable())
+            child.visibleProperty().addListener((observable, before, visible) -> releaseOrRestore(tree, tree.isVisible(), TREE_MIN_WIDTH));
+        inspector.visibleProperty().addListener((observable, before, visible) -> releaseOrRestore(inspector, visible, INSPECTOR_MIN_WIDTH));
+        releaseOrRestore(tree, tree.isVisible(), TREE_MIN_WIDTH);
+        releaseOrRestore(inspector, inspector.isVisible(), INSPECTOR_MIN_WIDTH);
         if (getDividers().size() >= 2) {
             getDividers().get(0).positionProperty().removeListener(first);
             getDividers().get(1).positionProperty().removeListener(second);
@@ -53,12 +63,25 @@ public final class ResponsiveWorkspaceSplitPane extends SplitPane {
         Platform.runLater(this::restoreDividerPositions);
     }
 
+    /** A hidden panel keeps no width, so its divider rests on the edge instead of leaving an empty band. */
+    private void releaseOrRestore(Node node, boolean visible, double visibleMinWidth) {
+        if (node instanceof Region region) {
+            // Only the tree pane has a part (the rail) that stays when the rest is hidden.
+            boolean reduced = visible && node == getItems().get(0) && hasHiddenChild(node);
+            region.setMinWidth(!visible ? 0 : reduced ? Region.USE_PREF_SIZE : visibleMinWidth);
+            region.setMaxWidth(!visible ? 0 : reduced ? Region.USE_PREF_SIZE : Region.USE_COMPUTED_SIZE);
+        }
+        Platform.runLater(this::restoreDividerPositions);
+    }
+
     private void restoreDividerPositions() {
         if (getDividers().size() < 2) return;
         restoring = true;
         try {
-            setDividerPositions(AppSettings.getInstance().getWorkspaceTreeDividerPosition(),
-                    AppSettings.getInstance().getWorkspaceInspectorDividerPosition());
+            setDividerPositions(
+                    getItems().get(0).isVisible() && !hasHiddenChild(getItems().get(0))
+                            ? AppSettings.getInstance().getWorkspaceTreeDividerPosition() : 0.0,
+                    getItems().get(2).isVisible() ? AppSettings.getInstance().getWorkspaceInspectorDividerPosition() : 1.0);
         } finally {
             restoring = false;
         }
@@ -78,8 +101,11 @@ public final class ResponsiveWorkspaceSplitPane extends SplitPane {
         else treeCollapsed = collapse;
         node.setVisible(!collapse);
         node.setManaged(!collapse);
-        minWidth(node, collapse ? 0 : (inspector ? INSPECTOR_MIN_WIDTH : TREE_MIN_WIDTH));
-        if (!collapse) Platform.runLater(this::restoreDividerPositions);
+    }
+
+    private static boolean hasHiddenChild(Node node) {
+        return node instanceof javafx.scene.Parent parent
+                && parent.getChildrenUnmodifiable().stream().anyMatch(child -> !child.isVisible());
     }
 
     private static void minWidth(Node node, double value) {

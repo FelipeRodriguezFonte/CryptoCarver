@@ -3,10 +3,10 @@
 <?import javafx.scene.layout.*?>
 
 <TitledPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-             fx:id="processDesignerRoot" text="🧩 Process Designer" expanded="true" collapsible="false" fx:controller="com.cryptocarver.ui.ProcessDesignerController">
-    <VBox styleClass="ux-inline-1684f00703" spacing="7">
+             fx:id="processDesignerRoot" text="🧩 Process Designer" expanded="true" collapsible="false" maxHeight="Infinity" fx:controller="com.cryptocarver.ui.ProcessDesignerController">
+    <VBox styleClass="ux-inline-1684f00703" spacing="6">
         <Label styleClass="ux-inline-39414733db" text="Compose safe workflows by dragging blocks and connecting them. Process files store configuration, never secret keys." wrapText="true"/>
-        <FlowPane prefWrapLength="980" styleClass="responsive-action-bar" hgap="10" vgap="8">
+        <FlowPane prefWrapLength="1400" styleClass="responsive-action-bar" hgap="10" vgap="6" alignment="CENTER_LEFT">
             <HBox spacing="6" alignment="CENTER_LEFT">
                 <Label styleClass="ux-inline-ba9ea6419e" text="Process:"/>
                 <TextField fx:id="processNameField" text="Untitled process" prefWidth="170"/>
@@ -21,9 +21,6 @@
             <HBox spacing="6" alignment="CENTER_LEFT">
                 <Button fx:id="openProcessButton" text="Open…" onAction="#handleLoadProcess" styleClass="secondary-button"/>
                 <Button fx:id="saveProcessButton" text="Save…" onAction="#handleSaveProcess" styleClass="secondary-button"/>
-            </HBox>
-            <Separator orientation="VERTICAL"/>
-            <HBox spacing="6" alignment="CENTER_LEFT">
                 <MenuButton fx:id="editMenuButton" text="Edición" styleClass="secondary-button">
                     <items>
                         <MenuItem text="Undo" onAction="#handleUndo"/>
@@ -48,36 +45,18 @@
             </HBox>
             <Separator orientation="VERTICAL"/>
             <HBox spacing="6" alignment="CENTER_LEFT">
-                <Button fx:id="reverseConnectionToolbarButton" text="Reverse connection" onAction="#handleReverseSelectedConnection" styleClass="secondary-button" disable="true"/>
-                <Button fx:id="clearCanvasToolbarButton" text="Clear canvas" onAction="#handleClearCanvas" styleClass="secondary-button"/>
-            </HBox>
-            <Separator orientation="VERTICAL"/>
-            <HBox spacing="6" alignment="CENTER_LEFT">
                 <Button fx:id="inspectorToggleButton" text="Hide inspector" onAction="#handleToggleInspector" styleClass="secondary-button"/>
                 <Button fx:id="focusModeButton" text="Focus mode" onAction="#handleToggleFocusMode" styleClass="secondary-button"/>
-            </HBox>
-            <Separator orientation="VERTICAL"/>
-            <HBox spacing="6" alignment="CENTER_LEFT">
                 <Button fx:id="expandResultsButton" text="Expand results" onAction="#handleOpenExpandedExecutionResult" styleClass="secondary-button"/>
                 <Button fx:id="openWindowButton" text="Open in window" onAction="#handleOpenWindow" styleClass="secondary-button"/>
             </HBox>
         </FlowPane>
-        <HBox styleClass="ux-inline-8a935d4e82" spacing="8" alignment="CENTER_LEFT">
-            <ProgressBar fx:id="processProgressBar" prefWidth="250" progress="0.0" HBox.hgrow="ALWAYS"/>
-            <Label styleClass="ux-inline-601a4c676b" fx:id="processStatusLabel" text="Ready"/>
-        </HBox>
-        <FlowPane prefWrapLength="980" styleClass="responsive-action-bar" hgap="6" vgap="6">
-            <Button fx:id="zoomInButton" text="Zoom in" onAction="#handleZoomIn" styleClass="secondary-button,ux-inline-ab4da656fa"/>
-            <Button fx:id="zoomOutButton" text="Zoom out" onAction="#handleZoomOut" styleClass="secondary-button,ux-inline-ab4da656fa"/>
-            <Button fx:id="resetZoomButton" text="Reset zoom" onAction="#handleResetZoom" styleClass="secondary-button,ux-inline-ab4da656fa"/>
-            <Button fx:id="zoomFitButton" text="Fit to content" onAction="#handleZoomFit" styleClass="secondary-button,ux-inline-ab4da656fa"/>
-            <Label styleClass="ux-inline-7f1f518806" fx:id="zoomLevelLabel" text="100%"/>
-            <CheckBox styleClass="ux-inline-ab4da656fa" fx:id="snapToGridCheck" text="Snap to grid" onAction="#handleSnapToGridToggled" selected="true"/>
-        </FlowPane>
-        <SplitPane fx:id="designerSplitPane" dividerPositions="0.18, 0.76" prefHeight="380">
+        <SplitPane fx:id="designerVerticalSplit" orientation="VERTICAL" dividerPositions="0.72" prefHeight="640" minHeight="420" VBox.vgrow="ALWAYS">
             <items>
-                <!-- Searchable Palette -->
-                <VBox styleClass="ux-inline-a15413a06d" fx:id="palettePanel" minWidth="180" prefWidth="200" maxWidth="260" spacing="6">
+                <SplitPane fx:id="designerSplitPane" dividerPositions="0.18, 0.76" minHeight="260">
+                    <items>
+                        <!-- Searchable Palette -->
+                        <VBox styleClass="ux-inline-a15413a06d" fx:id="palettePanel" minWidth="200" prefWidth="250" maxWidth="340" SplitPane.resizableWithParent="false" spacing="6">
                     <Label styleClass="ux-inline-ad770fad50" text="Palette"/>
                     <TextField styleClass="ux-inline-ab4da656fa" fx:id="paletteSearchField" promptText="Search palette…"/>
                     <ScrollPane styleClass="ux-inline-062b25176d" fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS">
@@ -87,46 +66,55 @@
                     </ScrollPane>
                 </VBox>
 
-                <!-- Canvas Workspace -->
-                <ScrollPane styleClass="ux-inline-74b94b8ef1" fx:id="designerWorkspace" fitToWidth="false" fitToHeight="false" pannable="true" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
-                    <content>
-                        <Pane styleClass="ux-inline-ec0ebd6c4b" fx:id="workflowCanvas" minWidth="1200" prefWidth="1200" minHeight="800" prefHeight="800"/>
-                    </content>
-                </ScrollPane>
+                        <!-- Canvas Workspace: its own action bar keeps selection and zoom next to the canvas -->
+                        <VBox spacing="4" minWidth="320">
+                            <FlowPane styleClass="responsive-action-bar" hgap="6" vgap="4" alignment="CENTER_LEFT">
+                                <Button fx:id="connectSelectedButton" text="Select 2 blocks to connect" onAction="#handleConnectSelected" styleClass="action-button,ux-inline-ab4da656fa"/>
+                                <MenuButton fx:id="connectMenuButton" text="Connect to..." styleClass="action-button,ux-inline-ab4da656fa" managed="false" visible="false"/>
+                                <Button fx:id="reverseConnectionToolbarButton" text="Reverse connection" onAction="#handleReverseSelectedConnection" styleClass="secondary-button,ux-inline-ab4da656fa" disable="true"/>
+                                <Button fx:id="deleteSelectedButton" text="Delete selected" onAction="#handleDeleteSelected" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+                                <Button fx:id="clearCanvasToolbarButton" text="Clear canvas" onAction="#handleClearCanvas" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+                                <Separator orientation="VERTICAL"/>
+                                <Button fx:id="zoomOutButton" text="Zoom out" onAction="#handleZoomOut" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+                                <Button fx:id="zoomInButton" text="Zoom in" onAction="#handleZoomIn" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+                                <Button fx:id="resetZoomButton" text="Reset zoom" onAction="#handleResetZoom" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+                                <Button fx:id="zoomFitButton" text="Fit to content" onAction="#handleZoomFit" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+                                <Label styleClass="ux-inline-7f1f518806" fx:id="zoomLevelLabel" text="100%"/>
+                                <CheckBox styleClass="ux-inline-ab4da656fa" fx:id="snapToGridCheck" text="Snap to grid" onAction="#handleSnapToGridToggled" selected="true"/>
+                            </FlowPane>
+                            <ScrollPane styleClass="ux-inline-74b94b8ef1" fx:id="designerWorkspace" fitToWidth="false" fitToHeight="false" pannable="true" VBox.vgrow="ALWAYS">
+                                <content>
+                                    <Pane styleClass="ux-inline-ec0ebd6c4b" fx:id="workflowCanvas" minWidth="1200" prefWidth="1200" minHeight="800" prefHeight="800"/>
+                                </content>
+                            </ScrollPane>
+                        </VBox>
 
-                <!-- Dynamic Descriptor Inspector -->
-                <VBox styleClass="ux-inline-66ce195191" fx:id="nodeInspector" spacing="6" minWidth="-1" prefWidth="280">
-                    <Label styleClass="ux-inline-601a4c676b" fx:id="selectedNodeLabel" wrapText="true"/>
-                    <Label styleClass="ux-inline-25e6beb3a5" fx:id="inputContractLabel" managed="false" visible="false"/>
-                    <Label styleClass="ux-inline-25e6beb3a5" fx:id="outputContractLabel" managed="false" visible="false"/>
-                    <VBox fx:id="nodeNameFieldGroup" spacing="2">
-                        <Label styleClass="ux-inline-ab4da656fa" text="Node name"/>
-                        <TextField styleClass="ux-inline-ab4da656fa" fx:id="nodeNameField" promptText="Describe this step"/>
-                    </VBox>
-
-                    <!-- Dynamically populated parameters -->
-                    <ScrollPane styleClass="ux-inline-062b25176d" fitToWidth="true" VBox.vgrow="ALWAYS">
-                        <content>
-                            <VBox styleClass="ux-inline-1193ccbe1f" fx:id="dynamicInspectorContainer" spacing="4"/>
-                        </content>
-                    </ScrollPane>
-
-                    <!-- Fixed footer buttons -->
-                    <Button fx:id="saveNodeSettingsButton" text="Save block settings" onAction="#handleSaveNodeSettings" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
-                    <VBox spacing="4" maxWidth="1.7976931348623157E308">
-                        <Button fx:id="connectSelectedButton" text="Select 2 blocks to connect" onAction="#handleConnectSelected" styleClass="action-button" maxWidth="1.7976931348623157E308"/>
-                        <MenuButton fx:id="connectMenuButton" text="Connect to..." styleClass="action-button" maxWidth="1.7976931348623157E308" managed="false" visible="false"/>
-                    </VBox>
-                    <Button fx:id="reverseConnectionButton" text="Reverse selected connection" onAction="#handleReverseSelectedConnection" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
-                    <Button fx:id="deleteSelectedButton" text="Delete selected" onAction="#handleDeleteSelected" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
-                    <Button fx:id="clearCanvasInspectorButton" text="Clear canvas" onAction="#handleClearCanvas" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
-                </VBox>
-            </items>
-        </SplitPane>
-        <SplitPane orientation="VERTICAL" dividerPositions="0.45" prefHeight="240" VBox.vgrow="ALWAYS">
-            <items>
-                <VBox styleClass="ux-inline-c7b1eebc45" spacing="4">
-                    <Label styleClass="ux-inline-601a4c676b" text="Execution status"/>
+                        <!-- Node inspector: only what describes and configures the selected block -->
+                        <VBox styleClass="ux-inline-66ce195191" fx:id="nodeInspector" spacing="6" minWidth="-1" prefWidth="300" SplitPane.resizableWithParent="false">
+                            <Label styleClass="ux-inline-601a4c676b" fx:id="selectedNodeLabel" wrapText="true"/>
+                            <Label styleClass="ux-inline-25e6beb3a5" fx:id="inputContractLabel" managed="false" visible="false"/>
+                            <Label styleClass="ux-inline-25e6beb3a5" fx:id="outputContractLabel" managed="false" visible="false"/>
+                            <VBox fx:id="nodeNameFieldGroup" spacing="2">
+                                <Label styleClass="ux-inline-ab4da656fa" text="Node name"/>
+                                <TextField styleClass="ux-inline-ab4da656fa" fx:id="nodeNameField" promptText="Describe this step"/>
+                            </VBox>
+                            <ScrollPane styleClass="ux-inline-062b25176d" fitToWidth="true" VBox.vgrow="ALWAYS">
+                                <content>
+                                    <VBox styleClass="ux-inline-1193ccbe1f" fx:id="dynamicInspectorContainer" spacing="4"/>
+                                </content>
+                            </ScrollPane>
+                            <Button fx:id="saveNodeSettingsButton" text="Save block settings" onAction="#handleSaveNodeSettings" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
+                        </VBox>
+                    </items>
+                </SplitPane>
+                <SplitPane dividerPositions="0.5" minHeight="120">
+                    <items>
+                        <VBox styleClass="ux-inline-c7b1eebc45" spacing="4">
+                    <HBox styleClass="ux-inline-8a935d4e82" spacing="8" alignment="CENTER_LEFT">
+                        <Label styleClass="ux-inline-601a4c676b" text="Execution status"/>
+                        <ProgressBar fx:id="processProgressBar" prefWidth="160" progress="0.0"/>
+                        <Label styleClass="ux-inline-601a4c676b" fx:id="processStatusLabel" text="Ready"/>
+                    </HBox>
                     <TableView styleClass="ux-inline-ab4da656fa" fx:id="executionStatusTable" prefHeight="110" VBox.vgrow="ALWAYS">
                         <columns>
                             <TableColumn fx:id="stepCol" text="#" prefWidth="42" sortable="false"/>
@@ -139,10 +127,12 @@
                         </columns>
                     </TableView>
                 </VBox>
-                <VBox styleClass="ux-inline-db8d9d3e8f" spacing="4">
+                        <VBox styleClass="ux-inline-db8d9d3e8f" spacing="4">
                     <Label styleClass="ux-inline-601a4c676b" text="Execution results"/>
                     <TextArea styleClass="ux-inline-744623818d" fx:id="executionOutputArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" promptText="Execution results and validation messages appear here."/>
                 </VBox>
+                    </items>
+                </SplitPane>
             </items>
         </SplitPane>
     </VBox>
