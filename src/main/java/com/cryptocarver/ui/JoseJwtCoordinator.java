@@ -270,6 +270,47 @@ final class JoseJwtCoordinator extends JoseCoordinatorSupport {
 
         }
 
+    void handleDecodeJWT() {
+        // Decoding deliberately ignores keys, trust settings and all claim/profile checks.
+        view().jwtDecodedHeaderArea().clear();
+        view().jwtDecodedPayloadArea().clear();
+        view().jwtFindingsArea().clear();
+        view().jwtStatusLabel().setText("");
+        if (isBlank(view().jwtValidateTokenArea())) {
+            showValidation(t("module.jose.feedback.tokenRequired"), "jwtValidateTokenArea");
+            return;
+        }
+        try {
+            JOSEObject token = JOSEObject.parse(view().jwtValidateTokenArea().getText().trim());
+            if (token instanceof JWEObject) {
+                showDecodeError("module.jose.decodeEncrypted");
+                return;
+            }
+            if (token.getPayload() == null || token.getPayload().toJSONObject() == null) {
+                showDecodeError("module.jose.decodeInvalid");
+                return;
+            }
+            view().jwtDecodedHeaderArea().setText(token.getHeader().toString());
+            view().jwtDecodedPayloadArea().setText(token.getPayload().toString());
+            String status = t("module.jose.decodedUnverified");
+            view().jwtStatusLabel().setText(status);
+            view().jwtStatusLabel().setStyle("-fx-text-fill: orange;");
+            view().jwtFindingsArea().setText(t("module.jose.decodeOnlyHint"));
+            reporter().publish(OperationResult.forOperation("JWT Decode")
+                    .detail("Signature", "NOT_CHECKED")
+                    .detail("Claim Checks", "NOT_CHECKED")
+                    .detail("Security warning", t("module.jose.decodeOnlyHint"))
+                    .status(status).build());
+        } catch (java.text.ParseException | IllegalArgumentException invalid) {
+            showDecodeError("module.jose.decodeInvalid");
+        }
+    }
+
+    private void showDecodeError(String key) {
+        view().jwtStatusLabel().setText(t(key));
+        view().jwtStatusLabel().setStyle("-fx-text-fill: red;");
+    }
+
     void handleValidateJWT() {
 
             if (isBlank(view().jwtValidateTokenArea())) { showValidation(t("module.jose.feedback.tokenRequired"), "jwtValidateTokenArea"); return; }
@@ -282,8 +323,11 @@ final class JoseJwtCoordinator extends JoseCoordinatorSupport {
             String skewStr = view().jwtClockSkewField().getText();
             long skew = 0;
             try {
-                skew = Long.parseLong(skewStr);
-            } catch (Exception e) {
+                skew = Long.parseLong(skewStr.trim());
+                if (skew < 0 || skew > Long.MAX_VALUE / 1000L) throw new NumberFormatException();
+            } catch (NumberFormatException e) {
+                showValidation(t("module.jose.feedback.clockSkew"), "jwtClockSkewField");
+                return;
             }
             boolean checkExp = view().jwtCheckExpiryCheck().isSelected();
             boolean oidcStrict = view().jwtOidcStrictCheck() != null && view().jwtOidcStrictCheck().isSelected();

@@ -130,6 +130,129 @@ class JoseJwtCharacterizationUITest {
         });
     }
 
+    @Test void decodeWithoutKeyIgnoresValidationSettingsAndNeverMarksTokenValid() throws Exception {
+        UiTestLifecycleExtension.onFx(() -> {
+            try (var p = new JoseCharacterizationSupport()) {
+                String payload = "{\"sub\":\"untrusted-user\",\"exp\":1,\"iat\":9999999999}";
+                String signed = JOSEService.signJws(payload, "HS256", KEY);
+                // Change the payload without signing again: decoding must still work.
+                String[] parts = signed.split("\\.");
+                parts[1] = com.nimbusds.jose.util.Base64URL.encode(payload.replace("untrusted-user", "tampered-user")).toString();
+                String tampered = String.join(".", parts);
+                p.area("jwtValidateKeyArea").clear();
+                ((TextField)p.control("jwtClockSkewField")).setText("invalid");
+                ((TextField)p.control("jwtExpectedIssField")).setText("wrong-issuer");
+                p.check("jwtOidcStrictCheck").setSelected(true);
+                p.check("jwtTrustHeaderKeyCheck").setSelected(true);
+                p.area("jwtTrustAnchorsArea").setText("invalid certificate");
+                ((TextField)p.control("jwtCertificateDateField")).setText("invalid date");
+                Button decode = p.control("jwtDecodeButton");
+                for (var language : List.of(LanguagePreference.EN, LanguagePreference.ES)) {
+                    p.language(language);
+                    assertEquals(I18nService.getInstance().text("module.jose.decodeOnly"), decode.getText());
+                    for (String token : List.of(tampered, com.nimbusds.jose.util.Base64URL.encode("{\"alg\":\"none\"}").toString() + "." + parts[1] + ".")) {
+                        p.area("jwtValidateTokenArea").setText("  " + token + "  ");
+                        p.area("jwtFindingsArea").setText("old finding");
+                        p.label("jwtStatusLabel").setStyle("-fx-text-fill: green;");
+                        decode.fire();
+                        assertNull(p.reporter.error);
+                        assertTrue(p.area("jwtDecodedHeaderArea").getText().contains("alg"));
+                        assertTrue(p.area("jwtDecodedPayloadArea").getText().contains("tampered-user"));
+                        assertEquals(I18nService.getInstance().text("module.jose.decodedUnverified"), p.label("jwtStatusLabel").getText());
+                        assertTrue(p.label("jwtStatusLabel").getStyle().contains("orange"));
+                        assertEquals(I18nService.getInstance().text("module.jose.decodeOnlyHint"), p.area("jwtFindingsArea").getText());
+                        assertEquals("JWT Decode", p.reporter.result.getOperation());
+                        assertTrue(p.reporter.result.getDetails().stream().filter(d -> d.name().equals("Signature") || d.name().equals("Claim Checks"))
+                                .allMatch(d -> d.value().equals("NOT_CHECKED")));
+                    }
+                    int published = p.reporter.history.size();
+                    for (String invalid : List.of("malformed", parts[0] + "." + com.nimbusds.jose.util.Base64URL.encode("not JSON") + ".AA")) {
+                        p.area("jwtValidateTokenArea").setText(invalid);
+                        decode.fire();
+                        assertEquals(I18nService.getInstance().text("module.jose.decodeInvalid"), p.label("jwtStatusLabel").getText());
+                        assertTrue(p.area("jwtDecodedHeaderArea").getText().isEmpty());
+                        assertTrue(p.area("jwtDecodedPayloadArea").getText().isEmpty());
+                        assertTrue(p.area("jwtFindingsArea").getText().isEmpty());
+                    }
+                    var jwe = new com.nimbusds.jose.JWEObject(new com.nimbusds.jose.JWEHeader(
+                            com.nimbusds.jose.JWEAlgorithm.DIR, com.nimbusds.jose.EncryptionMethod.A256GCM), new com.nimbusds.jose.Payload(payload));
+                    jwe.encrypt(new com.nimbusds.jose.crypto.DirectEncrypter(KEY.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+                    p.area("jwtValidateTokenArea").setText(jwe.serialize());
+                    decode.fire();
+                    assertEquals(I18nService.getInstance().text("module.jose.decodeEncrypted"), p.label("jwtStatusLabel").getText());
+                    assertEquals(published, p.reporter.history.size());
+                }
+            } catch (Exception e) { throw new RuntimeException(e); }
+        });
+    }
+
+    @Test void advancedOptionsRemainReadableInNarrowPanelsAndRejectInvalidClockSkew() throws Exception {
+        UiTestLifecycleExtension.onFx(() -> {
+            try (var p = new JoseCharacterizationSupport()) {
+                p.controller.showSection("JWT (Signed)");
+                javafx.scene.Parent root = p.loader.getRoot();
+                var validationContent = p.area("jwtValidateTokenArea").getParent();
+                var accordion = (Accordion)root.lookup(".accordion");
+                TitledPane validationPane = accordion.getPanes().stream().filter(pane -> pane.getContent() == validationContent).findFirst().orElseThrow();
+                validationPane.setAnimated(false);
+                accordion.setExpandedPane(validationPane);
+                var advancedContent = p.check("jwtCheckExpiryCheck").getParent();
+                TitledPane advancedPane = (TitledPane)validationContent.lookupAll(".titled-pane").stream()
+                        .filter(node -> ((TitledPane)node).getContent() == advancedContent).findFirst().orElseThrow();
+                advancedPane.setAnimated(false);
+                advancedPane.setExpanded(true);
+                ScrollPane scroll = new ScrollPane(root);
+                scroll.setFitToWidth(true);
+                var stage = new javafx.stage.Stage();
+                stage.setScene(new javafx.scene.Scene(scroll, 800, 900));
+                stage.getScene().getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                stage.show();
+                try {
+                    for (var language : List.of(LanguagePreference.EN, LanguagePreference.ES)) {
+                        p.language(language);
+                        for (int width : List.of(800, 600)) {
+                            scroll.resize(width, 900);
+                            scroll.applyCss(); scroll.layout(); root.layout();
+                            double lastBottom = -1;
+                            for (String id : List.of("jwtCheckExpiryCheck", "jwtOidcStrictCheck", "jwtAcceptNoneCheck", "jwtTrustHeaderKeyCheck")) {
+                                CheckBox check = p.check(id);
+                                assertFalse(check.getText().isBlank(), id);
+                                var rendered = (javafx.scene.text.Text)check.lookup(".text");
+                                assertEquals(check.getText(), rendered.getText(), language + "/" + width + "/" + id);
+                                var bounds = check.localToScene(check.getBoundsInLocal());
+                                assertTrue(bounds.getMinY() >= lastBottom, "Options must not overlap");
+                                lastBottom = bounds.getMaxY();
+                            }
+                            TextField skew = p.control("jwtClockSkewField");
+                            assertTrue(skew.getWidth() >= 80, "Clock skew must remain usable");
+                        }
+                    }
+                    if (Boolean.getBoolean("captureJwtLayout")) {
+                        var snapshot = advancedContent.snapshot(null, null);
+                        var png = new java.awt.image.BufferedImage((int)snapshot.getWidth(), (int)snapshot.getHeight(), java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                        for (int y = 0; y < png.getHeight(); y++) for (int x = 0; x < png.getWidth(); x++) png.setRGB(x, y, snapshot.getPixelReader().getArgb(x, y));
+                        var path = java.nio.file.Path.of("target/test-artifacts/jwt-advanced-es.png");
+                        java.nio.file.Files.createDirectories(path.getParent());
+                        javax.imageio.ImageIO.write(png, "png", path.toFile());
+                    }
+                } finally { stage.close(); }
+                p.area("jwtValidateTokenArea").setText(JOSEService.signJws(PAYLOAD, "HS256", KEY));
+                p.area("jwtValidateKeyArea").setText(KEY);
+                for (String invalid : List.of("garbage", "-1", "9223372036854775807")) {
+                    ((TextField)p.control("jwtClockSkewField")).setText(invalid);
+                    p.reporter.error = null;
+                    p.invoke("handleValidateJWT");
+                    assertNotNull(p.reporter.error);
+                    assertNull(p.reporter.result, "Invalid skew must stop validation");
+                }
+                ((TextField)p.control("jwtClockSkewField")).setText("0");
+                p.invoke("handleValidateJWT");
+                assertNotNull(p.reporter.result);
+                assertTrue(p.label("jwtStatusLabel").getStyle().contains("green"));
+            } catch (Exception e) { throw new RuntimeException(e); }
+        });
+    }
+
     @Test void criticalHeadersUseRealTokensAndVisibleLocalizedWarnings() throws Exception {
         UiTestLifecycleExtension.onFx(() -> {
             try (var p = new JoseCharacterizationSupport()) {

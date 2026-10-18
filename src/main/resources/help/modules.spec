@@ -501,6 +501,7 @@ generate: help_handleGenerateSignedJWT -> algorithm, template, serialization, un
 apply_claims: help_handleApplyJWTClaims -> claims, payload
 load_signing_key: help_handleLoadJWTKey, jwtKeyShelfMenu -> signing_key
 validate: help_handleValidateJWT -> token, verification_key, validate_secret_format, expected_claims, time_checks, policy, header_trust, profile_checks, decoded, findings
+decode: help_handleDecodeJWT -> token, decoded, findings
 load_verification_key: help_handleLoadJWTValidateKey, jwtValidateKeyShelfMenu -> verification_key
 detached: help_handleGenerateDetachedJWS, help_handleVerifyDetachedJWS -> detached_algorithm, detached_serialization, detached_payload, detached_keys, detached_header, detached_token
 clear_reset: help_handleClear, help_handleReset -> algorithm

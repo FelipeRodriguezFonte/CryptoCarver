@@ -610,6 +610,9 @@ public class JOSEController implements Initializable {
     private void handleValidateJWT() { jwtCoordinator().handleValidateJWT(); }
 
     @FXML
+    private void handleDecodeJWT() { jwtCoordinator().handleDecodeJWT(); }
+
+    @FXML
     private void handleRotateKey() { jwkCoordinator().handleRotateKey(); }
     @FXML
     private void handleGenerateJWE() { jweCoordinator().handleGenerateJWE(); }

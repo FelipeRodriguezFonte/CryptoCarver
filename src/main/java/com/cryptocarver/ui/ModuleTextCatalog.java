@@ -916,6 +916,9 @@ public final class ModuleTextCatalog {
         map.put("Check Expiration (exp/nbf/iat)", "module.jose.checkExpiration");
         map.put("Strict OIDC Profile", "module.jose.strictOidc");
         map.put("Verify & Decode", "module.jose.verifyDecode");
+        map.put("Decode without validation", "module.jose.decodeOnly");
+        map.put("No key required. Signature and claims are not checked.", "module.jose.decodeOnlyHint");
+        map.put("Time tolerance in seconds for exp, nbf and iat checks.", "module.jose.clockSkewHint");
         map.put("Decoded Header:", "module.jose.decodedHeader");
         map.put("Decoded Payload:", "module.jose.decodedPayload");
         map.put("JWS Detached (External Payload)", "module.jose.detachedTitle");

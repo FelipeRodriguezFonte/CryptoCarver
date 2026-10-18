@@ -143,6 +143,10 @@
                     <VBox spacing="12" styleClass="module-pane-content">
                         <Label text="JWT Token:" styleClass="form-label"/>
                         <TextArea fx:id="jwtValidateTokenArea" promptText="Paste JWT here..." prefRowCount="3" styleClass="monospace-field" wrapText="true"/>
+                        <FlowPane styleClass="responsive-action-bar">
+                            <Button fx:id="jwtDecodeButton" id="help_handleDecodeJWT" text="Decode without validation" onAction="#handleDecodeJWT" styleClass="secondary-button"/>
+                            <Label text="No key required. Signature and claims are not checked." wrapText="true" styleClass="helper-text"/>
+                        </FlowPane>
 
                         <GridPane hgap="10" vgap="9" styleClass="form-grid">
                             <columnConstraints>
@@ -181,14 +185,13 @@
                                     <TextField fx:id="jwtExpectedAudField" promptText="e.g. my-api" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
                                     <Label text="Clock Skew (sec):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
-                                    <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="2" GridPane.columnIndex="1">
-                                        <TextField fx:id="jwtClockSkewField" text="60" prefWidth="80" styleClass="form-field"/>
-                                        <CheckBox fx:id="jwtCheckExpiryCheck" text="Check Expiration (exp/nbf/iat)" selected="true"/>
-                                        <CheckBox fx:id="jwtOidcStrictCheck" text="Strict OIDC Profile"/>
-                                        <CheckBox fx:id="jwtAcceptNoneCheck" selected="false"/>
-                                        <CheckBox fx:id="jwtTrustHeaderKeyCheck" selected="false"/>
-                                    </HBox>
+                                    <TextField fx:id="jwtClockSkewField" text="60" minWidth="80" prefWidth="80" maxWidth="100" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
                                 </GridPane>
+                                <Label text="Time tolerance in seconds for exp, nbf and iat checks." wrapText="true" styleClass="helper-text"/>
+                                <CheckBox fx:id="jwtCheckExpiryCheck" text="Check Expiration (exp/nbf/iat)" selected="true" wrapText="true" maxWidth="Infinity"/>
+                                <CheckBox fx:id="jwtOidcStrictCheck" text="Strict OIDC Profile" wrapText="true" maxWidth="Infinity"/>
+                                <CheckBox fx:id="jwtAcceptNoneCheck" selected="false" wrapText="true" maxWidth="Infinity"/>
+                                <CheckBox fx:id="jwtTrustHeaderKeyCheck" selected="false" wrapText="true" maxWidth="Infinity"/>
                             </VBox>
                         </TitledPane>
 
@@ -198,10 +201,10 @@
                             <Label fx:id="jwtCertificateDateLabel" text="Certificate validation date (ISO-8601, empty = now):" styleClass="form-label"/>
                             <TextField fx:id="jwtCertificateDateField" styleClass="form-field"/>
                         </HBox>
-                        <HBox spacing="10" alignment="CENTER_LEFT">
+                        <FlowPane styleClass="responsive-action-bar">
                             <Button id="help_handleValidateJWT" text="Verify &amp; Decode" onAction="#handleValidateJWT" styleClass="action-button,primary-action"/>
-                            <Label fx:id="jwtStatusLabel" text="" styleClass="helper-text"/>
-                        </HBox>
+                        </FlowPane>
+                        <Label fx:id="jwtStatusLabel" text="" wrapText="true" styleClass="helper-text"/>
 
                         <GridPane hgap="10" vgap="9" styleClass="form-grid">
                             <columnConstraints>
