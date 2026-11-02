@@ -395,6 +395,20 @@
     </build>
 
     <profiles>
+        <!-- Maven Central stopped publishing linux-aarch64 for JavaFX 21 after 21.0.1.
+             JavaFX 22 changes how contextual help follows focus, so stay on this line. -->
+        <profile>
+            <id>linux-aarch64-javafx</id>
+            <activation>
+                <os>
+                    <name>linux</name>
+                    <arch>aarch64</arch>
+                </os>
+            </activation>
+            <properties>
+                <javafx.version>21.0.1</javafx.version>
+            </properties>
+        </profile>
         <profile>
             <!-- Opt-in CPU cap for the test JVM: mvn -o -q test -Plow-cpu.
                  Roughly halves the speed of the suite, so it is not the default. -->

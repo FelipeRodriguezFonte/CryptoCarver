@@ -381,7 +381,22 @@ curl -s -X POST http://127.0.0.1:8787/v1/sha256 -H 'Content-Type: application/js
 La aplicación funciona en:
 - ✅ **Windows** (10/11)
 - ✅ **macOS** (compilación e instaladores nativos para Apple Silicon e Intel)
-- ✅ **Linux** (Ubuntu, Debian, Fedora, etc.)
+- ✅ **Linux** (Kali, Ubuntu, Debian, Fedora, etc.; x86_64 y arm64)
+
+En Kali, Ubuntu o Debian instala el paquete de tu arquitectura desde GitHub Releases,
+que no necesita Java ni Maven (`uname -m` indica cuál; en Kali sobre un Mac con
+Apple Silicon es `arm64`):
+
+```bash
+sudo apt install ./cryptocarver_*.deb
+/opt/cryptocarver/bin/CryptoCarver
+```
+
+Sin instalar nada, descomprime el `.tar.gz` y ejecuta `CryptoCarver/bin/CryptoCarver`;
+si los iconos salen como cuadrados, instala `fonts-symbola`.
+Para generar los paquetes desde fuentes usa `./package_linux.sh` (`.tar.gz`) o
+`PACKAGE_TYPE=deb ./package_linux.sh`; necesitas un JDK 17+ con `jpackage` y `fakeroot`
+para el `.deb`. Cada arquitectura se empaqueta en su propio Linux.
 
 En Windows puedes ejecutarla desde fuentes con `run.bat`, desde un JAR ya compilado
 con `run_simple.bat` (que reutiliza el JAR dejado por `run.bat` o por

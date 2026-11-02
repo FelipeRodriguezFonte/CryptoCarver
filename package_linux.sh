@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Creates a self-contained Linux app-image by default. Set PACKAGE_TYPE=deb or
-# PACKAGE_TYPE=rpm on a matching distribution to build an installer package.
+# Creates a self-contained Linux app-image and its .tar.gz by default. Set
+# PACKAGE_TYPE=deb or PACKAGE_TYPE=rpm on a matching distribution to build an
+# installer package. Each architecture is packaged on its own machine.
 APP_NAME="CryptoCarver"
 MAIN_CLASS="com.cryptocarver.Launcher"
 OUTPUT_DIR="${PACKAGE_OUTPUT_DIR:-dist}"
@@ -44,10 +45,16 @@ if [ ! -f "$MAIN_JAR" ]; then
   exit 1
 fi
 
+# jpackage copies its whole --input directory: give it only the executable JAR.
+INPUT_DIR="target/jpackage-input"
+mkdir -p "$INPUT_DIR"
+cp "$MAIN_JAR" "$INPUT_DIR/"
+
+mkdir -p "$OUTPUT_DIR"
 ARGS=(
   --name "$APP_NAME"
   --app-version "$VERSION"
-  --input target
+  --input "$INPUT_DIR"
   --main-jar "$(basename "$MAIN_JAR")"
   --main-class "$MAIN_CLASS"
   --type "$PACKAGE_TYPE"
@@ -57,9 +64,23 @@ ARGS=(
 if [ -f "$ICON_PATH" ]; then
   ARGS+=(--icon "$ICON_PATH")
 fi
-if [ "$PACKAGE_TYPE" = "app-image" ] || [ "$PACKAGE_TYPE" = "deb" ] || [ "$PACKAGE_TYPE" = "rpm" ]; then
-  ARGS+=(--linux-shortcut --linux-menu-group CryptoCarver --linux-app-category Utility)
+# jpackage rejects the installer-only options when the type is app-image.
+if [ "$PACKAGE_TYPE" = "deb" ] || [ "$PACKAGE_TYPE" = "rpm" ]; then
+  ARGS+=(--linux-package-name cryptocarver --linux-shortcut --linux-menu-group CryptoCarver --linux-app-category Utility)
+fi
+# JavaFX loads these from its JAR at runtime, so jpackage cannot detect them.
+# Debian-family t64 packages (Kali, Ubuntu 24.04) still provide libgtk-3-0.
+if [ "$PACKAGE_TYPE" = "deb" ]; then
+  ARGS+=(--linux-package-deps "libgtk-3-0, libgl1, libxtst6, libxxf86vm1, fontconfig, fonts-symbola")
+fi
+if [ "$PACKAGE_TYPE" = "app-image" ]; then
+  rm -rf "${OUTPUT_DIR:?}/$APP_NAME"
 fi
 
 "$JPACKAGE" "${ARGS[@]}"
+if [ "$PACKAGE_TYPE" = "app-image" ]; then
+  ARCHIVE="$OUTPUT_DIR/$APP_NAME-$VERSION-linux-$(uname -m).tar.gz"
+  tar -C "$OUTPUT_DIR" -czf "$ARCHIVE" "$APP_NAME"
+  echo "Linux archive created: $ARCHIVE"
+fi
 echo "Linux ${PACKAGE_TYPE} created in $OUTPUT_DIR"

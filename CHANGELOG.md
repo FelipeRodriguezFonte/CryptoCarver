@@ -14,6 +14,11 @@
   etiquetadas, comentarios y un token en dos filas del host. Son byte a byte los
   de la herramienta en Python, fijados por un test contra su salida.
 
+- **Paquetes para Linux, Kali incluida.** `package_linux.sh` genera un `.tar.gz` y
+  un `.deb` con el runtime incluido, y el workflow `Linux packages` los construye
+  para x86_64 y arm64 y los adjunta a la release de cada etiqueta `v*`. En Linux arm64 se usa JavaFX
+  21.0.1, último de la rama 21 publicado para esa arquitectura en Maven Central.
+
 ### Cambiado
 
 - **El lote ICSF / CCA vuelve a separar lo que el inventario del Python
