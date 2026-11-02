@@ -19,6 +19,10 @@
   para x86_64 y arm64 y los adjunta a la release de cada etiqueta `v*`. En Linux arm64 se usa JavaFX
   21.0.1, último de la rama 21 publicado para esa arquitectura en Maven Central.
 
+- **Sesiones de ejercicio y evidencias.** El alumno inicia una sesión que registra cada
+  operación y la exporta como `.ccevidence`; **Revisar evidencias** abre una carpeta de
+  entregas en solo lectura y comprueba su integridad, sin probar la autoría.
+
 ### Cambiado
 
 - **El lote ICSF / CCA vuelve a separar lo que el inventario del Python

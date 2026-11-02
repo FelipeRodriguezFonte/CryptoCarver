@@ -96,6 +96,9 @@ final class ShellLocalizationCoordinator {
     view.text(controls.importScreenMenuItem(), "menu.importScreen");
     view.text(controls.saveSessionMenuItem(), "menu.saveSession");
     view.text(controls.exportSessionTrailMenuItem(), "menu.exportSessionTrail");
+    view.text(controls.startExerciseSessionMenuItem(), "menu.startExerciseSession");
+    view.text(controls.exportEvidenceMenuItem(), "menu.exportEvidence");
+    view.text(controls.reviewEvidenceMenuItem(), "menu.reviewEvidence");
     view.text(controls.exportHistoryMenuItem(), "menu.exportHistory");
     view.text(controls.exitMenuItem(), "menu.exit");
     view.text(controls.clearInputMenuItem(), "menu.clearInput");
@@ -233,6 +236,9 @@ final class ShellLocalizationCoordinator {
       MenuItem importScreenMenuItem,
       MenuItem saveSessionMenuItem,
       MenuItem exportSessionTrailMenuItem,
+      MenuItem startExerciseSessionMenuItem,
+      MenuItem exportEvidenceMenuItem,
+      MenuItem reviewEvidenceMenuItem,
       MenuItem exportHistoryMenuItem,
       MenuItem exitMenuItem,
       MenuItem clearInputMenuItem,
