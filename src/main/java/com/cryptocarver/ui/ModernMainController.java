@@ -76,6 +76,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private LaboratoryMenuCoordinator laboratoryMenuCoordinator;
     private final com.cryptocarver.model.SessionTrailState sessionTrailState = new com.cryptocarver.model.SessionTrailState();
     private SessionTrailCoordinator sessionTrailCoordinator;
+    private EvidenceSessionCoordinator evidenceSessionCoordinator;
+    private EvidenceReviewWindow evidenceReviewWindow;
     /**
      * Snapshot published by the latest completed operation.  It is deliberately
      * separate from the last focused text area: focus is a navigation concern,
@@ -337,6 +339,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private MenuItem importScreenMenuItem;
     @FXML private MenuItem saveSessionMenuItem;
     @FXML private MenuItem exportSessionTrailMenuItem;
+    @FXML private MenuItem startExerciseSessionMenuItem;
+    @FXML private MenuItem exportEvidenceMenuItem;
+    @FXML private MenuItem reviewEvidenceMenuItem;
+    @FXML private Label exerciseSessionLabel;
     @FXML private MenuItem exportHistoryMenuItem;
     @FXML private MenuItem exitMenuItem;
     @FXML private MenuItem clearInputMenuItem;
@@ -861,7 +867,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 fileMenu, editMenu, viewMenu, securityMenu,
                 toolsMenu, helpMenu, laboratoryMenu, languageMenu,
                 appearanceMenu, importKeyMenuItem, exportScreenMenuItem, importScreenMenuItem,
-                saveSessionMenuItem, exportSessionTrailMenuItem, exportHistoryMenuItem, exitMenuItem,
+                saveSessionMenuItem, exportSessionTrailMenuItem, startExerciseSessionMenuItem, exportEvidenceMenuItem,
+                reviewEvidenceMenuItem, exportHistoryMenuItem, exitMenuItem,
                 clearInputMenuItem, clearOutputMenuItem, copyOutputMenuItem, addToShelfMenuItem,
                 quickStartMenuItem, clipboardShelfMenuItem, commandPaletteMenuItem, toggleSidePanelMenuItem,
                 toggleInspectorMenuItem, expandResultMenuItem, expandTableMenuItem, zoomInMenuItem,
@@ -2157,7 +2164,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (resultPublicationCoordinator == null) resultPublicationCoordinator = new ResultPublicationCoordinator(
                 result -> { lastPublishedOperation = result.getOperation(); lastPublishedResultSnapshot = result; lastPublishedScreen = currentActiveOperation; },
                 result -> updateInspector(result.getOperation(), result.getInput(), result.getOutput(), result.getDetails()),
-                this::refreshSessionTrailNavigation,
+                () -> { evidenceSessionCoordinator().recordPublishedResult(); refreshSessionTrailNavigation(); },
                 (result, details) -> addToHistory(result.getOperation(), details, currentActiveOperation),
                 this::updateStatus, inspectorAddSessionStepButton, resultSummaryBar, resultOpLabel, resultAlgoLabel,
                 resultSizeLabel, resultFormatLabel, resultStatusBadge, outputFormatCombo, i18n, sessionTrailState);
@@ -2710,6 +2717,25 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 () -> { if (inspectorPanel != null && !inspectorPanel.isVisible()) { inspectorPanel.setVisible(true); inspectorPanel.setManaged(true); inspectorHiddenForCompactLayout = false; } },
                 this::updateStatus, this::showWarning, i18n);
         return sessionTrailCoordinator;
+    }
+
+    private EvidenceSessionCoordinator evidenceSessionCoordinator() {
+        if (evidenceSessionCoordinator == null) evidenceSessionCoordinator = new EvidenceSessionCoordinator(
+                sessionTrailState, sessionTrailCoordinator(), exportEvidenceMenuItem, exerciseSessionLabel, dialogService,
+                () -> mainPane, this::updateStatus, this::showWarning, i18n);
+        return evidenceSessionCoordinator;
+    }
+
+    @FXML
+    public void handleStartExerciseSession() { evidenceSessionCoordinator().handleStart(); }
+
+    @FXML
+    public void handleExportEvidence() { evidenceSessionCoordinator().handleExport(); }
+
+    @FXML
+    public void handleReviewEvidence() {
+        if (evidenceReviewWindow == null) evidenceReviewWindow = new EvidenceReviewWindow(i18n, this::showWarning);
+        evidenceReviewWindow.show(mainPane == null || mainPane.getScene() == null ? null : mainPane.getScene().getWindow());
     }
 
     @FXML

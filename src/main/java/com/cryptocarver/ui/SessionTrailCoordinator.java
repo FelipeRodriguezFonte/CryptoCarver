@@ -102,6 +102,14 @@ public final class SessionTrailCoordinator {
         return step;
     }
 
+    /** Unattended counterpart of the save dialog: an exercise session keeps every result. */
+    void recordCurrentResult() {
+        OperationResult result = currentResult.get();
+        if (result == null) return;
+        state.add(result, result.getOperation(), List.of(), captureClearTextTrailParameters());
+        refresh();
+    }
+
     public void refresh() {
         int count = state.size();
         if (countLabel != null) {

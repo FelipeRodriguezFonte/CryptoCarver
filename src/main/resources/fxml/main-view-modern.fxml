@@ -30,6 +30,10 @@
                     <MenuItem fx:id="exportSessionTrailMenuItem" text="Export Session Trail..." onAction="#handleExportSessionTrail" />
                     <MenuItem fx:id="exportHistoryMenuItem" text="Export History..." onAction="#handleExportHistory" />
                     <SeparatorMenuItem />
+                    <MenuItem fx:id="startExerciseSessionMenuItem" text="Start Exercise Session..." onAction="#handleStartExerciseSession" />
+                    <MenuItem fx:id="exportEvidenceMenuItem" text="Export Evidence..." onAction="#handleExportEvidence" disable="true" />
+                    <MenuItem fx:id="reviewEvidenceMenuItem" text="Review Evidence..." onAction="#handleReviewEvidence" />
+                    <SeparatorMenuItem />
                     <MenuItem fx:id="exitMenuItem" text="Exit" onAction="#handleExit" accelerator="Shortcut+Q" />
                 </Menu>
 
@@ -485,6 +489,7 @@
                 <Button fx:id="asyncCancelBtn" text="Cancel" onAction="#handleCancelAsyncOperation" styleClass="async-cancel-button"/>
             </HBox>
             <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="exerciseSessionLabel" visible="false" managed="false" styleClass="status-label-info"/>
             <Button fx:id="statusVisibilityButton" text="Full visibility" onAction="#handleOpenSecurityMenu" styleClass="status-context-button"/>
             <Label fx:id="statusLanguageLabel" text="Language: System" styleClass="status-label-info"/>
         </HBox>

@@ -405,6 +405,18 @@ con `run_simple.bat` (que reutiliza el JAR dejado por `run.bat` o por
 
 ---
 
+## 🎓 Entrega y revisión de ejercicios
+
+En **Archivo → Iniciar sesión de ejercicio** el alumno indica su nombre y el código del
+ejercicio; desde ese momento se registra cada operación. **Exportar evidencia** genera un
+`.ccevidence` sin valores no públicos, salvo que marque incluirlos.
+
+**Archivo → Revisar evidencias** abre una carpeta de entregas en solo lectura: una tabla por
+alumno y, para cada entrega, la línea temporal de operaciones. *Íntegro* indica que el fichero
+coincide con sus hashes, no quién hizo el trabajo: esos hashes se pueden recalcular.
+
+---
+
 ## 🆕 Evolución desde la primera versión
 
 La primera versión, publicada como **CryptoForge**, se centraba en una calculadora
