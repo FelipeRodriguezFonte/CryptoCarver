@@ -668,6 +668,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             detachStartupListeners();
             detachWindowLifecycleListeners();
             if (contextualHelpWindowCoordinator != null) contextualHelpWindowCoordinator.close();
+            if (evidenceReviewWindow != null) evidenceReviewWindow.close();
             if (contextualHelpCoordinator != null) contextualHelpCoordinator.close();
             if (cipherHelpContextAdapter != null) cipherHelpContextAdapter.close();
             if (jweHelpContextAdapter != null) jweHelpContextAdapter.close();

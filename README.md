@@ -410,10 +410,16 @@ con `run_simple.bat` (que reutiliza el JAR dejado por `run.bat` o por
 En **Archivo → Iniciar sesión de ejercicio** el alumno indica su nombre y el código del
 ejercicio; desde ese momento se registra cada operación. **Exportar evidencia** genera un
 `.ccevidence` sin valores no públicos, salvo que marque incluirlos.
+La práctica conserva su propio registro aunque se cargue o se vacíe otra sesión;
+guardar manualmente un resultado ya registrado no duplica la operación en la entrega.
+Cada fichero admite hasta 64 MiB: si la exportación supera ese límite, se conserva
+el destino anterior.
 
 **Archivo → Revisar evidencias** abre una carpeta de entregas en solo lectura: una tabla por
 alumno y, para cada entrega, la línea temporal de operaciones. *Íntegro* indica que el fichero
 coincide con sus hashes, no quién hizo el trabajo: esos hashes se pueden recalcular.
+La lectura se realiza en segundo plano, con progreso y cancelación. La tabla conserva
+solo los resúmenes; el detalle se vuelve a leer y verificar al seleccionar una entrega.
 
 ---
 

@@ -116,6 +116,25 @@ class OperationSessionLogTest {
     }
 
     @Test
+    void capturedSnapshotsSurviveReplacementAndRelinkInAnIndependentLog() {
+        OperationSessionLog workspace = new OperationSessionLog();
+        OperationSessionLog exercise = new OperationSessionLog();
+        SessionOperationStep first = workspace.add(result("One", "1"), "First", List.of());
+        exercise.append(first);
+        workspace.clear();
+        SessionOperationStep second = workspace.add(result("Two", "2"), "Second", List.of());
+        exercise.append(second);
+        workspace.clear();
+
+        assertEquals(2, exercise.size());
+        assertTrue(exercise.verifyChain());
+        assertEquals(first.getId(), exercise.getSteps().get(0).getId());
+        assertEquals(second.getTimestamp(), exercise.getSteps().get(1).getTimestamp());
+        assertEquals(first.getEntryHash(), exercise.getSteps().get(1).getPreviousHash());
+        assertEquals(SessionOperationStep.GENESIS_HASH, second.getPreviousHash());
+    }
+
+    @Test
     void copiesAreIndependentAndTextOutputIsStable() {
         OperationSessionLog original = new OperationSessionLog();
         original.add(result("Hash", "payload"), "Hash payload", List.of("review"));

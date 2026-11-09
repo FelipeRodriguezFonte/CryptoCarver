@@ -85,6 +85,68 @@ class EvidencePackageTest {
     }
 
     @Test
+    void writeAndReadUseTheSameUtf8ByteLimit(@TempDir Path folder) throws IOException {
+        EvidencePackage value = evidence(false);
+        byte[] serialized = codec.serialize(value).getBytes(StandardCharsets.UTF_8);
+        Path file = folder.resolve("limited.ccevidence");
+
+        new EvidencePackageCodec(serialized.length).write(value, file);
+        assertEquals(EvidencePackage.Integrity.VALID, new EvidencePackageCodec(serialized.length).load(file).integrity());
+
+        Files.write(file, serialized);
+        EvidencePackageCodec tooSmall = new EvidencePackageCodec(serialized.length - 1);
+        assertFalse(tooSmall.load(file).readable());
+        Files.writeString(file, "original destination", StandardCharsets.UTF_8);
+        assertThrows(IOException.class, () -> tooSmall.write(value, file));
+        assertEquals("original destination", Files.readString(file, StandardCharsets.UTF_8));
+        try (var files = Files.list(folder)) {
+            assertEquals(List.of(file), files.toList());
+        }
+    }
+
+    @Test
+    void writeLimitCountsUtf8BytesRatherThanCharacters(@TempDir Path folder) throws IOException {
+        String json = codec.serialize(evidence(false));
+        assertTrue(json.chars().anyMatch(character -> character > 127));
+        int utf8Bytes = json.getBytes(StandardCharsets.UTF_8).length;
+        assertTrue(utf8Bytes > json.length());
+        Path target = folder.resolve("utf8.ccevidence");
+        assertThrows(IOException.class, () -> new EvidencePackageCodec(utf8Bytes - 1).write(evidence(false), target));
+        assertFalse(Files.exists(target));
+    }
+
+    @Test
+    void boundedReadRejectsFilesBeyondTheLimit(@TempDir Path folder) throws IOException {
+        Path file = folder.resolve("growing.ccevidence");
+        Files.writeString(file, codec.serialize(evidence(false)), StandardCharsets.UTF_8);
+        assertFalse(new EvidencePackageCodec(8).load(file).readable());
+    }
+
+    @Test
+    void malformedUtf8IsRejected(@TempDir Path folder) throws IOException {
+        Path file = folder.resolve("malformed.ccevidence");
+        Files.write(file, new byte[] {(byte) 0xC3, (byte) 0x28});
+        assertFalse(codec.load(file).readable());
+    }
+
+    @Test
+    void oversizedStreamingWriteReportsAnIoErrorAndPreservesTheDestination(@TempDir Path folder) throws IOException {
+        OperationSessionLog large = new OperationSessionLog();
+        large.add(OperationResult.forOperation("Large result")
+                .enrichedOutput("x".repeat(32_768), OperationDetail.Classification.PUBLIC).build(),
+                "Large", List.of());
+        EvidencePackage value = EvidencePackage.create(new ExerciseSession("Ana", "LAB", "start"),
+                large, "end", "test", false);
+        Path target = folder.resolve("large.ccevidence");
+        Files.writeString(target, "original destination");
+        assertThrows(IOException.class, () -> new EvidencePackageCodec(8_192).write(value, target));
+        assertEquals("original destination", Files.readString(target));
+        try (var files = Files.list(folder)) {
+            assertEquals(List.of(target), files.toList());
+        }
+    }
+
+    @Test
     void suggestedFileNameIsSafe() {
         String name = new ExerciseSession("../Ana Pérez", "LAB 1", "t").suggestedFileName();
         assertFalse(name.contains("/"));

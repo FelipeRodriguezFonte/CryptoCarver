@@ -36,6 +36,15 @@
 
 ### Corregido
 
+- Las evidencias de una práctica mantienen un registro independiente del de las
+  sesiones guardadas: cargar o vaciar otra sesión ya no sustituye las operaciones
+  entregadas, y guardar manualmente un resultado no lo duplica en la evidencia.
+- La exportación de evidencias respeta el mismo límite de 64 MiB que el lector y
+  escribe mediante un temporal para conservar el destino si falla. El diálogo
+  de macOS propone una sola extensión `.ccevidence`.
+- La revisión de entregas lee y verifica en segundo plano, permite cancelar y
+  mantiene en memoria los resúmenes y el detalle de la entrega seleccionada.
+
 - La fortaleza efectiva de un token WRAPENH3 decía «clave de longitud sencilla»,
   cuando lo que pasa es que la longitud está ofuscada a propósito.
 - El README mandaba lanzar la CLI con `java -jar cryptocarver.jar icsf-…`, que

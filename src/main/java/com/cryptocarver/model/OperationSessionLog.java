@@ -68,6 +68,15 @@ public final class OperationSessionLog implements Serializable {
         return SessionOperationStep.copyOf(step);
     }
 
+    /** Adds an already captured snapshot to an independent chain, preserving its identity and timestamp. */
+    public synchronized void append(SessionOperationStep captured) {
+        if (captured == null) throw new IllegalArgumentException("Captured step is required");
+        ensureSteps();
+        String previous = steps.isEmpty() ? SessionOperationStep.GENESIS_HASH
+                : steps.get(steps.size() - 1).getEntryHash();
+        steps.add(captured.relink(previous));
+    }
+
     public synchronized boolean remove(String stepId) {
         ensureSteps();
         if (stepId == null) return false;
